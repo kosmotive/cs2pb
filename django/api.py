@@ -18,7 +18,7 @@ from django.conf import settings
 
 
 STEAM_API_KEY = os.environ['CS2PB_STEAM_API_KEY']
-assert len(ADMIN_MAIL_ADDRESS) > 0
+assert len(STEAM_API_KEY) > 0
 
 NAV_SUPPORTED_MAPS = frozenset(awpy.data.map_data.MAP_DATA.keys())
 
