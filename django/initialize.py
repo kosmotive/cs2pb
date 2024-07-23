@@ -9,7 +9,7 @@ parser.add_argument('--sharecode', action='store', type=str, help='Initial share
 parser.add_argument('--auth'     , action='store', type=str, help='Initial Steam Auth of the superuser account.')
 parser.add_argument('--squadname', action='store', type=str, help='Name of the squad of the superuser.')
 parser.add_argument('--discord-channel', action='store', type=str, help='Initial Discord channel ID of the squad.')
-parser.add_argument('--extra-steamid'  , nargs='*', type=str, help='Steam ID of user to be added as a squad member.')
+parser.add_argument('--extra-steamids' , nargs='*', type=str, help='Steam IDs of users to be added as squad members.')
 args = parser.parse_args()
 
 steamid = args.steamid
@@ -33,7 +33,7 @@ if auth is None: auth = input('Initial Steam Auth of the superuser account: ')
 squadname = args.squadname
 if squadname is None: squadname = input('Name of the initial squad of the superuser: ')
 
-extra_steamid_list = '[' + ', '.join((f"'{steamid}'" for steamid in args.extra_steamid)) + ']'
+extra_steamid_list = '[' + ', '.join((f"'{steamid}'" for steamid in args.extra_steamids)) + ']'
 
 from getpass import getpass
 password = getpass('Superuser password: ')

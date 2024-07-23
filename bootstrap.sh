@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export REF="6196edcedb80ce54ae11a479fa1957220e91be45"
+export REF="befd26a8430cf8502f036d041a8165b117f23377"
 
 git clone git@github.com:kodikit/cs2pb-bootstrap.git
 cd cs2pb-bootstrap
