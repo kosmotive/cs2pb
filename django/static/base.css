@@ -1,0 +1,161 @@
+a:link, a:visited, a:active, a:hover {
+    color: #3633fb;
+    text-decoration: underline;
+}
+
+.sup {
+    font-size: 66%;
+    transform: translate(0px, -0.5em);
+    display: inline-block;
+}
+
+form table th {
+    text-align: right;
+    vertical-align: top;
+    padding-top: 0.4em;
+}
+
+form .errorlist {
+    color: #f00;
+}
+
+body {
+    background-color: #eee;
+    font-family: Sans-serif;
+    padding: 5mm;
+    color: #000;
+    padding-bottom: 1cm;
+    margin: 0;
+}
+
+body, input, button {
+    font-size: 12pt;
+}
+
+#footer {
+    margin-top: 1cm;
+    text-align: center;
+    border-top: 1px solid #ccc;
+    margin-left: 1cm;
+    margin-right: 1cm;
+    padding-top: 15mm;
+}
+
+#footer a {
+    color: #aaa;
+    text-decoration: none;
+    font-size: 80%;
+}
+
+button.positive,
+input.positive {
+    background-color: #cfc;
+}
+
+button.negative,
+input.negative {
+    background-color: #fcc;
+}
+
+#header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #222;
+    color: white;
+    box-shadow: 0 2mm 2mm #ddd;
+    height: 2cm;
+    z-index: 1000;
+    opacity: 0.99;
+}
+
+#logo {
+    position: relative;
+    top: 6mm;
+    left: 25mm;
+}
+
+#logo a {
+    text-decoration: none;
+    color: #fff;
+    font-size: 18pt;
+}
+
+#logon {
+    display: inline-block;
+    font-style: italic;
+    margin-right: 15mm;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+#logon p {
+    display: inline-block;
+    margin: 0;
+    text-align: right;
+}
+
+#logon .username {
+    font-style: normal;
+    color: #fff;
+}
+
+#navigation {
+    position: absolute;
+    font-size: 14pt;
+    bottom: 0;
+    right: 25mm;
+    margin: 0;
+}
+
+#navigation li.nav {
+    display: inline-block;
+    border-bottom: 4mm solid #000;
+    padding-bottom: 4mm;
+    padding-left: 3mm;
+    padding-right: 3mm;
+    background: linear-gradient(#222, #555);
+    font-weight: bold;
+    margin-left: 1mm;
+    color: #999;
+}
+
+#navigation li.nav a,
+#navigation li.nav a:hover,
+#navigation li.nav a:visited,
+#navigation li.nav a:active {
+    color: inherit;
+    text-decoration: none;
+}
+
+#navigation li.nav-active {
+    border-bottom-color: #ff6699;
+    color: #fff;
+}
+
+#navigation li.nav:not(.nav-active):hover {
+    border-bottom-color: #999;
+    color: #fff;
+}
+
+#content {
+    margin-top: 25mm;
+}
+
+#content input:read-only {
+    background-color: #eee;
+    color: #aaa;
+}
+
+#content {
+    margin-left: 10mm;
+    margin-right: 10mm;
+}
+
+#error {
+    position: fixed;
+    bottom: 0;
+    background-color: #f00;
+    color: white;
+    z-index: 1000;
+}

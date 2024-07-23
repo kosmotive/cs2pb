@@ -1,0 +1,651 @@
+div.squad {
+    padding: 10mm;
+    padding-bottom: 0mm;
+    border-radius: 10mm;
+    margin-bottom: 2cm;
+    position: relative;
+}
+
+div.squad .squad-background {
+    background: linear-gradient(#fff 40%, #eee);
+    border-radius: 10mm;
+    height: 8cm;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+}
+
+div.squad .squad-name {
+    font-size: 350%;
+    font-family: serif;
+    margin-bottom: 5mm;
+    position: absolute;
+    top: 8mm;
+    left: 10mm;
+}
+
+div.squad .squad-sharelink {
+    display: inline-flex;
+    align-items: center;
+    font-size: 80%;
+    position: absolute;
+    top: 10mm;
+    right: 10mm;
+}
+
+div.squad .squad-sharelink a {
+    margin-left: 1mm;
+}
+
+div.squad .squad-sharelink a:link,
+div.squad .squad-sharelink a:visited,
+div.squad .squad-sharelink a:active,
+div.squad .squad-sharelink a:hover {
+    color: #aaa;
+}
+
+div.squad .squad-members {
+    margin-top: 2cm;
+    white-space: nowrap;
+}
+
+div.squad .squad-members div.profile-card:not(:first-child) {
+    margin-left: 5mm;
+}
+
+div.squad .squad-members div.profile-card:not(:last-child) {
+    margin-right: 5mm;
+}
+
+div.profile-card {
+    background: linear-gradient(#fff, #eee);
+    border-radius: 5mm;
+    box-shadow: 0 2mm 5mm #aaa;
+    display: inline-block;
+    padding: 5mm;
+    position: relative;
+    margin-bottom: 15mm;
+}
+
+div.profile-card .expand-profile-button {
+    position: absolute;
+    bottom: 5mm;
+    right: 5mm;
+}
+
+div.profile-card .avatar {
+    width: 50mm;
+    height: 50mm;
+}
+
+div.profile-card .profile-name {
+    font-size: 130%;
+    position: absolute;
+    left: 5mm;
+    right: 5mm;
+    padding: 0.5em 0 0.3em 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+div.profile-card .profile-stats {
+    margin-top: 12mm;
+}
+
+div.profile-card .profile-stat {
+    margin-top: 2mm;
+}
+
+div.profile-card .profile-stat-name {
+    text-transform: uppercase;
+    font-size: 80%;
+}
+
+div.profile-card .profile-stat-placeholder {
+    display: inline-block;
+    width: 4cm;
+    height: 5mm;
+    font-size: 80%;
+    line-height: 5mm;
+    color: #999;
+    font-weight: bold;
+}
+
+div.profile-card .profile-stat-bar-outer {
+    display: inline-block;
+    width: 4cm;
+    height: 5mm;
+    background-color: #ccc;
+    position: relative;
+}
+
+div.profile-card .profile-stat-bar-inner {
+    height: 5mm;
+}
+
+div.profile-card .profile-stat-order1 .profile-stat-bar-inner {
+    background-color: #ff6699;
+}
+
+div.profile-card .profile-stat-order2 .profile-stat-bar-inner {
+    background-color: #999;
+}
+
+div.profile-card .profile-stat-order3 .profile-stat-bar-inner {
+    background-color: #999;
+}
+
+div.profile-card .profile-stats .profile-stat:nth-of-type(5) {
+    border-top: 1px solid #ddd;
+    margin-top: 2mm;
+    padding-top: 2mm;
+}
+
+div.profile-card .profile-stat-bar-value {
+    display: inline-block;
+    position: absolute;
+    right: 5mm;
+    z-index: 1;
+}
+
+div.profile-card .profile-stat-bar-trend-up,
+div.profile-card .profile-stat-bar-trend-down {
+    display: inline-block;
+    position: absolute;
+    top: 1mm;
+    height: 3mm;
+    width: 3mm;
+    opacity: 0.25;
+}
+
+div.profile-card .profile-stat-bar-trend-up {
+    right: 1mm;
+}
+
+div.profile-card .profile-stat-bar-trend-down {
+    left: 1mm;
+}
+
+div.profile-card .profile-hint-container {
+    position: relative;
+    white-space: normal;
+}
+
+div.profile-card .profile-hint {
+    position: absolute;
+    top: 10mm;
+    color: #999;
+    font-size: 80%;
+}
+
+div.profile-card .badge-list {
+    margin-top: 2mm;
+    border-top: 1px solid #ddd;
+    padding-top: 2mm;
+    white-space: nowrap;
+    height: 8mm;
+    margin-bottom: -1mm;
+}
+
+div.profile-card .badge-list .badge {
+    width: 9mm;
+    height: 9mm;
+    position: relative;
+    display: inline-block;
+    margin-left: 1mm;
+    filter: drop-shadow(0 0 1mm rgba(0,0,0,0.1));
+}
+
+div.profile-card .badge-list .badge:first-child {
+    margin-left: 0mm;
+}
+
+div.profile-card .badge-list .badge .badge-count {
+    position: absolute;
+    right: 0.2mm;
+    bottom: 0;
+    font-size: 50%;
+    font-weight: bold;
+    color: #444;
+}
+
+div.squad .squad-members-appendix {
+    margin-left: -5mm;
+    margin-right: -5mm;
+    margin-top: 1cm;
+    display: block;
+    max-width: calc(100% + 10mm);
+}
+
+div.squad div.profile-card-appendix {
+    margin-right: 5mm;
+    margin-left: 5mm;
+}
+
+div.squad-members-appendix .legend {
+    margin-top: -2mm;
+    margin-bottom: -2mm;
+}
+
+div.squad-members-appendix .legend-item {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 5mm;
+    position: relative;
+    width: 65mm;
+    height: 3em;
+    margin-top: 2mm;
+    margin-bottom: 2mm;
+}
+
+div.squad-members-appendix .legend-item .badge {
+    width: 6mm;
+    vertical-align: middle;
+    position: absolute;
+    left: 0;
+    top: 0;
+    border-right: 1px solid #ccc;
+    padding-right: 1mm;
+    height: 100%;
+    background-size: 83%;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 0 1mm rgba(0,0,0,0.1));
+}
+
+div.squad-members-appendix .legend-item .legend-item-label {
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 90%;
+    position: absolute;
+    left: 9mm;
+    white-space: nowrap;
+}
+
+div.squad-members-appendix .legend-item .legend-item-description {
+    display: block;
+    font-size: 66%;
+    position: absolute;
+    left: 9mm;
+    top: 2em;
+}
+
+div.squad-members-appendix div.squad-members-appendix-header {
+    font-size: 80%;
+    text-transform: uppercase;
+    font-weight: bold;
+    margin-top: 2mm;
+    margin-bottom: 2mm;
+    display: inline-block;
+}
+
+div.squad-members-appendix div.profile-card-appendix {
+    display: inline-block;
+    padding: 5mm;
+    position: relative;
+    width: 50mm;
+    padding-top: 0;
+    padding-bottom:0;
+}
+
+div.squad-members-appendix div.profile-card-appendix div.profile-card-appendix-primary {
+    display: inline-block;
+}
+
+div.squad-members-appendix div.profile-card-appendix div.profile-card-appendix-secondary {
+    display: inline-block;
+    position: absolute;
+    right: 5mm;
+}
+
+div.squad-members-appendix div.profile-card-appendix-category {
+    display: inline-block;
+    position: absolute;
+    top: 2mm;
+    left: 10mm;
+    font-size: 140%;
+}
+
+div.squad-members-appendix div:nth-child(1 of .profile-card-appendix-row) {
+    border-top: 0;
+}
+
+div.squad-members-appendix div.profile-card-appendix-row {
+    border-top: 1px solid #ddd;
+    padding-top: 10mm;
+    padding-bottom: 3mm;
+    display: inline-block;
+    font-size: 80%;
+    position: relative;
+    color: #222;
+    white-space: nowrap;
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+div.squad .potw-aspirants {
+}
+
+div.squad .potw-aspirants .potw-aspirants-unfulfilled-requirement {
+    font-size: 80%;
+}
+
+div.squad .potw-aspirants-list {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+div.squad .potw-aspirants-footer {
+    padding: 3mm;
+    font-size: 80%;
+}
+
+div.squad .potw-aspirants-list .potw-aspirant {
+    border-top: 1px solid #ddd;
+    padding: 3mm;
+    background-color: rgba(255, 255, 255, 0.3);
+    color: #222;
+    vertical-align: middle;
+}
+
+div.squad div:nth-child(1 of .potw-aspirant) {
+    border-top: 0;
+}
+
+div.squad .potw-aspirant-name {
+    display: inline-block;
+    width: 4cm;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    vertical-align: middle;
+}
+
+div.squad .potw-aspirants .avatar {
+    width: 2em;
+    height: 2em;
+    vertical-align: middle;
+}
+
+div.squad .potw-aspirant-progress {
+    display: inline-block;
+    width: 15cm;
+    vertical-align: middle;
+}
+
+div.squad .potw-aspirant-progress-bar-kills,
+div.squad .potw-aspirant-progress-bar-deaths {
+    display: inline-block;
+    font-size: 80%;
+    border: 1px solid #fff;
+    padding: 0.5mm;
+    padding-left: 1mm;
+}
+
+div.squad .potw-aspirant-progress-bar-kills {
+    background-color: #00d045;
+}
+
+div.squad .potw-aspirant-progress-bar-deaths {
+    background-color: #ff9999;
+    transform: translate(0px, -1px);
+}
+
+div.squad .potw-aspirant-conclusion {
+    display: inline-block;
+    vertical-align: middle;
+    padding-left: 2mm;
+    margin-left: 2mm;
+    border-left: 1px solid #ddd;
+    line-height: 2em;
+}
+
+div.squad .potw-aspirant-conclusion .badge {
+    width: 2em;
+    height: 2em;
+    filter: drop-shadow(0 0 1mm #444);
+}
+
+div.session {
+    padding: 10mm;
+    padding-bottom: 0mm;
+    padding-top: 5mm;
+    margin-bottom: 10mm;
+    position: relative;
+}
+
+div.session .session-background {
+    background: linear-gradient(#fff 25%, #eee 100%);
+    border-radius: 10mm;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 5cm;
+    z-index: -1;
+}
+
+div.session .session-content {
+    white-space: nowrap;
+}
+
+div.session .session-content .match {
+    position: relative;
+    margin-top: 2mm;
+}
+
+div.session .session-content .session-header {
+    font-family: serif;
+    font-size: 200%;
+    margin-bottom: 3mm;
+    display: inline-block;
+    vertical-align: top;
+}
+
+div.session .session-content .session-members {
+    display: inline-block;
+    vertical-align: top;
+    margin-left: 5mm;
+    font-size: 200%;
+}
+
+div.session .session-content .session-members img.avatar {
+    height: 1em;
+}
+
+div.session img.avatar {
+    box-shadow: 0 0 1mm #999;
+}
+
+div.session .session-member {
+    position: relative;
+    display: inline-block;
+}
+
+div.session .session-member .badge{
+    position: absolute;
+    height: 0.66em;
+    width: auto;
+    right: -0.2em;
+    bottom: -0.2em;
+    z-index: 10;
+    filter: drop-shadow(0 0 1mm #ccc);
+}
+
+div.session .match-map-name,
+div.session .match-date,
+div.session .match-result,
+div.session .match-scoreboard {
+    display: inline-block;
+}
+
+div.session .match-map {
+    width: 100mm;
+    position: absolute;
+    left: 0;
+    bottom: 2mm;
+    background-repeat: no-repeat;
+    background-size: cover;
+    top: 5mm;
+}
+
+div.session .match-map-name {
+    position: absolute;
+    left: 0;
+    bottom: 2mm;
+    color: white;
+    font-size: 250%;
+    background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.8));
+    width: 98mm;
+    padding-left: 2mm;
+    text-transform: capitalize;
+    font-family: serif;
+    font-style: italic;
+    opacity: 0.8;
+    filter: drop-shadow(0 0 3mm white);
+}
+
+div.session .match-date {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+div.session .match-result {
+    position: absolute;
+    left: 35mm;
+    bottom: 15mm;
+    width: 30mm;
+    height: 30mm;
+    border-radius: 30mm;
+    font-size: 250%;
+    color: white;
+    background-color: rgba(0,0,0,0.3);
+}
+
+div.session .match-result span {
+    width: 30mm;
+    height: 30mm;
+    text-align: center;
+    display: table-cell;
+    vertical-align: middle;
+    white-space: nowrap;
+    filter: drop-shadow(0 0 3mm white);
+}
+
+div.session .match-result.match-result-w {
+    color: #66ff66;
+}
+
+div.session .match-result.match-result-l {
+    color: #ff5544;
+}
+
+div.session .match-scoreboard-team1 {
+    margin-right: 5mm;
+    margin-left: 110mm;
+}
+
+div.session .match-scoreboard-team1,
+div.session .match-scoreboard-team2 {
+    vertical-align: top;
+    margin-top: -1mm;
+    margin-bottom: 1mm;
+}
+
+div.session .match-scoreboard table {
+    border-collapse: collapse;
+}
+
+div.session .match-scoreboard table tr:nth-of-type(1) td {
+    font-weight: bold;
+    border-bottom: 1px solid #000;
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 80%;
+}
+
+div.session .match-scoreboard table tr:nth-of-type(2) td {
+    font-weight: bold;
+}
+
+div.session .match-scoreboard table tr td .first-item {
+    width: 35mm;
+    display: inline-flex;
+    align-items: center;
+}
+
+div.session .match-scoreboard table tr td .player-name {
+    display: inline;
+    overflow: hidden;
+    flex-grow: 1;
+    vertical-align: middle;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-left: 1mm;
+}
+
+div.session .match-scoreboard table tr td .badge-list {
+    display: inline-block;
+    height: 0;
+    overflow: visible;
+    transform: translate(0px, -1.05em);
+    filter: drop-shadow(0 0 1mm #ccc);
+}
+
+div.session .match-scoreboard table tr td .badge {
+    width: auto;
+    height: 2em;
+    margin-left: -1.4em;
+}
+
+div.session .match-scoreboard table tr td:not(:nth-of-type(1)) {
+    text-align: center;
+}
+
+div.session .match-scoreboard table tr:nth-of-type(2n) {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+div.session .match-scoreboard table tr td img.avatar {
+    vertical-align: middle;
+    width: 8mm;
+    height: 8mm;
+}
+
+div.session .match-scoreboard table tr.match-scoreboard-user td:first-of-type .avatar {
+}
+
+div.session .match-scoreboard table tr td {
+    vertical-align: middle;
+    min-width: 7mm;
+    padding: 1mm;
+    white-space: nowrap;
+}
+
+div.session .match-scoreboard table tr td:first-of-type {
+    padding-left: 0;
+}
+
+div.session .match-scoreboard table tr td:last-of-type {
+    padding-right: 0;
+}
+
+div.session .match-scoreboard table tr td img.rank {
+    height: 8mm;
+}
+
+div.load-more {
+    cursor: pointer;
+    border-radius: 10mm;
+    height: 20mm;
+    background-color: #ddd;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #444;
+    font-size: 150%;
+}
+
+div.load-more:hover {
+    background-color: #ccc;
+}

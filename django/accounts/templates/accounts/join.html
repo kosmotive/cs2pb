@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load stats_extras %}
+
+{% block title %}Join{% endblock %}
+{% block nav_matches %}{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'accounts.css' %}?{% now "U" %}">
+
+<p>Howdy, <b>{{ invitation.steam_profile.name }}</b>.</p>
+
+<p>You have been invited to join <b>{{ invitation.squad.name }}</b>.
+
+<p>To sign you up, we will require your <b>Match History Authentication Code</b> from Steam (<a href="#steam_auth_info">info</a>).</p>
+
+<form method="post" >
+    {% csrf_token %}
+
+    {{ form.non_field_errors }}
+
+    {% for hidden_field in form.hidden_fields %}
+
+        {{ hidden_field.errors }}
+        {{ hidden_field }}
+
+    {% endfor %}
+
+    <table>
+
+        {% for field in form.visible_fields %}
+
+            <tr>
+                <th>{{ field.label_tag }}</th>
+                <td>
+                    {{ field }}
+                    {% if form.ok|get_value:field.name %}<div class="field-validation-ok field-validation-{{ field.name }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-patch-check-fill" viewBox="0 0 16 16">
+                            <path fill="#0c0" d="M10.067.87a2.89 2.89 0 0 0-4.134 0l-.622.638-.89-.011a2.89 2.89 0 0 0-2.924 2.924l.01.89-.636.622a2.89 2.89 0 0 0 0 4.134l.637.622-.011.89a2.89 2.89 0 0 0 2.924 2.924l.89-.01.622.636a2.89 2.89 0 0 0 4.134 0l.622-.637.89.011a2.89 2.89 0 0 0 2.924-2.924l-.01-.89.636-.622a2.89 2.89 0 0 0 0-4.134l-.637-.622.011-.89a2.89 2.89 0 0 0-2.924-2.924l-.89.01-.622-.636zm.287 5.984-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7 8.793l2.646-2.647a.5.5 0 0 1 .708.708z"/>
+                        </svg>
+                    </div>{% endif %}
+                    {{ field.errors }}
+                    {{ field.help_text }}
+                </td>
+            </tr>
+
+        {% endfor %}
+
+        <tr>
+            <th></th>
+            <td><button type="submit">Submit</button></td>
+        </tr>
+
+    </table>
+
+</form>
+
+<div id="steam-auth-info">
+
+    <h1><a name="steam_auth_info"></a>How to get your Match History Authentication Code</h1>
+    
+    <p><b>Step 1.</b> Navigate to <a href="https://steamcommunity.com" target="_blank">https://steamcommunity.com</a>.</p>
+    
+    <p><b>Step 2.</b> Bring up your Steam profile by clicking on your avatar at the top right corner of the page.</p>
+    
+    <p><b>Step 3.</b> On the right side of the page, click on "Games". This should bring up a list of the games you have played:</p>
+    
+    <p><img src="{% static 'join-steam-games.jpg' %}" width="800"></p>
+    
+    <p><b>Step 4.</b> Find "Counter-Strike: Global Offensive" and click on "Personal Game Data" as shown above.</p>
+    
+    <p><b>Step 5.</b> Finally, navigate to "Authentication Codes" and issue a code for "Access to Your Match History" if you haven't already.</p>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load stats_extras %}
+
+{% block title %}Invite{% endblock %}
+{% block nav_matches %}{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'invite.css' %}?{% now "U" %}">
+
+<p>Send this link to <b>{{ invitation.steam_profile.name }}</b> to invite him/her to <b>{{ invitation.squad.name }}</b>:</p>
+
+<p><a href="{{ invite_url }}" class="invite-link">{{ invite_url }}</a></p>
+
+{% endblock %}

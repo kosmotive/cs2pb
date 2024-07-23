@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load stats_extras %}
+
+{% block title %}Squads{% endblock %}
+{% block nav_squads %}active{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'stats.css' %}?{% now "U" %}">
+
+{% for squad in squads %}
+
+    <div class="squad">
+
+        <div class="squad-background"></div>
+    
+        <div class="squad-name"> {{ squad.name }} </div>
+
+        <div class="squad-sharelink">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-up-right" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" fill="#aaa" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/>
+                <path fill-rule="evenodd" fill="#aaa" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/>
+            </svg>
+            <a href="{{ squad.share_link }}">Share</a>
+        </div>
+
+        <div class="squad-members autoscale fixed-margin-top">{% for member in squad.members %}
+    
+            {% include 'stats/profile-card.html' with player=member request=request expand_url=squad.expand_url %}
+    
+        {% endfor %}</div>
+
+        <div class="squad-members-appendix">
+
+            <div class="legend">
+
+                <div class="legend-item">
+                    <div style="background-image: url('{% static 'badges' %}/potw-1.png');" class="badge"></div>
+                    <div class="legend-item-label">Player of the Week 1<span class="sup">st</span> Class</div>
+                    <div class="legend-item-description">Achieve the first place in the weekly challenge.</div>
+                </div>
+
+                <div class="legend-item">
+                    <div style="background-image: url('{% static 'badges' %}/potw-2.png');" class="badge"></div>
+                    <div class="legend-item-label">Player of the Week 2<span class="sup">nd</span> Class</div>
+                    <div class="legend-item-description">Achieve the second place in the weekly challenge.</div>
+                </div>
+
+                <div class="legend-item">
+                    <div style="background-image: url('{% static 'badges' %}/potw-3.png');" class="badge"></div>
+                    <div class="legend-item-label">Player of the Week 3<span class="sup">rd</span> Class</div>
+                    <div class="legend-item-description">Achieve the third place in the weekly challenge.</div>
+                </div>
+
+                <div class="legend-item">
+                    <div style="background-image: url('{% static 'badges' %}/surpass-yourself.png');" class="badge"></div>
+                    <div class="legend-item-label">Surpass-yourself-Performance</div>
+                    <div class="legend-item-description">Significantly outperform your own average performance in a match.</div>
+                </div>
+
+                <div class="legend-item">
+                    <div style="background-image: url('{% static 'badges' %}/rising-star.png');" class="badge"></div>
+                    <div class="legend-item-label">Rising Star</div>
+                    <div class="legend-item-description">End a gaming session as the player with the best positive performance trend.</div>
+                </div>
+
+        </div>
+
+        <div class="squad-members-appendix"><div class="autoscale">
+
+            {% if squad.top_ct_hold_maps %}
+            <div class="squad-members-appendix-header">Best hold positions as CT</div><br>
+
+                {% for map_name in squad.top_ct_hold_maps %}
+                <div class="profile-card-appendix-row">
+
+                    {% for area in squad.top_ct_hold_areas|get_value:map_name %}
+
+                        <div class="profile-card-appendix">
+
+                            {% if area and area.kd_rel != None %}
+                        
+                                <div class="profile-card-appendix-primary"><b>{{ area.area_name }}</b></div>
+                                <div class="profile-card-appendix-secondary">
+                                    K/D {{ area.kd_rel|multiply:100|stringformat:"+.0f" }}%
+                                </div>
+
+                            {% else %}
+
+                                <div class="profile-card-appendix-primary">&ndash;</div>
+
+                            {% endif %}
+
+                        </div>
+    
+                    {% endfor %}
+
+                    <div class="profile-card-appendix-category">{{ map_name }}</div>
+
+                </div><br>
+                {% endfor %}
+
+            {% endif %}
+
+        </div></div>
+
+
+        <div class="squad-members-appendix"><div class="autoscale">
+
+            {% if squad.top_t_push_maps %}
+            <div class="squad-members-appendix-header">Best push options as T</div><br>
+
+                {% for map_name in squad.top_t_push_maps %}
+                <div class="profile-card-appendix-row">
+
+                    {% for area in squad.top_t_push_areas|get_value:map_name %}
+
+                        <div class="profile-card-appendix">
+
+                            {% if area and area.kd_rel != None %}
+                        
+                                <div class="profile-card-appendix-primary"><b>{{ area.area_name }}</b></div>
+                                <div class="profile-card-appendix-secondary">
+                                    K/D {{ area.kd_rel|multiply:100|stringformat:"+.0f" }}%
+                                </div>
+
+                            {% else %}
+
+                                <div class="profile-card-appendix-primary">&ndash;</div>
+
+                            {% endif %}
+
+                        </div>
+    
+                    {% endfor %}
+
+                    <div class="profile-card-appendix-category">{{ map_name }}</div>
+
+                </div><br>
+                {% endfor %}
+
+            {% endif %}
+
+        </div></div>
+
+        {% if squad.upcoming_player_of_the_week %}
+        <div class="squad-members-appendix"><div class="autoscale">
+
+            <div class="squad-members-appendix-header">Aspirants for the Player of the Week Badge {{ squad.upcoming_player_of_the_week.week }}/{{ squad.upcoming_player_of_the_week.year }}</div><br>
+
+            <div class="potw-aspirants">
+
+                {% if squad.upcoming_player_of_the_week.unfulfilled_requirement %}
+
+                    <div class="potw-aspirants-unfulfilled-requirement">{{ squad.upcoming_player_of_the_week.unfulfilled_requirement }}</div>
+
+                {% else %}
+
+                    <div class="potw-aspirants-list">
+                    {% for player_data in squad.upcoming_player_of_the_week.leaderboard %}
+
+                        <div class="potw-aspirant">
+
+                            <div class="potw-aspirant-name">
+                                <img src="{{ player_data.player.avatar_s }}" class="avatar">
+                                {{ player_data.player.name }}
+                            </div>
+
+                            <div class="potw-aspirant-progress">
+
+                                <div class="potw-aspirant-progress-bar-kills" style="width: {{ player_data.kills_rel|multiply:100 }}%;">
+                                    {{ player_data.kills }} kills
+                                </div><br>
+                                <div class="potw-aspirant-progress-bar-deaths" style="width: {{ player_data.deaths_rel|multiply:100 }}%;">
+                                    {{ player_data.deaths }} deaths
+                                </div>
+
+                            </div>
+
+                            <div class="potw-aspirant-conclusion">
+
+                                {% if player_data.unfulfilled_requirement %}
+
+                                    {{ player_data.unfulfilled_requirement }}
+
+                                {% elif player_data.place_candidate %}
+
+                                    <img src="{% static 'badges' %}/potw-{{ player_data.place_candidate }}.png" class="badge">
+
+                                {% endif %}
+
+                            </div>
+
+                        </div>
+
+                    {% endfor %}
+                    </div>
+
+                    <div class="potw-aspirants-footer">Badges will be awarded: {{ squad.upcoming_player_of_the_week.competition_end }}</div>
+
+                {% endif %}
+
+            </div>
+
+        </div></div>
+        {% endif %}
+    
+    </div>
+
+{% endfor %}
+
+{% endblock %}

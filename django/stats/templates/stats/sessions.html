@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Matches{% endblock %}
+{% block nav_matches %}active{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'stats.css' %}?{% now "U" %}">
+
+<script language="javascript">
+function request(last_timestamp, handler) {
+    const url = "{% if request.user.steam_profile %}{% url 'matches' %}{% else %}{% url 'matches' squad=squad %}{% endif %}/" + last_timestamp;
+    xmlhttp = new XMLHttpRequest();
+    xmlhttp.open('GET', url, true);
+    xmlhttp.onreadystatechange = function() {
+        if (xmlhttp.readyState == 4) {
+            handler(xmlhttp.responseText);
+        }
+    };
+    xmlhttp.send();
+}
+
+function load_more(button, last_timestamp) {
+    button.style.cursor = 'wait';
+    dom = request(last_timestamp, function(text) {
+        const parser = new DOMParser();
+        const dom = parser.parseFromString(text, 'text/html');
+        button.replaceWith(...dom.body.children);
+    });
+}
+</script>
+
+{% include 'stats/sessions-list.html' with sessions=sessions last_timestamp=last_timestamp %}
+
+{% endblock %}

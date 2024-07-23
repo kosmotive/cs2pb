@@ -1,0 +1,6 @@
+{
+    "enabled": true,
+    "token": "",
+    "base_url": "http://127.0.0.1:8000",
+    "ticks_per_minute": 10
+}

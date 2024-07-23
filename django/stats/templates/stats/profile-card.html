@@ -1,0 +1,89 @@
+{% load static %}
+
+<div class="profile-card">
+
+    <img src="{{ player.profile.avatar_l }}" class="avatar-l avatar">
+
+    <div class="profile-name">{{ player.profile.name }}</div>
+
+    <div class="profile-stats">{% for stat in player.stats %}
+
+        <div class="profile-stat profile-stat-order{{ stat.order }}" }}">
+            <div class="profile-stat-name">{{ stat.name }}</div>
+
+            {% if stat.value is None %}
+
+                <div class="profile-stat-placeholder">
+                    n/a insufficient data
+                </div>
+
+            {% else %}
+
+                <div class="profile-stat-bar">
+                    <div class="profile-stat-bar-outer">
+                        <div class="profile-stat-bar-inner" style="width: {{ stat.load }}%;">&nbsp;</div>
+                        {% if stat.trend_rel > 0 %}
+                            <div class="profile-stat-bar-trend-up"><svg viewBox="0 0 1 1">
+                                <path d="M 0,0 L 0,1 L 1,0.5 Z" fill="#000"/>
+                            </svg></div>
+                        {% elif stat.trend_rel < 0 %}
+                            <div class="profile-stat-bar-trend-down"><svg viewBox="0 0 1 1">
+                                <path d="M 1,0 L 1,1 L 0,0.5 Z" fill="#000"/>
+                            </svg></div>
+                        {% endif %}
+                    </div>
+                    <div class="profile-stat-bar-value">
+                        {{ stat.label }}
+                    </div>
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    {% endfor %}</div>
+
+    <div class="badge-list">{% if player.badges %}{% for badge in player.badges %}
+
+        <div style="background-image: url('{% static 'badges' %}/{{ badge.slug }}.png'); background-size: contain;" class="badge">
+            <span class="badge-count">{{ badge.count }}</span>
+        </div>
+
+    {% endfor %}{% else %}
+
+        <div class="badge"></div>
+
+    {% endif %}</div>
+
+    {% if expand_url %}
+
+        <div class="expand-profile-button"><a href="{{ expand_url }}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-caret-down-square-fill" viewBox="0 0 16 16">
+                <path fill="#aaa" d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm4 4a.5.5 0 0 0-.374.832l4 4.5a.5.5 0 0 0 .748 0l4-4.5A.5.5 0 0 0 12 6H4z"/>
+            </svg>
+        </a></div>
+
+    {% endif %}
+
+    <div class="profile-hint-container">
+
+        {% if not player.profile.account %}
+
+            <div class="profile-hint">
+                [<a href="{% url 'csv' player.profile.steamid %}" target="_blank">csv</a>, <a href="{% url 'notebook' player.profile.steamid %}" target="_blank">ipynb</a>]
+                Data might be incomplete since player has not joined yet.
+                {% if request.user.steam_profile and player.invite_url %}<a href="{{ player.invite_url }}">Invite?</a>{% endif %}
+            </div>
+
+        {% elif player.profile.account.last_completed_update %}
+
+            <div class="profile-hint">
+                Last updated: {{ player.profile.account.last_completed_update.completed_datetime }}
+                [<a href="{% url 'csv' player.profile.steamid %}" target="_blank">csv</a>, <a href="{% url 'notebook' player.profile.steamid %}" target="_blank">ipynb</a>]
+            </div>
+
+        {% endif %}
+
+    </div>
+
+</div>

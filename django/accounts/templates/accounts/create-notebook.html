@@ -1,0 +1,116 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load stats_extras %}
+
+{% block content %}
+
+<script language="javascript">
+
+const openRequest = indexedDB.open('JupyterLite Storage', 5);
+
+openRequest.onupgradeneeded = function() {
+    const db = openRequest.result;
+    if (!db.objectStoreNames.contains('files')) {
+        db.createObjectStore('files');
+    }
+};
+
+openRequest.onerror = function() {
+    console.error(openRequest.error);
+};
+
+openRequest.onsuccess = function() {
+    const db = openRequest.result;
+    const tr = db.transaction('files', 'readwrite');
+    const files = tr.objectStore('files');
+    const filesRequest = files.getAll();
+    filesRequest.onsuccess = function() {
+        let index = 1;
+        let filename = '{{ player.steamid }}.ipynb';
+        while(true) {
+            if(filesRequest.result.filter(
+                        function(file) {
+                            return file.name == filename;
+                        }
+                    ).length > 0) {
+                filename = '{{ player.steamid }}-' + (++index) + '.ipynb';
+            } else {
+                break;
+            }
+        }
+        const now = new Date().toISOString();
+        const file = {
+            "name": filename,
+            "path": filename,
+            "last_modified": now,
+            "created": now,
+            "format": "json",
+            "mimetype": "application/json",
+            "content": {
+                "metadata": {
+                    "language_info": {
+                        "codemirror_mode": {
+                            "name": "python",
+                            "version": 3
+                        },
+                        "file_extension": ".py",
+                        "mimetype": "text/x-python",
+                        "name": "python",
+                        "nbconvert_exporter": "python",
+                        "pygments_lexer": "ipython3",
+                        "version": "3.8"
+                    },
+                    "kernelspec": {
+                        "name": "python",
+                        "display_name": "Python (Pyodide)",
+                        "language": "python"
+                    }
+                },
+                "nbformat_minor": 4,
+                "nbformat": 4,
+                "cells": [
+                    {
+                        "cell_type": "markdown",
+                        "source": "**Steam ID:** {{ player.steamid }}\n\n" + "**Name:** {{ player.name }}\n\n" + "**Version:** " + new Date().toLocaleString() + "\n\n---",
+                        "metadata": {},
+                        "execution_count":null,
+                        "outputs": []
+                    },
+                    {
+                        "cell_type": "code",
+                        "source": "import numpy as np\n" + "import matplotlib.pyplot as plt\n" + "import pandas as pd\n" + "import pyodide\n" + "import time",
+                        "metadata": {},
+                        "execution_count":null,
+                        "outputs": []
+                    },
+                    {
+                        "cell_type": "code",
+                        "source": "%matplotlib inline",
+                        "metadata": {},
+                        "execution_count":null,
+                        "outputs": []
+                    },
+                    {
+                        "cell_type": "code",
+                        "source": "df = pd.read_csv(pyodide.http.open_url(f'{{ csv_url }}?time={time.time()}'), delimiter=';')\n" + "df",
+                        "metadata": {},
+                        "execution_count":null,
+                        "outputs": []
+                    }
+                ]
+            },
+            "size": 0,
+            "writable": true,
+            "type": "notebook"
+        };
+        files.put(file, filename);
+
+        window.location.replace('{% static 'jupyterlite/lab' %}?path=' + filename);
+    };
+};
+
+</script>
+
+Your notebook is being prepared, stay patient...
+
+{% endblock %}

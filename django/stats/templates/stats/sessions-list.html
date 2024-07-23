@@ -1,0 +1,98 @@
+{% load static %}
+{% load stats_extras %}
+
+{% for session in sessions %}
+<div class="session">
+
+    <div class="session-background"></div>
+
+    <div class="session-container autoscale"><div class="session-content">
+
+        <div class="session-header">
+            <b>Session:</b> {{ session.started_weekday }}, {{ session.started_date }}, {{ session.started_time }} &ndash; {{ session.ended_time }}
+        </div>
+
+        <div class="session-members">
+        {% for player in session.participated_squad_members %}
+
+            <div class="session-member {% if player.steamid == session.rising_star.pk %}rising-star{% endif %}">
+                <img src="{{ player.avatar_s }}" class="avatar">
+
+                {% if player.steamid == session.rising_star.pk %}
+
+                    <img src="{% static 'badges' %}/rising-star.png" class="badge">
+
+                {% endif %}
+
+            </div>
+
+        {% endfor %}
+        </div>
+
+        {% for m in session.matches_list %}
+        <div class="match">
+    
+            <div style="background-image: url('{% static 'maps/'|add:m.map_name|add:'.jpg' %}')" class="match-map"></div>
+
+            <div class="match-map-name">{{ m.map_name|map_name }}</div>
+
+            <div class="match-date">{{ m.time }} &ndash; {{ m.time_end }}</div>
+
+            <div class="match-result match-result-{{ m.result }}"><span>
+                <b>{{ m.score_team1 }}</b>:<b>{{ m.score_team2 }}</b>
+            </span></div>
+
+            {% for team_idx in "12" %}
+
+                <div class="match-scoreboard match-scoreboard-team{{ team_idx }}"><table>
+                    <tr><td colspan="8">Team {{ team_idx }}</td></tr>
+                    <tr>
+                        <td>Player</td>
+                        <td>K</td>
+                        <td>D</td>
+                        <td>A</td>
+                        <td>ADR</td>
+                        <td>&starf;</td>
+                        <td>HS</td>
+                    </tr>
+
+                    {% for mp in m.matchparticipation_set.all %}{% if mp.team == team_idx|add:"0" %}
+
+                    <tr>
+                        <td>
+                            <div class="first-item">
+                                <img src="{{ mp.player.avatar_s }}" class="avatar">
+                                <div class="player-name">{{ mp.player.name }}</div>
+                                <div class="badge-list">{% for badge in mp.badges.all reversed %}
+                                    <img src="{% static 'badges' %}/{{ badge.badge_type.slug }}.png" class="badge">
+                                {% endfor %}</div>
+                            </div>
+                        </td>
+                        <td>{{ mp.kills }}</td>
+                        <td>{{ mp.deaths }}</td>
+                        <td>{{ mp.assists }}</td>
+                        <td>{{ mp.adr|floatformat }}</td>
+                        <td>{{ mp.mvps }}</td>
+                        <td>{{ mp.headshots|divide:mp.kills|stringformat:".1f" }}</td>
+                    </tr>
+
+                    {% endif %}{% endfor %}
+
+                </table></div>
+
+            {% endfor %}
+
+        </div>
+        {% endfor %}
+
+    </div></div>
+
+</div>
+{% endfor %}
+
+{% if last_timestamp %}
+
+    <div class="load-more" onclick="load_more(this, {{ last_timestamp }});">Load more</div>
+
+{% endif %}
+

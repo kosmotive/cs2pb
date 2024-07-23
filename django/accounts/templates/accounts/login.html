@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'login.css' %}?{% now "U" %}">
+
+<h1>Login</h1>
+
+<p>Please enter <em>either</em> your Email address <em>or</em> your Steam ID for authentication.</p>
+
+<form method="post" >
+    {% csrf_token %}
+
+    {{ form.non_field_errors }}
+
+    {% for hidden_field in form.hidden_fields %}
+
+        {{ hidden_field.errors }}
+        {{ hidden_field }}
+
+    {% endfor %}
+
+    <table>
+
+        {% for field in form.visible_fields %}
+
+            <tr>
+                <th>{{ field.label_tag }}</th>
+                <td>
+                    {{ field }}
+                    {{ field.errors }}
+                    {{ field.help_text }}
+                </td>
+            </tr>
+
+        {% endfor %}
+
+        <tr>
+            <th></th>
+            <td><button type="submit">Submit</button></td>
+        </tr>
+
+    </table>
+
+</form>
+
+{% endblock %}
