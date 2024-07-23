@@ -22,7 +22,7 @@ pip install -r requirements.txt
 
 Set up the environment variables listed below!
 
-Bootstrap CS2PB:
+Then, bootstrap CS2PB:
 ```
 sh bootstrap.sh
 ```
