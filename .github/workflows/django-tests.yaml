@@ -30,3 +30,6 @@ jobs:
     - name: Run test-suite
       working-directory: ./django
       run: python manage.py test
+      env:
+        CS2PB_ADMIN_MAIL_ADDRESS: ${{ CS2PB_ADMIN_MAIL_ADDRESS }}
+        CS2PB_STEAM_API_KEY: ${{ CS2PB_STEAM_API_KEY }}
