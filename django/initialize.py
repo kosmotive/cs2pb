@@ -36,7 +36,7 @@ if squadname is None: squadname = input('Name of the initial squad of the superu
 extra_steamid_list = '[' + ', '.join((f"'{steamid}'" for steamid in args.extra_steamid)) + ']'
 
 from getpass import getpass
-password = getpass('Password: ')
+password = getpass('Superuser password: ')
 
 import subprocess, sys
 subprocess.run(['python', 'manage.py', 'shell', '-c', f'''
