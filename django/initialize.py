@@ -54,7 +54,7 @@ users = [Account.objects.create_superuser('{steamid}', '{password}', **kwargs).s
 for steamid in {extra_steamid_list}:
     users.append(SteamProfile.objects.create(steamid=steamid))
 
-squad = Squad.objects.create(name='{discord_id}', discord_channel_id='{discord_channel}')
+squad = Squad.objects.create(name='{discord}', discord_channel_id='{discord_channel}')
 for member in users:
     squad.members.add(member)
 squad.save()
