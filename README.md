@@ -22,13 +22,11 @@ pip install -r requirements.txt
 
 Set up the environment variables listed below!
 
-Bootstrap CS2PB:
+Then, bootstrap CS2PB:
 ```
 sh bootstrap.sh
 ```
-Note that this requires access to the private repository `kodikit/cs2pb-bootstrap`, which you might not have access to.
-
-If you don't have access to that repository, you will have to bootstrap manually:
+Note that this requires access to the private repository [kodikit/cs2pb-bootstrap](https://github.com/kodikit/cs2pb-bootstrap), which you might not have access to. If you don't have access to that repository, you will have to bootstrap manually:
 ```
 cd django
 python manage.py migrate
