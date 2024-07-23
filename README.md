@@ -28,7 +28,7 @@ sh bootstrap.sh
 ```
 Note that this requires access to the private repository `kodikit/cs2pb-bootstrap`, which you might not have access to.
 
-If you don't have access to that repository, you will have to bootstrap manually. To do that, create the file `discord/discordbot/settings.json` (see `discord/discordbot/settings.json.skeleton` for an example), and then run:
+If you don't have access to that repository, you will have to bootstrap manually. To do that, create the file `django/discordbot/settings.json` (see `django/discordbot/settings.json.skeleton` for an example), and then run:
 ```
 cd django
 python manage.py migrate
