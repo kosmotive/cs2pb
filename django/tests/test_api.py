@@ -2,6 +2,7 @@ from types import SimpleNamespace
 import unittest
 
 import api
+from tests import testsuite
 
 
 class fetch_match_details(unittest.TestCase):
@@ -10,7 +11,7 @@ class fetch_match_details(unittest.TestCase):
         pmatch = {
             'sharecode': 'CSGO-a622L-DjJDC-5zwn4-Gx2tf-YYmQD',
             'timestamp': 1720469310,
-            'summary': SimpleNamespace(map = 'tests/data/demos/003694683536926703955_1352610665.dem.bz2'),
+            'summary': SimpleNamespace(map = testsuite.get_demo_path('003694683536926703955_1352610665')),
             'steam_ids': [
                 76561197967680028,
                 76561197961345487,

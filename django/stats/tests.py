@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from django.test import TestCase
 
 from stats.models import Match, MatchBadge, KillEvent
+from tests import testsuite
 
 
 class Match__create_from_data(TestCase):
@@ -12,7 +13,7 @@ class Match__create_from_data(TestCase):
             'sharecode': 'CSGO-a622L-DjJDC-5zwn4-Gx2tf-YYmQD',
             'timestamp': 1720469310,
             'summary': SimpleNamespace(
-                map = 'tests/data/demos/003694683536926703955_1352610665.dem.bz2',
+                map = testsuite.get_demo_path('003694683536926703955_1352610665'),
                 team_scores = (4, 13),
                 match_duration = 1653,
                 enemy_kills = [
