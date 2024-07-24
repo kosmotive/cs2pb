@@ -132,6 +132,7 @@ class Account(AbstractUser):
 
     @property
     def sharecode(self):
+        # FIXME: `find_oldest_sharecode` should be the sharecode of a match, where this user participated, and not just any
         return self.steam_profile.find_oldest_sharecode() if len(self.last_sharecode) == 0 else self.last_sharecode
 
     @property
