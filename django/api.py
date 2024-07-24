@@ -43,12 +43,18 @@ def fetch_match_details(pmatch):
     pmatch['map'] = demo.header['map_name']
     pmatch['kills'] = demo.kills
 
+    def get_damage(steam_id):
+        try:
+            return int(dmg_df.at[str(steam_id), 'dmg'])
+        except KeyError:
+            return 0
+
     dmg_df = awpy_fork.stats.dmg(demo)
-    pmatch['dmg'] = {str(steam_id): int(dmg_df.at[str(steam_id), 'dmg']) for steam_id in pmatch['steam_ids']}
+    pmatch['dmg'] = {str(steam_id): get_damage(steam_id) for steam_id in pmatch['steam_ids']}
 
     # We avoid using `awpy.stats.adr` because this requires `ticks=True` for Demo parsing
     num_rounds = sum(pmatch['summary'].team_scores)
-    pmatch['adr'] = {str(steam_id): int(dmg_df.at[str(steam_id), 'dmg']) / num_rounds for steam_id in pmatch['steam_ids']}
+    pmatch['adr'] = {str(steam_id): get_damage(steam_id) / num_rounds for steam_id in pmatch['steam_ids']}
 
     # FIXME: should be possible to do this similarly, see https://github.com/pnxenopoulos/awpy/blob/6748bb6e4a7015b4b29eb35fb75ac78dc0cd8b04/awpy/stats/rating.py#L77
     #hltv_df = awpy.stats.rating(demo)
