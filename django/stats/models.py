@@ -222,7 +222,7 @@ class Match(models.Model):
                 players.append(steam_profile)
 
                 mp = MatchParticipation(player = steam_profile, pmatch = m)
-                mp.position  =     pos  % 5
+                mp.position  =     pos  % 5 # this is the CSGO scoreboard position (corresponds to the score), in CS2 it is not used
                 mp.team      = 1 + pos // 5
                 mp.result    = get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
                 mp.kills     = kills
@@ -323,7 +323,7 @@ class MatchParticipation(models.Model):
                 fields=['pmatch', 'team', 'position'], name='unique_pmatch_team_position',
             ),
         ]
-        ordering = ['position']
+        ordering = ['-adr'] # in CSGO, this was `position` (corresponding to the score), but in CS2 the ordering is determiend by the ADR
 
     @property
     def kd(self):
