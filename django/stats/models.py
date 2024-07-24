@@ -222,7 +222,7 @@ class Match(models.Model):
                 players.append(steam_profile)
 
                 mp = MatchParticipation(player = steam_profile, pmatch = m)
-                mp.position  =     pos  % 5
+                mp.position  =     pos  % 5 # this is the CSGO scoreboard position (corresponds to the score), in CS2 it is not used
                 mp.team      = 1 + pos // 5
                 mp.result    = get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
                 mp.kills     = kills
@@ -232,8 +232,6 @@ class Match(models.Model):
                 mp.mvps      = mvps
                 mp.headshots = headshots
                 mp.adr       = float(data[ 'adr'][str(steam_profile.steamid)] or 0)
-                mp.kast      = float(data['kast'][str(steam_profile.steamid)] or 0)
-                mp.hltv      = float(data['hltv'][str(steam_profile.steamid)] or 0)
                 mp.save()
 
             for kill_data in data['kills'].to_dict(orient='records'):
@@ -308,15 +306,13 @@ class MatchParticipation(models.Model):
     team     = models.PositiveSmallIntegerField() # team 1 or team 2
     result   = models.CharField(blank=False, max_length=1) # (t) tie, (w) win, (l) loss
 
-    kills        = models.PositiveSmallIntegerField() # enemy kills
-    assists      = models.PositiveSmallIntegerField()
-    deaths       = models.PositiveSmallIntegerField()
-    score        = models.PositiveSmallIntegerField()
-    mvps         = models.PositiveSmallIntegerField()
-    headshots    = models.PositiveSmallIntegerField() # enemy headshots
-    adr          = models.FloatField()                # average damage per round
-    kast         = models.FloatField()                # kill assist survival trade, https://awpy.readthedocs.io/en/latest/stats.html#awpy.stats.kast
-    hltv         = models.FloatField()                # rating similar to hltv, https://awpy.readthedocs.io/en/latest/stats.html#awpy.stats.rating
+    kills     = models.PositiveSmallIntegerField() # enemy kills
+    assists   = models.PositiveSmallIntegerField()
+    deaths    = models.PositiveSmallIntegerField()
+    score     = models.PositiveSmallIntegerField()
+    mvps      = models.PositiveSmallIntegerField()
+    headshots = models.PositiveSmallIntegerField() # enemy headshots
+    adr       = models.FloatField()                # average damage per round
 
     class Meta:
         constraints = [
@@ -327,7 +323,7 @@ class MatchParticipation(models.Model):
                 fields=['pmatch', 'team', 'position'], name='unique_pmatch_team_position',
             ),
         ]
-        ordering = ['position']
+        ordering = ['-adr'] # in CSGO, this was `position` (corresponding to the score), but in CS2 the ordering is determiend by the ADR
 
     @property
     def kd(self):

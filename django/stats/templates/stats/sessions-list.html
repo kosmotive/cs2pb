@@ -71,7 +71,7 @@
                         <td>{{ mp.kills }}</td>
                         <td>{{ mp.deaths }}</td>
                         <td>{{ mp.assists }}</td>
-                        <td>{{ mp.adr|floatformat }}</td>
+                        <td>{{ mp.adr|floatformat:1 }}</td>
                         <td>{{ mp.mvps }}</td>
                         <td>{{ mp.headshots|divide:mp.kills|stringformat:".1f" }}</td>
                     </tr>

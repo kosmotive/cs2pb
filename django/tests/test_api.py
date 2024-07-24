@@ -11,7 +11,10 @@ class fetch_match_details(unittest.TestCase):
         pmatch = {
             'sharecode': 'CSGO-a622L-DjJDC-5zwn4-Gx2tf-YYmQD',
             'timestamp': 1720469310,
-            'summary': SimpleNamespace(map = testsuite.get_demo_path('003694683536926703955_1352610665')),
+            'summary': SimpleNamespace(
+                map = testsuite.get_demo_path('003694683536926703955_1352610665'),
+                team_scores = (4, 13),
+            ),
             'steam_ids': [
                 76561197967680028,
                 76561197961345487,
