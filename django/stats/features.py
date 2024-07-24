@@ -145,7 +145,6 @@ class Features:
     ti   = TeamImpact()
     pe   = ParticipationEffect()
     adr  = ExpressionFeature(F_float('adr'), 'Damage per round', 'The damage per round, averaged over all matches.', format='{:.1f}')
-    kast = ExpressionFeature(F_float('kast'), 'KAST performance', 'Rounds in which the player either had a kill, assist, survived, or was traded.', format='{:.1f}')
     hltv = ExpressionFeature(F_float('hltv'), 'HLTV rating', 'Performance in relation to the statistical means.', format='{:.1f}')
     pv   = ExpressionFeature(Sqrt((F_float('kills') / F_float('deaths')) * (F_float('adr') / Value(100))), 'Player value', 'Geometric mean of kills per death ration and the average damage per round (divided by 100).')
 
