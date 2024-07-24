@@ -140,16 +140,16 @@ class ParticipationEffect(Feature):
 
 class Features:
 
-    kd   = ExpressionFeature(F_float('kills') / F_float('deaths'), 'Kills per death', 'The kills/death ratio, averaged over all matches.')
-    ad   = ExpressionFeature(F_float('assists') / F_float('deaths'), 'Assists per death', 'The assists/death ratio, averaged over all matches.')
-    ti   = TeamImpact()
-    pe   = ParticipationEffect()
-    adr  = ExpressionFeature(F_float('adr'), 'Damage per round', 'The damage per round, averaged over all matches.', format='{:.1f}')
-    hltv = ExpressionFeature(F_float('hltv'), 'HLTV rating', 'Performance in relation to the statistical means.', format='{:.1f}')
-    pv   = ExpressionFeature(Sqrt((F_float('kills') / F_float('deaths')) * (F_float('adr') / Value(100))), 'Player value', 'Geometric mean of kills per death ration and the average damage per round (divided by 100).')
+    kd  = ExpressionFeature(F_float('kills') / F_float('deaths'), 'Kills per death', 'The kills/death ratio, averaged over all matches.')
+    ad  = ExpressionFeature(F_float('assists') / F_float('deaths'), 'Assists per death', 'The assists/death ratio, averaged over all matches.')
+    ti  = TeamImpact()
+    pe  = ParticipationEffect()
+    adr = ExpressionFeature(F_float('adr'), 'Damage per round', 'The damage per round, averaged over all matches.', format='{:.1f}')
+    pv  = ExpressionFeature(Sqrt((F_float('kills') / F_float('deaths')) * (F_float('adr') / Value(100))), 'Player value', 'Geometric mean of kills per death ration and the average damage per round (divided by 100).')
+    acc = ExpressionFeature(F_float('headshots'), 'Accuracy', 'The headshot rate.', format='{:.1f}')
 
     ALL  = [] # will be filled automatically
-    MANY = [pv, pe, adr, kd]
+    MANY = [pv, pe, acc, adr, kd]
 
 
 for attr_name in dir(Features):

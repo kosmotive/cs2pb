@@ -56,10 +56,6 @@ def fetch_match_details(pmatch):
     num_rounds = sum(pmatch['summary'].team_scores)
     pmatch['adr'] = {str(steam_id): get_damage(steam_id) / num_rounds for steam_id in pmatch['steam_ids']}
 
-    # FIXME: should be possible to do this similarly, see https://github.com/pnxenopoulos/awpy/blob/6748bb6e4a7015b4b29eb35fb75ac78dc0cd8b04/awpy/stats/rating.py#L77
-    #hltv_df = awpy.stats.rating(demo)
-    #pmatch['hltv'] = {str(steam_id): _get_player_stat(hltv_df, 'rating', steam_id) for steam_id in pmatch['steam_ids']}
-
 
 class API:
 

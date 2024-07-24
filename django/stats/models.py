@@ -232,7 +232,6 @@ class Match(models.Model):
                 mp.mvps      = mvps
                 mp.headshots = headshots
                 mp.adr       = float(data[ 'adr'][str(steam_profile.steamid)] or 0)
-                mp.hltv      = 0 #float(data['hltv'][str(steam_profile.steamid)] or 0) # FIXME: re-enable this…
                 mp.save()
 
             for kill_data in data['kills'].to_dict(orient='records'):
@@ -307,14 +306,13 @@ class MatchParticipation(models.Model):
     team     = models.PositiveSmallIntegerField() # team 1 or team 2
     result   = models.CharField(blank=False, max_length=1) # (t) tie, (w) win, (l) loss
 
-    kills        = models.PositiveSmallIntegerField() # enemy kills
-    assists      = models.PositiveSmallIntegerField()
-    deaths       = models.PositiveSmallIntegerField()
-    score        = models.PositiveSmallIntegerField()
-    mvps         = models.PositiveSmallIntegerField()
-    headshots    = models.PositiveSmallIntegerField() # enemy headshots
-    adr          = models.FloatField()                # average damage per round
-    hltv         = models.FloatField()                # rating similar to hltv, https://awpy.readthedocs.io/en/latest/stats.html#awpy.stats.rating
+    kills     = models.PositiveSmallIntegerField() # enemy kills
+    assists   = models.PositiveSmallIntegerField()
+    deaths    = models.PositiveSmallIntegerField()
+    score     = models.PositiveSmallIntegerField()
+    mvps      = models.PositiveSmallIntegerField()
+    headshots = models.PositiveSmallIntegerField() # enemy headshots
+    adr       = models.FloatField()                # average damage per round
 
     class Meta:
         constraints = [
