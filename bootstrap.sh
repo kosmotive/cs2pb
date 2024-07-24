@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export REF="c45d61062eb3075d39c00914e280acf45423c6e8"
+export REF="13e28581333d883d682a65ff84132b70d46a822a"
 
 git clone git@github.com:kodikit/cs2pb-bootstrap.git
 cd cs2pb-bootstrap
@@ -11,4 +11,4 @@ rm -rf cs2pb-bootstrap
 
 cd django
 ./reset.sh init
-cat ../bootstrap.sql | sqlite3 db.sqlite3
+cat bootstrap.sql | sqlite3 db.sqlite3

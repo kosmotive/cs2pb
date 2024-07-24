@@ -12,6 +12,7 @@
 /django/reset.sh
 /django/static/maps/
 /django/tests/data/demos/*.dem.bz2
+/django/*.sql
 __pycache__
 *.pyc
 /node/node_modules
