@@ -1,6 +1,7 @@
 import ratelimit
 import json
-import awpy, awpy.data.map_data, awpy.stats
+import awpy, awpy.data.map_data
+import awpy_fork.stats
 import requests
 import tempfile
 import bz2
@@ -42,14 +43,16 @@ def fetch_match_details(pmatch):
     pmatch['map'] = demo.header['map_name']
     pmatch['kills'] = demo.kills
 
-    adr_df = awpy.stats.adr(demo)
-    pmatch['adr'] = {str(steam_id): _get_player_stat(adr_df, 'adr', steam_id) for steam_id in pmatch['steam_ids']}
+    dmg_df = awpy_fork.stats.dmg(demo)
+    pmatch['dmg'] = {str(steam_id): int(dmg_df.at[str(steam_id), 'dmg']) for steam_id in pmatch['steam_ids']}
 
-    kast_df = awpy.stats.kast(demo)
-    pmatch['kast'] = {str(steam_id): _get_player_stat(kast_df, 'kast', steam_id) for steam_id in pmatch['steam_ids']}
+    # We avoid using `awpy.stats.adr` because this requires `ticks=True` for Demo parsing
+    num_rounds = sum(pmatch['summary'].team_scores)
+    pmatch['adr'] = {str(steam_id): int(dmg_df.at[str(steam_id), 'dmg']) / num_rounds for steam_id in pmatch['steam_ids']}
 
-    hltv_df = awpy.stats.rating(demo)
-    pmatch['hltv'] = {str(steam_id): _get_player_stat(hltv_df, 'rating', steam_id) for steam_id in pmatch['steam_ids']}
+    # FIXME: should be possible to do this similarly, see https://github.com/pnxenopoulos/awpy/blob/6748bb6e4a7015b4b29eb35fb75ac78dc0cd8b04/awpy/stats/rating.py#L77
+    #hltv_df = awpy.stats.rating(demo)
+    #pmatch['hltv'] = {str(steam_id): _get_player_stat(hltv_df, 'rating', steam_id) for steam_id in pmatch['steam_ids']}
 
 
 class API:
@@ -179,7 +182,7 @@ class DemoParser:
         log.info(f'Parsing demo: {demofile}')
         try:
             assert os.path.isfile(demofile)
-            return awpy.Demo(path=demofile)
+            return awpy.Demo(path=demofile, ticks=False)  ## ticks=False is required to reduce memory consumption
         except:
             log.critical(f'Failed to parse demo: {demofile}')
             raise
