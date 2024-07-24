@@ -11,6 +11,7 @@
 /django/initialize.sh
 /django/reset.sh
 /django/static/maps/
+/django/tests/data/demos/*.dem.bz2
 __pycache__
 *.pyc
 /node/node_modules
