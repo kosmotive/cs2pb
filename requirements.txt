@@ -24,6 +24,7 @@ importlib_resources==6.4.0
 kiwisolver==1.4.5
 loguru==0.7.2
 matplotlib==3.9.1
+memory_profiler==0.61
 multidict==6.0.5
 numpy==1.26.4
 packaging==24.1

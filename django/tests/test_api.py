@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 import unittest
 
+from memory_profiler import memory_usage
+
 import api
 from tests import testsuite
 
@@ -28,7 +30,12 @@ class fetch_match_details(unittest.TestCase):
                 76561198064174518,
             ],
         }
-        api.fetch_match_details(pmatch)
+
+        fetch_match_details = lambda: api.fetch_match_details(pmatch)
+        peak_mem_mb = max(memory_usage(proc = fetch_match_details))
+
+        # Peak memory usage was ~900 MiB when tested, shouldn't rise too much in the future to avoid memory issues
+        self.assertLess(peak_mem_mb, 1300)
 
         self.assertEqual(pmatch['map'], 'de_vertigo')
         self.assertEqual(round(pmatch['adr']['76561197967680028'], 1), 104.7)
