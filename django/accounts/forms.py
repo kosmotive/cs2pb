@@ -1,3 +1,5 @@
+import re
+
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 from django import forms
 from django.core.exceptions import ValidationError
@@ -32,13 +34,20 @@ def test_steam_auth(steam_profile, steam_auth):
     return api.test_steam_auth(steam_profile.find_oldest_sharecode(), SteamAPIUser(steam_profile.steamid, steam_auth))
 
 
+def verify_discord_name(discord_name):
+    return re.match(r'^[a-z0-9_\.]{2,32}$', discord_name) is not None
+
+
 class FormDiscordMixin:
 
-
     def clean_discord_name(form):
+        """
+        Verify the Discord name.
+
+        The rules are specified in: https://support.discord.com/hc/en-us/articles/12620128861463-New-Usernames-Display-Names#h_01GXPQAGG6W477HSC5SR053QG1
+        """
         discord_name = form.cleaned_data['discord_name']
-        parts = discord_name.split('#')
-        if len(discord_name) > 0 and (len(parts) != 2 or not parts[1].isnumeric() or len(parts[1]) != 4 or len(parts[0]) == 0):
+        if len(discord_name) > 0 and not verify_discord_name(discord_name):
             raise ValidationError('Not a valid Discord name.')
         return discord_name
 
