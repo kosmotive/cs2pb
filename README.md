@@ -20,26 +20,26 @@ Install the dependencies:
 pip install -r requirements.txt
 ```
 
-Set up the environment variables listed below!
+### Environment variables
 
-Then, bootstrap CS2PB:
+The following environment variables are required:
+
+- `CS2PB_ADMIN_MAIL_ADDRESS`: The mail address to send notifications to, when important failures occur which might require manual intervention (e.g., failure of the Steam API, or parsing demo files).
+
+- `CS2PB_STEAM_API_KEY`: A valid key for accessing the Steam API.
+
+### Bootstrapping
+
+To bootstrap CS2PB easily, there is a fully automated process:
 ```
 sh bootstrap.sh
 ```
-Note that this requires access to the private repository [kodikit/cs2pb-bootstrap](https://github.com/kodikit/cs2pb-bootstrap), which you might not have access to.
-
-If you don't have access to that repository, you will have to bootstrap manually. To do that, create the file `django/discordbot/settings.json` (see `django/discordbot/settings.json.skeleton` for an example), and then run:
+Note that this requires access to the private repository [kodikit/cs2pb-bootstrap](https://github.com/kodikit/cs2pb-bootstrap), which you might not have access to. If you don't have access to that repository, you will have to bootstrap manually. To do that, create the file `django/discordbot/settings.json` (see `django/discordbot/settings.json.skeleton` for an example), and then run:
 ```
 cd django
 python manage.py migrate
 python initialize.py --help
 ```
-
-## Environment variables
-
-`CS2PB_ADMIN_MAIL_ADDRESS`: The mail address to send notifications to, when important failures occur which might require manual intervention (e.g., failure of the Steam API, or parsing demo files).
-
-`CS2PB_STEAM_API_KEY`: A valid key for accessing the Steam API.
 
 ## Web links
 
