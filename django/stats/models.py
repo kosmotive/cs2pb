@@ -61,9 +61,9 @@ class GamingSession(models.Model):
                 comments.append(f' <{player.steamid}> {icon} {100 * kpi["trend_rel"]:+.1f}% ({kpi["value"]:.2f})')
             else:
                 comments.append(f' <{player.steamid}> ±0.00% ({kpi["value"]:.2f})')
-        text = 'It looks like your today\'s session has ended!'
+        text = 'Looks like your session has ended!'
         if len(comments) > 0:
-            text += ' Here is your today\'s performance compared to your 30-days average: ' + ', '.join(comments)
+            text += ' Here is your current performance compared to your 30-days average: ' + ', '.join(comments)
             text += ', with respect to the *player value*.'
         ScheduledNotification.objects.create(squad = self.squad, text = text)
         if participated_squad_members > 1 and top_player is not None and top_player_trend_rel > 0.01:
