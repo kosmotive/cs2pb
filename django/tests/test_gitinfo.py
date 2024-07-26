@@ -15,7 +15,7 @@ class get_head_info(unittest.TestCase):
 
 class get_changelog(unittest.TestCase):
 
-    def test(self):
+    def test_pr(self):
         changelog = gitinfo.get_changelog()
         self.assertIn(dict(
             message = 'Fix player cards HTML/CSS',
@@ -24,6 +24,22 @@ class get_changelog(unittest.TestCase):
             date = '2024-07-26',
         ), changelog)
 
+    def test_substitute(self):
+        changelog = gitinfo.get_changelog()
+        self.assertIn(dict(
+            message = 'Fix Discord name field in settings/signup',
+            url = 'https://github.com/kodikit/cs2pb/pull/5',
+            sha = 'f229070697d182f1aa55b2594bf3e7f0cf69bd34',
+            date = '2024-07-25',
+        ), changelog)
+
+    def test_exclude(self):
+        changelog = gitinfo.get_changelog()
+        sha_list = [entry['sha'] for entry in changelog]
+        self.assertNotIn('ef37efb000f082b1a18e9fd4c1e49344eb6d4f78', changelog)
+
+    def test_order(self):
+        changelog = gitinfo.get_changelog()
         previous_date = None
         for entry in changelog:
             if previous_date is not None:
