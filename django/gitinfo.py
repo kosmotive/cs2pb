@@ -8,6 +8,15 @@ import git
 repo_dir = pathlib.Path(__file__).parent.parent
 base_repo_url = 'https://github.com/kodikit/cs2pb'
 
+changelog_exclude = [
+    'ef37efb000f082b1a18e9fd4c1e49344eb6d4f78',
+    'e7c3037db900d619187186ffa6c9865196c562cc',
+]
+
+changelog_substitute_message = {
+    'f229070697d182f1aa55b2594bf3e7f0cf69bd34': 'Fix Discord name field in settings/signup',
+}
+
 
 def get_fmt_date(commit):
     return datetime.utcfromtimestamp(
@@ -28,6 +37,7 @@ def get_changelog():
     hotfix_pattern = re.compile(r'^hotfix:(.*)', re.IGNORECASE)
     changelog = list()
     for c in r.iter_commits():
+        if c.hexsha in changelog_exclude: continue
         entry = None
         
         m = merge_pr_pattern.match(c.message)
@@ -46,6 +56,7 @@ def get_changelog():
             )
 
         if entry is not None:
+            entry['message'] = changelog_substitute_message.get(c.hexsha, entry['message'])
             changelog.append(entry | dict(sha = c.hexsha, date = get_fmt_date(c)))
 
     return changelog

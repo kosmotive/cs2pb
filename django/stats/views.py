@@ -80,6 +80,7 @@ def squad_expanded_stats(request, squad):
 
 def squads(request, squad=None, expanded_stats=False):
     context = dict()
+    add_changelog_to_context(request, context)
 
     if squad is not None:
         try:
@@ -167,11 +168,15 @@ def matches(request, squad=None, last_timestamp=None):
 
 def add_globals_to_context(context):
     context['version'] = gitinfo.get_head_info()
-    context['changelog'] = gitinfo.changelog
     qs = UpdateTask.objects.filter(completed_timestamp = None)
     qs = qs.values('account').annotate(count = Count('account'))
     if qs.count() > 0 and qs.latest('count')['count'] > 1:
         msg = 'There is a temporary malfunction of the Steam Client API.'
         context['error'] = f'{msg} Come back later.'
         send_mail('Steam API malfunction', msg, ADMIN_MAIL_ADDRESS, [ADMIN_MAIL_ADDRESS], fail_silently=True)
+
+
+def add_changelog_to_context(request, context):
+    if request.user:
+        context['changelog'] = gitinfo.changelog
 
