@@ -1,3 +1,4 @@
+from datetime import datetime
 import pathlib
 import re
 
@@ -11,7 +12,8 @@ base_repo_url = 'https://github.com/kodikit/cs2pb'
 def get_head_info():
     r = git.Repo(str(repo_dir))
     sha = r.head.object.hexsha
-    date = r.head.object.committed_date
+    timestamp = r.head.object.committed_date
+    date = datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d')
     return dict(sha = sha, date = date)
 
 
