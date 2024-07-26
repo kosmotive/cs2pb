@@ -136,10 +136,14 @@ div.profile-card .profile-stat-order3 .profile-stat-bar-inner {
     background-color: #999;
 }
 
-div.profile-card .profile-stats .profile-stat:nth-of-type(5) {
-    border-top: 1px solid #ddd;
-    margin-top: 2mm;
+div.profile-card .profile-stats .profile-stat-order3 {
+    border-top: 2px solid #ddd;
     padding-top: 2mm;
+}
+
+div.profile-card .profile-stats .profile-stat-order3~.profile-stat-order3 {
+    border-top: 0;
+    padding-top: 0;
 }
 
 div.profile-card .profile-stat-bar-value {
@@ -181,7 +185,7 @@ div.profile-card .profile-hint {
 
 div.profile-card .badge-list {
     margin-top: 2mm;
-    border-top: 1px solid #ddd;
+    border-top: 2px solid #ddd;
     padding-top: 2mm;
     white-space: nowrap;
     height: 8mm;

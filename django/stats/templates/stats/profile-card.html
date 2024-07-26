@@ -8,7 +8,7 @@
 
     <div class="profile-stats">{% for stat in player.stats %}
 
-        <div class="profile-stat profile-stat-order{{ stat.order }}" }}">
+        <div class="profile-stat profile-stat-order{{ stat.order }}">
             <div class="profile-stat-name">{{ stat.name }}</div>
 
             {% if stat.value is None %}

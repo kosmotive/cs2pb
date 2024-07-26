@@ -104,7 +104,7 @@ def squads(request, squad=None, expanded_stats=False):
             account.update_matches()
         PlayerOfTheWeek.create_missing_badges(squad)
         played_maps = get_maps_played_by_squad(squad)
-        cards = sorted_cards([compute_card(m, squad, features, [2,4,np.inf]) for m in squad.members.all()])
+        cards = sorted_cards([compute_card(m, squad, features, [2,3,np.inf]) for m in squad.members.all()])
         kd_by_member = {m.steamid: Features.kd(FeatureContext.create_default(m, squad))['value'] for m in squad.members.all()}
         kd_list = [kd_by_member[card['profile'].steamid] for card in cards]
         try:
