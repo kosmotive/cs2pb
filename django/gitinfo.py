@@ -49,3 +49,6 @@ def get_changelog():
             changelog.append(entry | dict(sha = c.hexsha, date = get_fmt_date(c)))
 
     return changelog
+
+
+changelog = get_changelog()
