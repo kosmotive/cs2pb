@@ -9,11 +9,16 @@ repo_dir = pathlib.Path(__file__).parent.parent
 base_repo_url = 'https://github.com/kodikit/cs2pb'
 
 
+def get_fmt_date(commit):
+    return datetime.utcfromtimestamp(
+        commit.committed_date
+    ).strftime('%Y-%m-%d')
+
+
 def get_head_info():
     r = git.Repo(str(repo_dir))
     sha = r.head.object.hexsha
-    timestamp = r.head.object.committed_date
-    date = datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%d')
+    date = get_fmt_date(r.head.object)
     return dict(sha = sha, date = date)
 
 
@@ -41,6 +46,6 @@ def get_changelog():
             )
 
         if entry is not None:
-            changelog.append(entry | dict(sha = c.hexsha))
+            changelog.append(entry | dict(sha = c.hexsha, date = get_fmt_date(c)))
 
     return changelog
