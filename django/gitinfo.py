@@ -31,7 +31,7 @@ def get_changelog():
         entry = None
         
         m = merge_pr_pattern.match(c.message)
-        if m is not None:
+        if m is not None and '[no changelog]' not in c.message and '[no-changelog]' not in c.message:
             pr_id = int(m.group(1))
             entry = dict(
                 message = '\n'.join(c.message.split('\n')[1:]).strip(),

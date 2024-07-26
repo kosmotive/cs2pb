@@ -17,7 +17,18 @@ class get_changelog(unittest.TestCase):
 
     def test(self):
         changelog = gitinfo.get_changelog()
-        print(changelog)
+        self.assertIn(dict(
+            message = 'Fix player cards HTML/CSS',
+            url = 'https://github.com/kodikit/cs2pb/pull/6',
+            sha = '4a7136f55f7db3cd7c12191103eeb36ece7feafd',
+            date = '2024-07-26',
+        ), changelog)
+
+        previous_date = None
+        for entry in changelog:
+            if previous_date is not None:
+                self.assertLessEqual(entry['date'], previous_date)
+            previous_date = entry['date']
 
 
 if __name__ == '__main__':
