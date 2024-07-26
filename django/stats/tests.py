@@ -3,7 +3,19 @@ from types import SimpleNamespace
 from django.test import TestCase
 
 from stats.models import Match, MatchBadge, KillEvent
+from stats import views
 from tests import testsuite
+
+
+class add_globals_to_context(TestCase):
+
+    def test(self):
+        ctx = dict()
+        views.add_globals_to_context(ctx)
+
+        self.assertTrue('version' in ctx.keys())
+        self.assertTrue('sha' in ctx['version'].keys())
+        self.assertTrue('date' in ctx['version'].keys())
 
 
 class Match__create_from_data(TestCase):

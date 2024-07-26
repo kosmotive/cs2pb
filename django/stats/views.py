@@ -8,7 +8,7 @@ from django.db.models import Count
 from accounts.models import SteamProfile, Account, Squad
 from .models import Match, MatchParticipation, PlayerOfTheWeek, UpdateTask, GamingSession
 from .features import Features, FeatureContext, escape_none
-from . import git
+import git
 
 import os
 import numpy as np
