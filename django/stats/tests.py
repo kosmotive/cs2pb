@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from django.test import TestCase
 
 from accounts.models import Squad
-import gitinfo
 from stats.models import Match, MatchBadge, KillEvent
 from stats import views
 from discordbot.models import ScheduledNotification
@@ -250,17 +249,38 @@ class MatchBadge__award(TestCase):
 
 class Squad__do_changelog_announcements(TestCase):
 
+    changelog = [
+        {
+            'message': 'Fix player cards HTML/CSS',
+            'url': 'https://github.com/kodikit/cs2pb/pull/6',
+            'sha': '4a7136f55f7db3cd7c12191103eeb36ece7feafd',
+            'date': '2024-07-26',
+        },
+        {
+            'message': 'Fix Discord name field in settings/signup',
+            'url': 'https://github.com/kodikit/cs2pb/pull/5',
+            'sha': 'f229070697d182f1aa55b2594bf3e7f0cf69bd34',
+            'date': '2024-07-25',
+        },
+        {
+            'message': 'Reduce memory usage',
+            'url': 'https://github.com/kodikit/cs2pb/pull/2',
+            'sha': '4fdb97a4c5de5fe0bd7fba1798acbde702c08212',
+            'date': '2024-07-24',
+        },
+    ]
+
     def test_new_squad(self):
         squad = Squad.objects.create(name='squad', discord_channel_id='xxx')
-        squad.do_changelog_announcements()
+        squad.do_changelog_announcements(Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
-        c = dict(
-            sha = '-test-sha-',
-            date = '-test-date-',
-            message = '-test-message-',
-            url = '-test-url-'
-        )
-        squad.do_changelog_announcements([c] + gitinfo.changelog)
+        c = {
+            'message': 'Hotfix: Minor layout improvements',
+            'url': 'https://github.com/kodikit/cs2pb/commits/9074a7a848a6ac74ba729757e1b2a4a971586190',
+            'sha': '9074a7a848a6ac74ba729757e1b2a4a971586190',
+            'date': '2024-07-26',
+        }
+        squad.do_changelog_announcements([c] + Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.get()
         self.assertEqual(notification.squad.pk, squad.pk)
@@ -268,27 +288,27 @@ class Squad__do_changelog_announcements(TestCase):
         self.assertIn(c['message'], text)
         self.assertIn(c['date'], text)
         self.assertIn(c['url'], text)
-        for c in gitinfo.changelog:
-            self.assertNotIn(gitinfo.changelog[-1]['url'], text)
+        for c in Squad__do_changelog_announcements.changelog:
+            self.assertNotIn(Squad__do_changelog_announcements.changelog[-1]['url'], text)
 
     def test_without_discord_channel(self):
-        squad = Squad.objects.create(name='squad', last_changelog_announcement=gitinfo.changelog[-1]['sha'])
-        squad.do_changelog_announcements()
+        squad = Squad.objects.create(name='squad', last_changelog_announcement=Squad__do_changelog_announcements.changelog[-1]['sha'])
+        squad.do_changelog_announcements(Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
     def test(self):
-        squad = Squad.objects.create(name='squad', discord_channel_id='xxx', last_changelog_announcement=gitinfo.changelog[-1]['sha'])
+        squad = Squad.objects.create(name='squad', discord_channel_id='xxx', last_changelog_announcement=Squad__do_changelog_announcements.changelog[-1]['sha'])
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
-        squad.do_changelog_announcements()
+        squad.do_changelog_announcements(Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.get()
         self.assertEqual(notification.squad.pk, squad.pk)
         text = notification.text
-        for c in gitinfo.changelog[:-1]:
+        for c in Squad__do_changelog_announcements.changelog[:-1]:
             self.assertIn(c['message'], text)
             self.assertIn(c['date'], text)
             self.assertIn(c['url'], text)
-        self.assertNotIn(gitinfo.changelog[-1]['url'], text)
+        self.assertNotIn(Squad__do_changelog_announcements.changelog[-1]['url'], text)
 
 
 if __name__ == '__main__':
