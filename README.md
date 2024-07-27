@@ -28,6 +28,8 @@ The following environment variables are required:
 
 - `CS2PB_STEAM_API_KEY`: A valid key for accessing the Steam API.
 
+- `CS2PB_DISCORD_ENABLED`: Set to `1` to enable the Discord bot.
+
 ### Bootstrapping
 
 To bootstrap CS2PB easily, there is a fully automated process:

@@ -3,6 +3,7 @@ import json
 import asyncio
 import logging
 import re
+import os
 
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
@@ -323,8 +324,11 @@ with open('discordbot/settings.json') as fin:
     settings = json.load(fin)
 
 
-if settings['enabled']:
+if os.environ.get('CS2PB_DISCORD_ENABLED', False):
 
     tick_pause = 60 / int(settings['ticks_per_minute'])
     bot.run(settings['token'])
+
+    for squad in Squad.objects.all():
+        squad.do_changelog_announcements()
 
