@@ -178,7 +178,8 @@ class Squad(models.Model):
     uuid    = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     members = models.ManyToManyField(SteamProfile, related_name='squads')
     name    = models.CharField(blank=False, max_length=100)
-    discord_channel_id = models.CharField(blank=True, max_length=50, verbose_name='Discord Channel ID', unique=True)
+    discord_channel_id = models.CharField(blank=True, max_length=50, verbose_name='Discord Channel ID', unique=True) # FIXME: should be nullable, so that there can be more than one squad without a Discord channel?
+    last_changelog_announcement = models.CharField(blank=True, max_length=40, default='')
 
     def __str__(self):
         return self.name
@@ -226,6 +227,31 @@ class Squad(models.Model):
             account = getattr(m, 'account', None)
             if account is not None:
                 yield account
+
+    def do_changelog_announcements(self, changelog=None):
+        if changelog is None:
+            from gitinfo import changelog
+
+        # Do not make announcements for new squads, or those which do not have a Discord channel
+        if self.last_changelog_announcement != '' and self.discord_channel_id != '':
+
+            announcements = list()
+            for entry in changelog:
+
+                if entry['sha'] == self.last_changelog_announcement:
+                    break
+                else:
+                    announcements.append(entry)
+
+            if len(announcements) > 0:
+                fmt = lambda entry: f'- **{entry["date"]}:** {entry["message"]} [More info]({entry["url"]})'
+                text = 'I have just received the following updats:\n' + '\n'.join(fmt(entry) for entry in announcements)
+
+                from discordbot.models import ScheduledNotification
+                ScheduledNotification.objects.create(squad = self, text = text)
+
+        self.last_changelog_announcement = changelog[0]['sha']
+        self.save()
 
 
 class Invitation(models.Model):

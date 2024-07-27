@@ -2,8 +2,11 @@ from types import SimpleNamespace
 
 from django.test import TestCase
 
+from accounts.models import Squad
+import gitinfo
 from stats.models import Match, MatchBadge, KillEvent
 from stats import views
+from discordbot.models import ScheduledNotification
 from tests import testsuite
 
 
@@ -243,6 +246,49 @@ class MatchBadge__award(TestCase):
         badge = MatchBadge.objects.filter(badge_type = 'ace').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
+
+
+class Squad__do_changelog_announcements(TestCase):
+
+    def test_new_squad(self):
+        squad = Squad.objects.create(name='squad', discord_channel_id='xxx')
+        squad.do_changelog_announcements()
+        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
+        c = dict(
+            sha = '-test-sha-',
+            date = '-test-date-',
+            message = '-test-message-',
+            url = '-test-url-'
+        )
+        squad.do_changelog_announcements([c] + gitinfo.changelog)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
+        notification = ScheduledNotification.objects.get()
+        self.assertEqual(notification.squad.pk, squad.pk)
+        text = notification.text
+        self.assertIn(c['message'], text)
+        self.assertIn(c['date'], text)
+        self.assertIn(c['url'], text)
+        for c in gitinfo.changelog:
+            self.assertNotIn(gitinfo.changelog[-1]['url'], text)
+
+    def test_without_discord_channel(self):
+        squad = Squad.objects.create(name='squad', last_changelog_announcement=gitinfo.changelog[-1]['sha'])
+        squad.do_changelog_announcements()
+        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
+
+    def test(self):
+        squad = Squad.objects.create(name='squad', discord_channel_id='xxx', last_changelog_announcement=gitinfo.changelog[-1]['sha'])
+        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
+        squad.do_changelog_announcements()
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
+        notification = ScheduledNotification.objects.get()
+        self.assertEqual(notification.squad.pk, squad.pk)
+        text = notification.text
+        for c in gitinfo.changelog[:-1]:
+            self.assertIn(c['message'], text)
+            self.assertIn(c['date'], text)
+            self.assertIn(c['url'], text)
+        self.assertNotIn(gitinfo.changelog[-1]['url'], text)
 
 
 if __name__ == '__main__':
