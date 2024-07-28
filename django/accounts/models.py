@@ -229,7 +229,7 @@ class Squad(models.Model):
             if account is not None:
                 yield account
 
-    def do_changelog_announcements(self, changelog=None):
+    def do_changelog_announcements(self, base_url=None, changelog=None):
         if changelog is None:
             from gitinfo import changelog
 
@@ -245,7 +245,8 @@ class Squad(models.Model):
                     announcements.append(entry)
 
             if len(announcements) > 0:
-                fmt = lambda entry: f'\n\n🚀 **{entry["date"]}:** {entry["message"]} [More info]({get_redirect_url_to(entry["url"])})'
+                obscure_url = lambda url: base_url + get_redirect_url_to(url)
+                fmt = lambda entry: f'\n\n🚀 **{entry["date"]}:** {entry["message"]} [More info]({obscure_url(entry["url"])})'
                 text = 'I have just received some updats:' + ''.join(fmt(entry) for entry in announcements)
 
                 from discordbot.models import ScheduledNotification
