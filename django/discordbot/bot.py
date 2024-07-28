@@ -327,7 +327,7 @@ if os.environ.get('CS2PB_DISCORD_ENABLED', False):
         settings = json.load(fin)
 
     for squad in Squad.objects.all():
-        squad.do_changelog_announcements(base_url = settings['base_url']})
+        squad.do_changelog_announcements(base_url = settings['base_url'])
 
     tick_pause = 60 / int(settings['ticks_per_minute'])
     bot.run(settings['token'])
