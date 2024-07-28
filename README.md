@@ -13,6 +13,7 @@
 - Player of the Week challenge
 - Match-wise badges (quad-kill, ace)
 - Session-wise badged (surpass yourself, rising star)
+- Interactive data exploration via included [JupyterLite](https://github.com/jupyterlite) instance and Python
 
 ## Installation
 
