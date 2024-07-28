@@ -31,19 +31,24 @@ def get_head_info():
     return dict(sha = sha, date = date)
 
 
-def get_changelog():
+def get_changelog(skip_nochangelog=True):
     r = git.Repo(str(repo_dir))
     merged_pr_pattern = re.compile(r'^Merge pull request #([0-9]+) from.+')
     squashed_pr_pattern = re.compile(r'^(.+) \(#([0-9]+)\)')
     hotfix_pattern = re.compile(r'^hotfix:(.*)', re.IGNORECASE)
     changelog = list()
     for c in r.iter_commits():
-        if c.hexsha in changelog_exclude: continue
         entry = None
+
+        if c.hexsha in changelog_exclude:
+            continue
+
+        if skip_nochangelog and ('[no changelog]' in c.message or '[no-changelog]' in c.message):
+            continue
         
         # Match pull requests with merge commits
         m = merged_pr_pattern.match(c.message)
-        if m is not None and '[no changelog]' not in c.message and '[no-changelog]' not in c.message:
+        if m is not None:
             pr_id = int(m.group(1))
             entry = dict(
                 message = '\n'.join(c.message.split('\n')[1:]).strip(),
@@ -52,7 +57,7 @@ def get_changelog():
 
         # Match squashed pull requests
         m = squashed_pr_pattern.match(c.message)
-        if m is not None and '[no changelog]' not in c.message and '[no-changelog]' not in c.message:
+        if m is not None:
             pr_id = int(m.group(2))
             entry = dict(
                 message = m.group(1),

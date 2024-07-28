@@ -15,13 +15,22 @@ class get_head_info(unittest.TestCase):
 
 class get_changelog(unittest.TestCase):
 
-    def test_pr(self):
+    def test_merged_pr(self):
         changelog = gitinfo.get_changelog()
         self.assertIn(dict(
             message = 'Fix player cards HTML/CSS',
             url = 'https://github.com/kodikit/cs2pb/pull/6',
             sha = '4a7136f55f7db3cd7c12191103eeb36ece7feafd',
             date = '2024-07-26',
+        ), changelog)
+
+    def test_squashed_pr(self):
+        changelog = gitinfo.get_changelog(skip_nochangelog=False)
+        self.assertIn(dict(
+            message = '[no-changelog] Extract changelog from Git history',
+            url = 'https://github.com/kodikit/cs2pb/pull/8',
+            sha = 'a6f3167e1313abb002cc759142eec01c235da977',
+            date = '2024-07-28',
         ), changelog)
 
     def test_substitute(self):
