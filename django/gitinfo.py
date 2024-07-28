@@ -64,7 +64,7 @@ def get_changelog():
         if m is not None:
             entry = dict(
                 message = 'Hotfix: ' + m.group(1).split('\n')[0].strip(),
-                url = base_repo_url + '/commits/' + c.hexsha,
+                url = base_repo_url + '/commit/' + c.hexsha,
             )
 
         if entry is not None:
