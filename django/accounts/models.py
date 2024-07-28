@@ -6,6 +6,7 @@ from django.core.validators import RegexValidator
 
 from api import api
 from stats.updater import queue_update_task
+from url_forward import get_redirect_url_to
 
 from datetime import datetime
 
@@ -244,7 +245,7 @@ class Squad(models.Model):
                     announcements.append(entry)
 
             if len(announcements) > 0:
-                fmt = lambda entry: f'\n\n🚀 **{entry["date"]}:** {entry["message"]} [More info]({entry["url"]})'
+                fmt = lambda entry: f'\n\n🚀 **{entry["date"]}:** {entry["message"]} [More info]({get_redirect_url_to(entry["url"])})'
                 text = 'I have just received some updats:' + ''.join(fmt(entry) for entry in announcements)
 
                 from discordbot.models import ScheduledNotification
