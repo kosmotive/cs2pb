@@ -22,4 +22,5 @@ urlpatterns = [
     path('accounts/', include('accounts.urls')),
     path('stats/', include('stats.urls')),
     path('', RedirectView.as_view(url='stats/')),
+    path('redirect/', include('url_forward.urls')),
 ]

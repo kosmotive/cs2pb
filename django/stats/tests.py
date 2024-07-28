@@ -7,6 +7,7 @@ from stats.models import Match, MatchBadge, KillEvent
 from stats import views
 from discordbot.models import ScheduledNotification
 from tests import testsuite
+from url_forward import get_redirect_url_to
 
 
 class add_globals_to_context(TestCase):
@@ -272,34 +273,34 @@ class Squad__do_changelog_announcements(TestCase):
 
     def test_new_squad(self):
         squad = Squad.objects.create(name='squad', discord_channel_id='xxx')
-        squad.do_changelog_announcements(Squad__do_changelog_announcements.changelog)
+        squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
         c = {
             'message': 'Hotfix: Minor layout improvements',
-            'url': 'https://github.com/kodikit/cs2pb/commits/9074a7a848a6ac74ba729757e1b2a4a971586190',
+            'url': get_redirect_url_to('https://github.com/kodikit/cs2pb/commits/9074a7a848a6ac74ba729757e1b2a4a971586190'),
             'sha': '9074a7a848a6ac74ba729757e1b2a4a971586190',
             'date': '2024-07-26',
         }
-        squad.do_changelog_announcements([c] + Squad__do_changelog_announcements.changelog)
+        squad.do_changelog_announcements(changelog = [c] + Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.get()
         self.assertEqual(notification.squad.pk, squad.pk)
         text = notification.text
         self.assertIn(c['message'], text)
         self.assertIn(c['date'], text)
-        self.assertIn(c['url'], text)
+        self.assertIn(get_redirect_url_to(c['url']), text)
         for c in Squad__do_changelog_announcements.changelog:
             self.assertNotIn(Squad__do_changelog_announcements.changelog[-1]['url'], text)
 
     def test_without_discord_channel(self):
         squad = Squad.objects.create(name='squad', last_changelog_announcement=Squad__do_changelog_announcements.changelog[-1]['sha'])
-        squad.do_changelog_announcements(Squad__do_changelog_announcements.changelog)
+        squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
     def test(self):
         squad = Squad.objects.create(name='squad', discord_channel_id='xxx', last_changelog_announcement=Squad__do_changelog_announcements.changelog[-1]['sha'])
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
-        squad.do_changelog_announcements(Squad__do_changelog_announcements.changelog)
+        squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.get()
         self.assertEqual(notification.squad.pk, squad.pk)
@@ -307,7 +308,7 @@ class Squad__do_changelog_announcements(TestCase):
         for c in Squad__do_changelog_announcements.changelog[:-1]:
             self.assertIn(c['message'], text)
             self.assertIn(c['date'], text)
-            self.assertIn(c['url'], text)
+            self.assertIn(get_redirect_url_to(c['url']), text)
         self.assertNotIn(Squad__do_changelog_announcements.changelog[-1]['url'], text)
 
 

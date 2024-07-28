@@ -323,11 +323,11 @@ async def who_is_your_creator(ctx):
 if os.environ.get('CS2PB_DISCORD_ENABLED', False):
     log.info(f'Discord integration enabled')
 
-    for squad in Squad.objects.all():
-        squad.do_changelog_announcements()
-
     with open('discordbot/settings.json') as fin:
         settings = json.load(fin)
+
+    for squad in Squad.objects.all():
+        squad.do_changelog_announcements(base_url = settings['base_url'])
 
     tick_pause = 60 / int(settings['ticks_per_minute'])
     bot.run(settings['token'])

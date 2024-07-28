@@ -6,6 +6,7 @@ from django.core.validators import RegexValidator
 
 from api import api
 from stats.updater import queue_update_task
+from url_forward import get_redirect_url_to
 
 from datetime import datetime
 
@@ -228,7 +229,7 @@ class Squad(models.Model):
             if account is not None:
                 yield account
 
-    def do_changelog_announcements(self, changelog=None):
+    def do_changelog_announcements(self, base_url='', changelog=None):
         if changelog is None:
             from gitinfo import changelog
 
@@ -244,8 +245,9 @@ class Squad(models.Model):
                     announcements.append(entry)
 
             if len(announcements) > 0:
-                fmt = lambda entry: f'\n\n🚀 **{entry["date"]}:** {entry["message"]} [More info]({entry["url"]})'
-                text = 'I have just received some updats:' + ''.join(fmt(entry) for entry in announcements)
+                obscure_url = lambda url: base_url + get_redirect_url_to(url)
+                fmt = lambda entry: f'\n\n🚀 **{entry["date"]}:** {entry["message"]} [More info]({obscure_url(entry["url"])})'
+                text = 'I have just received some updates:' + ''.join(fmt(entry) for entry in announcements)
 
                 from discordbot.models import ScheduledNotification
                 ScheduledNotification.objects.create(squad = self, text = text)
