@@ -3,6 +3,17 @@
 [![Run test-suite](https://github.com/kodikit/cs2pb/actions/workflows/django-tests.yaml/badge.svg)](https://github.com/kodikit/cs2pb/actions/workflows/django-tests.yaml)
 [![Check settings](https://github.com/kodikit/cs2pb/actions/workflows/check-settings.yaml/badge.svg)](https://github.com/kodikit/cs2pb/actions/workflows/check-settings.yaml)
 
+<img width="894" src="https://github.com/user-attachments/assets/b25b17c1-6636-4a01-9f52-4c761c2a033f">
+
+## Features
+
+- Squad overview web page
+- Match history web page
+- Discord integration
+- Player of the Week challenge
+- Match-wise badges (quad-kill, ace)
+- Session-wise badged (surpass yourself, rising star)
+
 ## Installation
 
 Create a virtual environment for Python:
