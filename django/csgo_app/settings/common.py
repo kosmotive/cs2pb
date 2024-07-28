@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'accounts',
     'stats',
     'discordbot',
+    'url_forward',
 ]
 
 MIDDLEWARE = [
