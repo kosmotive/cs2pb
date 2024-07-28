@@ -244,8 +244,8 @@ class Squad(models.Model):
                     announcements.append(entry)
 
             if len(announcements) > 0:
-                fmt = lambda entry: f'- **{entry["date"]}:** {entry["message"]} [More info]({entry["url"]})'
-                text = 'I have just received the following updats:\n' + '\n'.join(fmt(entry) for entry in announcements)
+                fmt = lambda entry: f'\n\n🚀 **{entry["date"]}:** {entry["message"]} [More info]({entry["url"]})'
+                text = 'I have just received some updats:' + ''.join(fmt(entry) for entry in announcements)
 
                 from discordbot.models import ScheduledNotification
                 ScheduledNotification.objects.create(squad = self, text = text)
