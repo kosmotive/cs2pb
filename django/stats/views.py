@@ -8,7 +8,7 @@ from django.db.models import Count
 from accounts.models import SteamProfile, Account, Squad
 from .models import Match, MatchParticipation, PlayerOfTheWeek, UpdateTask, GamingSession
 from .features import Features, FeatureContext, escape_none
-from . import git
+import gitinfo
 
 import os
 import numpy as np
@@ -166,7 +166,7 @@ def matches(request, squad=None, last_timestamp=None):
 
 
 def add_globals_to_context(context):
-    context['version'] = git.get_head_info()
+    context['version'] = gitinfo.get_head_info()
     qs = UpdateTask.objects.filter(completed_timestamp = None)
     qs = qs.values('account').annotate(count = Count('account'))
     if qs.count() > 0 and qs.latest('count')['count'] > 1:

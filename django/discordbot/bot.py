@@ -3,6 +3,7 @@ import json
 import asyncio
 import logging
 import re
+import os
 
 from django.db import transaction
 from django.core.exceptions import ObjectDoesNotExist
@@ -319,12 +320,17 @@ async def who_is_your_creator(ctx):
     await ctx.response.send_message('The only and almighty, *the void of the Aether!!1*'.upper())
 
 
-with open('discordbot/settings.json') as fin:
-    settings = json.load(fin)
+if os.environ.get('CS2PB_DISCORD_ENABLED', False):
+    log.info(f'Discord integration enabled')
 
+    for squad in Squad.objects.all():
+        squad.do_changelog_announcements()
 
-if settings['enabled']:
+    with open('discordbot/settings.json') as fin:
+        settings = json.load(fin)
 
     tick_pause = 60 / int(settings['ticks_per_minute'])
     bot.run(settings['token'])
 
+else:
+    log.warning(f'Discord integration disabled')
