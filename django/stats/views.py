@@ -80,7 +80,6 @@ def squad_expanded_stats(request, squad):
 
 def squads(request, squad=None, expanded_stats=False):
     context = dict()
-    add_changelog_to_context(request, context)
 
     if squad is not None:
         try:
@@ -174,9 +173,4 @@ def add_globals_to_context(context):
         msg = 'There is a temporary malfunction of the Steam Client API.'
         context['error'] = f'{msg} Come back later.'
         send_mail('Steam API malfunction', msg, ADMIN_MAIL_ADDRESS, [ADMIN_MAIL_ADDRESS], fail_silently=True)
-
-
-def add_changelog_to_context(request, context):
-    if request.user:
-        context['changelog'] = gitinfo.changelog
 

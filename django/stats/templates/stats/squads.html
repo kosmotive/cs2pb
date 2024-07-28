@@ -9,36 +9,6 @@
 
 <link rel="stylesheet" type="text/css" href="{% static 'stats.css' %}?{% now "U" %}">
 
-{% if changelog %}
-
-    <div id="changelog">
-
-        <p class="changelog-header">
-
-            <span class="changelog-title">Recent changes</span>
-
-            (<a href="">dismiss</a>)
-
-        </p>
-
-        {% for entry in changelog %}
-
-            <p class="changelog-entry">
-
-                <span class="changelog-entry-date">{{ entry.date }}</span>
-
-                <span class="changelog-entry-message">{{ entry.message }}</span>
-
-                <span class="changelog-entry-details"><a href="{{ entry.url }}" target="_blank">More info</a></span>
-
-            </p>
-
-        {% endfor %}
-
-    </div>
-
-{% endif %}
-
 {% for squad in squads %}
 
     <div class="squad">

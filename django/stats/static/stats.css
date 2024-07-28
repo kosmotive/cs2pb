@@ -653,26 +653,3 @@ div.load-more {
 div.load-more:hover {
     background-color: #ccc;
 }
-
-#changelog {
-    background-color: #ffa;
-    padding: 5mm 10mm;
-    border-radius: 10mm;
-    margin-bottom: 10mm;
-}
-
-#changelog .changelog-header {
-    font-size: 120%;
-}
-
-#changelog .changelog-title {
-    font-weight: bold;
-}
-
-#changelog .changelog-entry-date {
-    font-weight: bold;
-}
-
-#changelog .changelog-entry-date:after {
-    content: ':'
-}
