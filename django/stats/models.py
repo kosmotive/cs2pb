@@ -159,6 +159,14 @@ class GamingSession(models.Model):
         return f'Empty Gaming Session ({self.pk})'
 
 
+def get_match_result(team_idx, team_scores):
+    own_team_score = team_scores[ team_idx]
+    opp_team_score = team_scores[(team_idx + 1) % 2]
+    if own_team_score < opp_team_score: return 'l'
+    if own_team_score > opp_team_score: return 'w'
+    return 't'
+
+
 class Match(models.Model):
 
     sharecode   = models.CharField(blank=False, max_length=50)
@@ -193,13 +201,6 @@ class Match(models.Model):
             m.duration = data['summary'].match_duration
             m.map_name = data['map']
             m.save()
-
-            def get_match_result(team_idx, team_scores):
-                own_team_score = team_scores[ team_idx]
-                opp_team_score = team_scores[(team_idx + 1) % 2]
-                if own_team_score < opp_team_score: return 'l'
-                if own_team_score > opp_team_score: return 'w'
-                return 't'
 
             slices = [
                 data['steam_ids'],
@@ -504,10 +505,10 @@ class PlayerOfTheWeek(models.Model):
                 else:
                     player_data['place_candidate'] = None
                 result['leaderboard'].append(player_data)
-        mode = get_next_potw_mode(prev_badge.mode)
+        mode = get_next_potw_mode(prev_badge.mode.id)
         draft_badge = PlayerOfTheWeek(timestamp = result['timestamp'], squad = squad, mode = mode)
         result['competition_end'] = draft_badge.competition_end_datetime
-        result['week'] = draft_badge.week
+        result['week'] = draft_badge.week - 1
         result['year'] = draft_badge.year
         return result
 

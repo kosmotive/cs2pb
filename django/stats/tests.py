@@ -2,8 +2,8 @@ from types import SimpleNamespace
 
 from django.test import TestCase
 
-from accounts.models import Squad
-from stats.models import Match, MatchBadge, KillEvent, get_next_potw_mode as get_next_potw_mode_, potw_mode_cycle, PlayerOfTheWeek
+from accounts.models import Squad, SteamProfile
+from stats.models import Match, MatchParticipation, MatchBadge, KillEvent, get_next_potw_mode as get_next_potw_mode_, potw_mode_cycle, get_match_result, PlayerOfTheWeek
 from stats import views
 from discordbot.models import ScheduledNotification
 from tests import testsuite
@@ -317,6 +317,92 @@ class get_next_potw_mode(TestCase):
     def test(self):
         self.assertEqual(get_next_potw_mode_(potw_mode_cycle[ 0].id), potw_mode_cycle[1])
         self.assertEqual(get_next_potw_mode_(potw_mode_cycle[-1].id), potw_mode_cycle[0])
+
+
+class PlayerOfTheWeek__get_next_badge_data(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        testsuite.fake_api.inject('accounts.models')
+
+    @classmethod
+    def tearDownClass(cls):
+        testsuite.fake_api.restore('accounts.models')
+
+    def setUp(self):
+        self.squad = Squad.objects.create(name='squad')
+        self.team1 = [
+            SteamProfile.objects.create(steamid = '12345678900000001'),
+            SteamProfile.objects.create(steamid = '12345678900000002'),
+            SteamProfile.objects.create(steamid = '12345678900000003'),
+        ]
+        self.team2 = [
+            SteamProfile.objects.create(steamid = '12345678900000004'),
+            SteamProfile.objects.create(steamid = '12345678900000005'),
+            SteamProfile.objects.create(steamid = '12345678900000006'),
+        ]
+
+        # Add players to squad
+        for player in self.players:
+            self.squad.members.add(player)
+
+        # Create an initial match
+        self._create_match(0)
+
+    @property
+    def players(self):
+        return self.team1 + self.team2
+
+    def _create_match(self, timestamp):
+        m = Match.objects.create(
+            sharecode = f'sharecode-{timestamp}',
+            timestamp = timestamp,
+            score_team1 = 12,
+            score_team2 = 13,
+            duration = 1653,
+            map_name = 'de_dust2',
+        )
+        for uidx, user in enumerate(self.players):
+            mp = MatchParticipation(player = user, pmatch = m)
+            mp.position  = uidx % 3
+            mp.team      = 1 + uidx // 3
+            mp.result    = get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
+            mp.kills     =  20   + uidx
+            mp.assists   =  10   - uidx
+            mp.deaths    =  15   + uidx
+            mp.score     =  30   - uidx
+            mp.mvps      =   5   + uidx
+            mp.headshots =  15   - uidx
+            mp.adr       = 120.5 + uidx
+            mp.save()
+
+    def test(self):
+        potw = PlayerOfTheWeek.get_next_badge_data(self.squad)
+        self.assertEqual(potw['week'], 1)
+        self.assertEqual(potw['year'], 1970)
+        for entry in potw['leaderboard']:
+            player = entry['player']
+
+            if entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team1)
+
+            if not entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team2)
+
+            if entry.get('place_candidate') is None:
+                self.assertIn(player, self.team1)
+
+            if entry.get('place_candidate') == 1:
+                self.assertEqual(player.pk, self.team2[0].pk)
+
+            if entry.get('place_candidate') == 2:
+                self.assertEqual(player.pk, self.team2[1].pk)
+
+            if entry.get('place_candidate') == 3:
+                self.assertEqual(player.pk, self.team2[2].pk)
+
+        #from pprint import pprint
+        #pprint(potw)
 
 
 if __name__ == '__main__':
