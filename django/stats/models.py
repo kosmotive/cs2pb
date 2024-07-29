@@ -401,8 +401,8 @@ potw_mode_cycle = [
 ]
 
 
-def get_next_potw_mode(mode):
-    idx = [m.id for m in potw_mode_cycle].index(mode)
+def get_next_potw_mode(mode_id):
+    idx = [m.id for m in potw_mode_cycle].index(mode_id)
     return potw_mode_cycle[(idx + 1) % len(potw_mode_cycle)]
 
 
@@ -505,17 +505,18 @@ class PlayerOfTheWeek(models.Model):
                 else:
                     player_data['place_candidate'] = None
                 result['leaderboard'].append(player_data)
-        mode = get_next_potw_mode(prev_badge.mode.id)
+        mode = get_next_potw_mode(prev_badge.mode.id).id
         draft_badge = PlayerOfTheWeek(timestamp = result['timestamp'], squad = squad, mode = mode)
         result['competition_end'] = draft_badge.competition_end_datetime
         result['week'] = draft_badge.week - 1
         result['year'] = draft_badge.year
+        result['mode'] = draft_badge.mode
         return result
 
     @staticmethod
     def create_badge(badge_data):
         if datetime.timestamp(csgo_timestamp(badge_data['timestamp'])) > datetime.timestamp(datetime.now()): return None
-        badge = PlayerOfTheWeek(timestamp = badge_data['timestamp'], squad = badge_data['squad'])
+        badge = PlayerOfTheWeek(timestamp = badge_data['timestamp'], squad = badge_data['squad'], mode = badge_data['mode'])
         for player_data in badge_data['leaderboard']:
             if   player_data['place_candidate'] == 1: badge.player1 = player_data['player']
             elif player_data['place_candidate'] == 2: badge.player2 = player_data['player']

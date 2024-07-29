@@ -403,6 +403,26 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
         #from pprint import pprint
         #pprint(potw)
+        return potw
+
+
+class PlayerOfTheWeek__create_badge(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        testsuite.fake_api.inject('accounts.models')
+
+    @classmethod
+    def tearDownClass(cls):
+        testsuite.fake_api.restore('accounts.models')
+
+    def test(self):
+        get_next_badge_data = PlayerOfTheWeek__get_next_badge_data()
+        get_next_badge_data.setUp()
+        data = get_next_badge_data.test()
+        get_next_badge_data.tearDown()
+        badge = PlayerOfTheWeek.create_badge(data)
+        self.assertEqual(badge.mode, 'k/d')
 
 
 if __name__ == '__main__':
