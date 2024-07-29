@@ -1,5 +1,6 @@
 from datetime import datetime
 from dateutil import tz
+from types import SimpleNamespace
 
 from django.db import models, transaction
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
@@ -392,6 +393,18 @@ class KillEvent(models.Model):
     victim_z = models.FloatField()
 
 
+potw_mode_cycle = [
+    SimpleNamespace(id = 'k/d', description = 'Max out your kill/death ratio!'),
+    SimpleNamespace(id = 'adr', description = 'Max out your average damage per round!'),
+    SimpleNamespace(id = 'killstreaks', description = 'Score the longest kill streaks you can get!'), # 2^(2n - 1) - 1 points for n kills per round, ie: 1->0, 2->15, 3->63, 4->255, 5->1023
+]
+
+
+def get_next_potw_mode(mode):
+    idx = [m.id for m in potw_mode_cycle].index(mode)
+    return potw_mode_cycle[(idx + 1) % len(potw_mode_cycle)]
+
+
 class PlayerOfTheWeek(models.Model):
 
     timestamp = models.PositiveBigIntegerField()
@@ -399,6 +412,7 @@ class PlayerOfTheWeek(models.Model):
     player2   = models.ForeignKey(SteamProfile, null=True , on_delete=models.SET_NULL, blank=True, related_name='potw2') # silver
     player3   = models.ForeignKey(SteamProfile, null=True , on_delete=models.SET_NULL, blank=True, related_name='potw3') # bronze
     squad     = models.ForeignKey(Squad       , null=False, on_delete=models.CASCADE)
+    mode      = models.CharField(blank=False, max_length=20)
 
     @property
     def competition_start_timestamp(self):
@@ -436,7 +450,7 @@ class PlayerOfTheWeek(models.Model):
         prehistoric_badge_date = prehistoric_match_date + timedelta(days = -prehistoric_match_date.weekday())
         prehistoric_badge_date = prehistoric_badge_date.replace(hour=4, minute=0)
         prehistoric_timestamp  = round(datetime.timestamp(prehistoric_badge_date))
-        prehistoric_badge = PlayerOfTheWeek(timestamp = prehistoric_timestamp, squad = squad)
+        prehistoric_badge = PlayerOfTheWeek(timestamp = prehistoric_timestamp, squad = squad, mode = potw_mode_cycle[-1])
         return prehistoric_badge
 
     @staticmethod
@@ -490,7 +504,8 @@ class PlayerOfTheWeek(models.Model):
                 else:
                     player_data['place_candidate'] = None
                 result['leaderboard'].append(player_data)
-        draft_badge = PlayerOfTheWeek(timestamp = result['timestamp'], squad = squad)
+        mode = get_next_potw_mode(prev_badge.mode)
+        draft_badge = PlayerOfTheWeek(timestamp = result['timestamp'], squad = squad, mode = mode)
         result['competition_end'] = draft_badge.competition_end_datetime
         result['week'] = draft_badge.week
         result['year'] = draft_badge.year

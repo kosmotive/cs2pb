@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from django.test import TestCase
 
 from accounts.models import Squad
-from stats.models import Match, MatchBadge, KillEvent
+from stats.models import Match, MatchBadge, KillEvent, get_next_potw_mode as get_next_potw_mode_, potw_mode_cycle, PlayerOfTheWeek
 from stats import views
 from discordbot.models import ScheduledNotification
 from tests import testsuite
@@ -310,6 +310,13 @@ class Squad__do_changelog_announcements(TestCase):
             self.assertIn(c['date'], text)
             self.assertIn(get_redirect_url_to(c['url']), text)
         self.assertNotIn(Squad__do_changelog_announcements.changelog[-1]['url'], text)
+
+
+class get_next_potw_mode(TestCase):
+
+    def test(self):
+        self.assertEqual(get_next_potw_mode_(potw_mode_cycle[ 0].id), potw_mode_cycle[1])
+        self.assertEqual(get_next_potw_mode_(potw_mode_cycle[-1].id), potw_mode_cycle[0])
 
 
 if __name__ == '__main__':
