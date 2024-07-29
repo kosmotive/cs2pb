@@ -3,7 +3,8 @@ from types import SimpleNamespace
 from django.test import TestCase
 
 from accounts.models import Squad, SteamProfile
-from stats.models import Match, MatchParticipation, MatchBadge, KillEvent, get_next_potw_mode as get_next_potw_mode_, potw_mode_cycle, get_match_result, PlayerOfTheWeek
+from stats.models import Match, MatchParticipation, MatchBadge, KillEvent, get_match_result, PlayerOfTheWeek
+from stats import potw
 from stats import views
 from discordbot.models import ScheduledNotification
 from tests import testsuite
@@ -315,8 +316,8 @@ class Squad__do_changelog_announcements(TestCase):
 class get_next_potw_mode(TestCase):
 
     def test(self):
-        self.assertEqual(get_next_potw_mode_(potw_mode_cycle[ 0].id), potw_mode_cycle[1])
-        self.assertEqual(get_next_potw_mode_(potw_mode_cycle[-1].id), potw_mode_cycle[0])
+        self.assertEqual(potw.get_next_mode(potw.mode_cycle[ 0].id), potw.mode_cycle[1])
+        self.assertEqual(potw.get_next_mode(potw.mode_cycle[-1].id), potw.mode_cycle[0])
 
 
 class PlayerOfTheWeek__get_next_badge_data(TestCase):
@@ -377,11 +378,11 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
             mp.save()
 
     def test(self):
-        potw = PlayerOfTheWeek.get_next_badge_data(self.squad)
-        self.assertEqual(potw['mode'], 'k/d')
-        self.assertEqual(potw['week'], 1)
-        self.assertEqual(potw['year'], 1970)
-        for entry in potw['leaderboard']:
+        badge = PlayerOfTheWeek.get_next_badge_data(self.squad)
+        self.assertEqual(badge['mode'], 'k/d')
+        self.assertEqual(badge['week'], 1)
+        self.assertEqual(badge['year'], 1970)
+        for entry in badge['leaderboard']:
             player = entry['player']
 
             if entry.get('unfulfilled_requirement', ''):
@@ -403,8 +404,8 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
                 self.assertEqual(player.pk, self.team2[2].pk)
 
         #from pprint import pprint
-        #pprint(potw)
-        return potw
+        #pprint(badge)
+        return badge
 
 
 class PlayerOfTheWeek__create_badge(TestCase):

@@ -1,6 +1,5 @@
 from datetime import datetime
 from dateutil import tz
-from types import SimpleNamespace
 
 from django.db import models, transaction
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
@@ -8,9 +7,10 @@ from django.db.models.signals import m2m_changed
 from django.db.models import Avg, Count, F
 
 from accounts.models import SteamProfile, Account, Squad
+from api import NAV_SUPPORTED_MAPS, api, fetch_match_details, SteamAPIUser, InvalidSharecodeError
 from discordbot.models import ScheduledNotification
 from .features import Features, FeatureContext
-from api import NAV_SUPPORTED_MAPS, api, fetch_match_details, SteamAPIUser, InvalidSharecodeError
+from . import potw
 
 import awpy.data
 import numpy as np
@@ -233,7 +233,7 @@ class Match(models.Model):
                 mp.score     = score
                 mp.mvps      = mvps
                 mp.headshots = headshots
-                mp.adr       = float(data[ 'adr'][str(steam_profile.steamid)] or 0)
+                mp.adr       = float(data['adr'][str(steam_profile.steamid)] or 0)
                 mp.save()
 
             for kill_data in data['kills'].to_dict(orient='records'):
@@ -265,6 +265,10 @@ class Match(models.Model):
 
     def __str__(self):
         return f'{self.map_name} ({self.datetime})'
+
+    @property
+    def rounds(self):
+        return self.score_team1 + self.score_team2
 
     @property
     def timestamp_end(self):
@@ -406,18 +410,6 @@ class KillEvent(models.Model):
     victim_z = models.FloatField()
 
 
-potw_mode_cycle = [
-    SimpleNamespace(id = 'k/d', description = 'Max out your kill/death ratio!'),
-    SimpleNamespace(id = 'adr', description = 'Max out your average damage per round!'),
-    SimpleNamespace(id = 'killstreaks', description = 'Score the longest kill streaks you can get!'), # 2^(2n - 1) - 1 points for n kills per round, ie: 1->0, 2->15, 3->63, 4->255, 5->1023
-]
-
-
-def get_next_potw_mode(mode_id):
-    idx = [m.id for m in potw_mode_cycle].index(mode_id)
-    return potw_mode_cycle[(idx + 1) % len(potw_mode_cycle)]
-
-
 class PlayerOfTheWeek(models.Model):
 
     timestamp = models.PositiveBigIntegerField()
@@ -463,7 +455,7 @@ class PlayerOfTheWeek(models.Model):
         prehistoric_badge_date = prehistoric_match_date + timedelta(days = -prehistoric_match_date.weekday())
         prehistoric_badge_date = prehistoric_badge_date.replace(hour=4, minute=0)
         prehistoric_timestamp  = round(datetime.timestamp(prehistoric_badge_date))
-        prehistoric_badge = PlayerOfTheWeek(timestamp = prehistoric_timestamp, squad = squad, mode = potw_mode_cycle[-1])
+        prehistoric_badge = PlayerOfTheWeek(timestamp = prehistoric_timestamp, squad = squad, mode = potw.mode_cycle[-1])
         return prehistoric_badge
 
     @staticmethod
@@ -478,6 +470,7 @@ class PlayerOfTheWeek(models.Model):
     def get_next_badge_data(squad):
         prev_badge = PlayerOfTheWeek.get_latest_badge(squad)
         prev_date  = datetime.fromtimestamp(prev_badge.timestamp)
+        mode = potw.get_next_mode(prev_badge.mode.id)
         next_timestamp = round(datetime.timestamp(prev_date + timedelta(days = 7)))
         player_stats   = dict()
         match_participations = squad.match_participations(
@@ -487,17 +480,16 @@ class PlayerOfTheWeek(models.Model):
         # Accumulate stats
         for mp in match_participations:
             if mp.player.steamid not in player_stats:
-                player_stats[mp.player.steamid] = dict(kills = 0, deaths = 0, wins = 0)
-            player_stats[mp.player.steamid]['deaths'] += mp.deaths
-            player_stats[mp.player.steamid]['kills' ] += mp.kills
+                player_stats[mp.player.steamid] = dict(wins = 0)
+            mode.accumulate(player_stats[mp.player.steamid], mp)
             if mp.result == 'w':
                 player_stats[mp.player.steamid]['wins'] += 1
 
         # Aggregate stats
         for steamid in player_stats:
-            player_stats[steamid]['k/d'] = player_stats[steamid]['kills'] / max((1, player_stats[steamid]['deaths']))
+            player_stats[steamid]['score'] = mode.aggregate(player_stats[steamid])
 
-        top_steamids = sorted(player_stats.keys(), key=lambda steamid: player_stats[steamid]['k/d'], reverse=True)
+        top_steamids = sorted(player_stats.keys(), key=lambda steamid: player_stats[steamid]['score'], reverse=True)
         result = {
             'timestamp':   next_timestamp,
             'squad':       squad,
@@ -522,8 +514,7 @@ class PlayerOfTheWeek(models.Model):
                 else:
                     player_data['place_candidate'] = None
                 result['leaderboard'].append(player_data)
-        mode = get_next_potw_mode(prev_badge.mode.id).id
-        draft_badge = PlayerOfTheWeek(timestamp = result['timestamp'], squad = squad, mode = mode)
+        draft_badge = PlayerOfTheWeek(timestamp = result['timestamp'], squad = squad, mode = mode.id)
         result['competition_end'] = draft_badge.competition_end_datetime
         result['week'] = draft_badge.week - 1
         result['year'] = draft_badge.year
