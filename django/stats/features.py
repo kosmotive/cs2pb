@@ -55,6 +55,9 @@ class Feature:
             trend, trend_rel = None, None
         return stat(self.name, value_base, self.format, max_value = self.get_max_value(ctx), trend = trend, trend_rel = trend_rel)
 
+    def __str__(self):
+        return self.name
+
 
 class FeatureContext:
 
