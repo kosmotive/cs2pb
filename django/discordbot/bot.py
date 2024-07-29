@@ -204,7 +204,7 @@ async def join(ctx):
             await ctx.response.send_message(f'This invitation is only for you ma friend:\n{url}', ephemeral=True)
 
 
-mention_pattern = re.compile(r'^ *<@!([0-9]+)> *$')
+mention_pattern = re.compile(r'^ *<@([0-9]+)> *$')
 
 
 async def resolve_mention(token):
