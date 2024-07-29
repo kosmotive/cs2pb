@@ -18,3 +18,4 @@ __pycache__
 /node/node_modules
 /node/package-lock.json
 /node/resolve.json
+/.no-bootstrap
