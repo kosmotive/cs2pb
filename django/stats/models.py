@@ -331,6 +331,18 @@ class MatchParticipation(models.Model):
     def kd(self):
         return self.kills / max((1, self.deaths))
 
+    def streaks(self, n):
+        """
+        Count the number of streaks of length n.
+
+        A streak of length n is a round played where the player scored n kills.
+        """
+        rounds = np.zeros(100, int)
+        for kev in self.kill_events.all():
+            if kev.round is None: continue
+            rounds[kev.round] += 1
+        return (rounds == n).sum()
+
     @staticmethod
     def filter(qs, period):
         return qs if period is None else qs.filter(**period.filters())
@@ -471,6 +483,8 @@ class PlayerOfTheWeek(models.Model):
         match_participations = squad.match_participations(
             pmatch__timestamp__gt  = prev_badge.timestamp,
             pmatch__timestamp__lte = next_timestamp)
+
+        # Accumulate stats
         for mp in match_participations:
             if mp.player.steamid not in player_stats:
                 player_stats[mp.player.steamid] = dict(kills = 0, deaths = 0, wins = 0)
@@ -478,8 +492,11 @@ class PlayerOfTheWeek(models.Model):
             player_stats[mp.player.steamid]['kills' ] += mp.kills
             if mp.result == 'w':
                 player_stats[mp.player.steamid]['wins'] += 1
+
+        # Aggregate stats
         for steamid in player_stats:
             player_stats[steamid]['k/d'] = player_stats[steamid]['kills'] / max((1, player_stats[steamid]['deaths']))
+
         top_steamids = sorted(player_stats.keys(), key=lambda steamid: player_stats[steamid]['k/d'], reverse=True)
         result = {
             'timestamp':   next_timestamp,
@@ -595,11 +612,7 @@ class MatchBadge(models.Model):
     def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug, dry=False):
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
         if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
-        rounds = np.zeros(100, int)
-        for kev in participation.kill_events.all():
-            if kev.round is None: continue
-            rounds[kev.round] += 1
-        number = (rounds == kill_number).sum()
+        number = participation.streaks(n = kill_number)
         if number > 0:
             log.info(f'{participation.player.name} achieved {badge_type.name} {number} time(s)')
             if not dry:

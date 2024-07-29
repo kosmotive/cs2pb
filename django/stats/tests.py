@@ -378,6 +378,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
     def test(self):
         potw = PlayerOfTheWeek.get_next_badge_data(self.squad)
+        self.assertEqual(potw['mode'], 'k/d')
         self.assertEqual(potw['week'], 1)
         self.assertEqual(potw['year'], 1970)
         for entry in potw['leaderboard']:
