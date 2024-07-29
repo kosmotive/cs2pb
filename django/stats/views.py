@@ -124,14 +124,16 @@ def squads(request, squad=None, expanded_stats=False):
             'upcoming_player_of_the_week_mode': upcoming_potw_mode,
         }
         if upcoming_potw is not None and len(upcoming_potw['leaderboard']) > 0:
-            potw_max_field1  = max([player_data[upcoming_potw_mode.fields[0]] for player_data in upcoming_potw['leaderboard']])
-            potw_max_field2  = max([player_data[upcoming_potw_mode.fields[1]] for player_data in upcoming_potw['leaderboard']])
-            potw_denominator = max((potw_max_field1, potw_max_field2))
+
+            # The maximum value is used as the denominator for normalization
+            potw_denominator = max(
+                max([player_data[field] for player_data in upcoming_potw['leaderboard']])
+                for field in upcoming_potw_mode.fields
+            )
             for player_data in upcoming_potw['leaderboard']:
-                player_data['field1'] = player_data[upcoming_potw_mode.fields[0]]
-                player_data['field2'] = player_data[upcoming_potw_mode.fields[1]]
-                player_data['field1_rel'] = player_data[upcoming_potw_mode.fields[0]] / potw_denominator
-                player_data['field2_rel'] = player_data[upcoming_potw_mode.fields[1]] / potw_denominator
+                for fidx, field in enumerate(upcoming_potw_mode.fields):
+                    player_data[f'field{fidx + 1}'] = player_data[field]
+                    player_data[f'field{fidx + 1}_rel'] = player_data[field] / potw_denominator
         context['squads'].append(squad_data)
 
     context['request'] = request

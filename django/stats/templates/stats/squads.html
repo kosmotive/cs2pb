@@ -181,9 +181,11 @@
                                 <div class="potw-aspirant-progress-bar-kills" style="width: {{ player_data.field1_rel|multiply:100 }}%;">
                                     {{ player_data.field1|floatformat:0 }} {{ squad.upcoming_player_of_the_week_mode.labels.0 }}
                                 </div><br>
+                                {% if squad.upcoming_player_of_the_week_mode.fields|length > 1 %}
                                 <div class="potw-aspirant-progress-bar-deaths" style="width: {{ player_data.field2_rel|multiply:100 }}%;">
                                     {{ player_data.field2|floatformat:0 }} {{ squad.upcoming_player_of_the_week_mode.labels.1 }}
                                 </div>
+                                {% endif %}
 
                             </div>
 
