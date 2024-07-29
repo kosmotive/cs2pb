@@ -149,6 +149,15 @@
 
             <div class="squad-members-appendix-header">Aspirants for the Player of the Week Badge {{ squad.upcoming_player_of_the_week.week }}/{{ squad.upcoming_player_of_the_week.year }}</div><br>
 
+            {% if squad.upcoming_player_of_the_week_mode %}
+            <div class="potw-header">
+
+                <span class="potw-name">{{ squad.upcoming_player_of_the_week_mode.name }}:</span>
+                <span class="potw-description">{{ squad.upcoming_player_of_the_week_mode.description }}</span>
+
+            </div>
+            {% endif %}
+
             <div class="potw-aspirants">
 
                 {% if squad.upcoming_player_of_the_week.unfulfilled_requirement %}
@@ -169,12 +178,22 @@
 
                             <div class="potw-aspirant-progress">
 
-                                <div class="potw-aspirant-progress-bar-kills" style="width: {{ player_data.kills_rel|multiply:100 }}%;">
-                                    {{ player_data.kills }} kills
+                                <div class="potw-aspirant-progress-bar-kills" style="width: {{ player_data.field1_rel|multiply:100 }}%;">
+                                    {% if player_data.details %}
+                                        {{ player_data.details.0|safe }}
+                                    {% else %}
+                                        {{ player_data.field1|floatformat:0 }} {{ squad.upcoming_player_of_the_week_mode.labels.0 }}
+                                    {% endif %}
                                 </div><br>
-                                <div class="potw-aspirant-progress-bar-deaths" style="width: {{ player_data.deaths_rel|multiply:100 }}%;">
-                                    {{ player_data.deaths }} deaths
+                                {% if squad.upcoming_player_of_the_week_mode.fields|length > 1 %}
+                                <div class="potw-aspirant-progress-bar-deaths" style="width: {{ player_data.field2_rel|multiply:100 }}%;">
+                                    {% if player_data.details %}
+                                        {{ player_data.details.1|safe }}
+                                    {% else %}
+                                        {{ player_data.field2|floatformat:0 }} {{ squad.upcoming_player_of_the_week_mode.labels.1 }}
+                                    {% endif %}
                                 </div>
+                                {% endif %}
 
                             </div>
 

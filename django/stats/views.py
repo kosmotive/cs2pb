@@ -8,6 +8,7 @@ from django.db.models import Count
 from accounts.models import SteamProfile, Account, Squad
 from .models import Match, MatchParticipation, PlayerOfTheWeek, UpdateTask, GamingSession
 from .features import Features, FeatureContext, escape_none
+from . import potw
 import gitinfo
 
 import os
@@ -109,23 +110,33 @@ def squads(request, squad=None, expanded_stats=False):
         kd_list = [kd_by_member[card['profile'].steamid] for card in cards]
         try:
             upcoming_potw = PlayerOfTheWeek.get_next_badge_data(squad)
+            upcoming_potw_mode = potw.get_mode_by_id(upcoming_potw['mode'])
         except Match.DoesNotExist:
             log.error(f'Failed to fetch upcoming Player of the Week', exc_info=True)
             upcoming_potw = None
+            upcoming_potw_mode = None
         squad_data = {
             'name': squad.name,
             'share_link': squad.absolute_url(request),
             'expand_url': None if expanded_stats else reverse('squad_expanded_stats', kwargs=dict(squad = squad.uuid)),
             'members': cards,
             'upcoming_player_of_the_week': upcoming_potw,
+            'upcoming_player_of_the_week_mode': upcoming_potw_mode,
         }
         if upcoming_potw is not None and len(upcoming_potw['leaderboard']) > 0:
-            potw_max_kills   = max([player_data['kills' ] for player_data in upcoming_potw['leaderboard']])
-            potw_max_deaths  = max([player_data['deaths'] for player_data in upcoming_potw['leaderboard']])
-            potw_denominator = max((potw_max_kills, potw_max_deaths))
+
+            # The maximum value is used as the denominator for normalization
+            potw_denominator = max(
+                max([player_data[field] for player_data in upcoming_potw['leaderboard']])
+                for field in upcoming_potw_mode.fields
+            )
+
             for player_data in upcoming_potw['leaderboard']:
-                player_data[ 'kills_rel'] = player_data[ 'kills'] / potw_denominator
-                player_data['deaths_rel'] = player_data['deaths'] / potw_denominator
+                player_data[f'details'] = upcoming_potw_mode.details(player_data)
+                for fidx, field in enumerate(upcoming_potw_mode.fields):
+                    player_data[f'field{fidx + 1}'] = player_data[field]
+                    player_data[f'field{fidx + 1}_rel'] = player_data[field] / potw_denominator
+
         context['squads'].append(squad_data)
 
     context['request'] = request

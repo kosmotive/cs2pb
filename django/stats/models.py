@@ -7,9 +7,10 @@ from django.db.models.signals import m2m_changed
 from django.db.models import Avg, Count, F
 
 from accounts.models import SteamProfile, Account, Squad
+from api import NAV_SUPPORTED_MAPS, api, fetch_match_details, SteamAPIUser, InvalidSharecodeError
 from discordbot.models import ScheduledNotification
 from .features import Features, FeatureContext
-from api import NAV_SUPPORTED_MAPS, api, fetch_match_details, SteamAPIUser, InvalidSharecodeError
+from . import potw
 
 import awpy.data
 import numpy as np
@@ -158,6 +159,14 @@ class GamingSession(models.Model):
         return f'Empty Gaming Session ({self.pk})'
 
 
+def get_match_result(team_idx, team_scores):
+    own_team_score = team_scores[ team_idx]
+    opp_team_score = team_scores[(team_idx + 1) % 2]
+    if own_team_score < opp_team_score: return 'l'
+    if own_team_score > opp_team_score: return 'w'
+    return 't'
+
+
 class Match(models.Model):
 
     sharecode   = models.CharField(blank=False, max_length=50)
@@ -193,13 +202,6 @@ class Match(models.Model):
             m.map_name = data['map']
             m.save()
 
-            def get_match_result(team_idx, team_scores):
-                own_team_score = team_scores[ team_idx]
-                opp_team_score = team_scores[(team_idx + 1) % 2]
-                if own_team_score < opp_team_score: return 'l'
-                if own_team_score > opp_team_score: return 'w'
-                return 't'
-
             slices = [
                 data['steam_ids'],
                 data['summary'].enemy_kills,
@@ -231,7 +233,7 @@ class Match(models.Model):
                 mp.score     = score
                 mp.mvps      = mvps
                 mp.headshots = headshots
-                mp.adr       = float(data[ 'adr'][str(steam_profile.steamid)] or 0)
+                mp.adr       = float(data['adr'][str(steam_profile.steamid)] or 0)
                 mp.save()
 
             for kill_data in data['kills'].to_dict(orient='records'):
@@ -263,6 +265,10 @@ class Match(models.Model):
 
     def __str__(self):
         return f'{self.map_name} ({self.datetime})'
+
+    @property
+    def rounds(self):
+        return self.score_team1 + self.score_team2
 
     @property
     def timestamp_end(self):
@@ -328,6 +334,18 @@ class MatchParticipation(models.Model):
     @property
     def kd(self):
         return self.kills / max((1, self.deaths))
+
+    def streaks(self, n):
+        """
+        Count the number of streaks of length n.
+
+        A streak of length n is a round played where the player scored n kills.
+        """
+        rounds = np.zeros(100, int)
+        for kev in self.kill_events.all():
+            if kev.round is None: continue
+            rounds[kev.round] += 1
+        return (rounds == n).sum()
 
     @staticmethod
     def filter(qs, period):
@@ -399,6 +417,7 @@ class PlayerOfTheWeek(models.Model):
     player2   = models.ForeignKey(SteamProfile, null=True , on_delete=models.SET_NULL, blank=True, related_name='potw2') # silver
     player3   = models.ForeignKey(SteamProfile, null=True , on_delete=models.SET_NULL, blank=True, related_name='potw3') # bronze
     squad     = models.ForeignKey(Squad       , null=False, on_delete=models.CASCADE)
+    mode      = models.CharField(blank=False, max_length=20)
 
     @property
     def competition_start_timestamp(self):
@@ -436,7 +455,7 @@ class PlayerOfTheWeek(models.Model):
         prehistoric_badge_date = prehistoric_match_date + timedelta(days = -prehistoric_match_date.weekday())
         prehistoric_badge_date = prehistoric_badge_date.replace(hour=4, minute=0)
         prehistoric_timestamp  = round(datetime.timestamp(prehistoric_badge_date))
-        prehistoric_badge = PlayerOfTheWeek(timestamp = prehistoric_timestamp, squad = squad)
+        prehistoric_badge = PlayerOfTheWeek(timestamp = prehistoric_timestamp, squad = squad, mode = potw.mode_cycle[-1].id)
         return prehistoric_badge
 
     @staticmethod
@@ -448,24 +467,31 @@ class PlayerOfTheWeek(models.Model):
             return badges.latest('timestamp')
 
     @staticmethod
-    def get_next_badge_data(squad):
+    def get_next_badge_data(squad, force_mode = None):
         prev_badge = PlayerOfTheWeek.get_latest_badge(squad)
         prev_date  = datetime.fromtimestamp(prev_badge.timestamp)
+        mode = potw.get_next_mode(prev_badge.mode) if force_mode is None else potw.get_mode_by_id(force_mode)
         next_timestamp = round(datetime.timestamp(prev_date + timedelta(days = 7)))
         player_stats   = dict()
         match_participations = squad.match_participations(
             pmatch__timestamp__gt  = prev_badge.timestamp,
             pmatch__timestamp__lte = next_timestamp)
+
+        # Accumulate stats
+        stat_fields = {'score'}
         for mp in match_participations:
             if mp.player.steamid not in player_stats:
-                player_stats[mp.player.steamid] = dict(kills = 0, deaths = 0, wins = 0)
-            player_stats[mp.player.steamid]['deaths'] += mp.deaths
-            player_stats[mp.player.steamid]['kills' ] += mp.kills
+                player_stats[mp.player.steamid] = dict(wins = 0)
+            mode.accumulate(player_stats[mp.player.steamid], mp)
+            stat_fields |= frozenset(player_stats[mp.player.steamid].keys()) - frozenset(['wins'])
             if mp.result == 'w':
                 player_stats[mp.player.steamid]['wins'] += 1
+
+        # Aggregate stats
         for steamid in player_stats:
-            player_stats[steamid]['k/d'] = player_stats[steamid]['kills'] / max((1, player_stats[steamid]['deaths']))
-        top_steamids = sorted(player_stats.keys(), key=lambda steamid: player_stats[steamid]['k/d'], reverse=True)
+            player_stats[steamid]['score'] = mode.aggregate(player_stats[steamid])
+
+        top_steamids = sorted(player_stats.keys(), key=lambda steamid: player_stats[steamid]['score'], reverse=True)
         result = {
             'timestamp':   next_timestamp,
             'squad':       squad,
@@ -476,36 +502,35 @@ class PlayerOfTheWeek(models.Model):
         else:
             next_place = 1
             for steamid in top_steamids:
-                player_data = {
-                    'player': SteamProfile.objects.get(pk = steamid),
-                    'kills':  player_stats[steamid]['kills'],
-                    'deaths': player_stats[steamid]['deaths'],
-                }
-                if player_stats[steamid]['wins'] == 0:
+                player_data = dict(player = SteamProfile.objects.get(pk = steamid)) | {field: player_stats[steamid][field] for field in stat_fields}
+                fail_requirements = mode.does_fail_requirements(player_stats[steamid])
+                if fail_requirements != None:
                     player_data['place_candidate'] = None
-                    player_data['unfulfilled_requirement'] = 'Will not be awarded unless at least one match is won.'
+                    player_data['unfulfilled_requirement'] = str(fail_requirements)
                 elif next_place <= 3 and len(top_steamids) > next_place:
                     player_data['place_candidate'] = next_place
                     next_place += 1
                 else:
                     player_data['place_candidate'] = None
                 result['leaderboard'].append(player_data)
-        draft_badge = PlayerOfTheWeek(timestamp = result['timestamp'], squad = squad)
+        draft_badge = PlayerOfTheWeek(timestamp = result['timestamp'], squad = squad, mode = mode.id)
         result['competition_end'] = draft_badge.competition_end_datetime
-        result['week'] = draft_badge.week
+        result['week'] = draft_badge.week - 1
         result['year'] = draft_badge.year
+        result['mode'] = draft_badge.mode
         return result
 
     @staticmethod
     def create_badge(badge_data):
         if datetime.timestamp(csgo_timestamp(badge_data['timestamp'])) > datetime.timestamp(datetime.now()): return None
-        badge = PlayerOfTheWeek(timestamp = badge_data['timestamp'], squad = badge_data['squad'])
+        badge = PlayerOfTheWeek(timestamp = badge_data['timestamp'], squad = badge_data['squad'], mode = badge_data['mode'])
         for player_data in badge_data['leaderboard']:
             if   player_data['place_candidate'] == 1: badge.player1 = player_data['player']
             elif player_data['place_candidate'] == 2: badge.player2 = player_data['player']
             elif player_data['place_candidate'] == 3: badge.player3 = player_data['player']
         badge.save()
-        text = f'May I have your attention? 🥇 <{badge.player1.steamid}> is the **Player of the Week {badge.week}/{badge.year}**!'
+        mode = potw.get_mode_by_id(badge.mode)
+        text = f'Attention now, the results of the *{mode.name}* are in! 🥇 <{badge.player1.steamid}> is the **Player of the Week {badge.week}/{badge.year}**!'
         if badge.player2 is not None:
             if badge.player3 is None: text = f'{text} Second place goes to 🥈 <{badge.player2.steamid}>.'
             else: text = f'{text} Second and third places go to 🥈 <{badge.player2.steamid}> and 🥉 <{badge.player3.steamid}>, respectively.'
@@ -578,11 +603,7 @@ class MatchBadge(models.Model):
     def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug, dry=False):
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
         if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
-        rounds = np.zeros(100, int)
-        for kev in participation.kill_events.all():
-            if kev.round is None: continue
-            rounds[kev.round] += 1
-        number = (rounds == kill_number).sum()
+        number = participation.streaks(n = kill_number)
         if number > 0:
             log.info(f'{participation.player.name} achieved {badge_type.name} {number} time(s)')
             if not dry:

@@ -326,11 +326,24 @@ div.squad-members-appendix div.profile-card-appendix-row {
     background-color: rgba(255, 255, 255, 0.3);
 }
 
+div.squad .potw-header {
+    padding: 3mm;
+    background-color: #eff;
+}
+
+div.squad .potw-header .potw-name {
+    font-weight: bold;
+}
+
+div.squad .potw-header .potw-description {
+}
+
 div.squad .potw-aspirants {
 }
 
 div.squad .potw-aspirants .potw-aspirants-unfulfilled-requirement {
     font-size: 80%;
+    padding: 3mm;
 }
 
 div.squad .potw-aspirants-list {

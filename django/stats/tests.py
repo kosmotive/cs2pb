@@ -2,12 +2,29 @@ from types import SimpleNamespace
 
 from django.test import TestCase
 
-from accounts.models import Squad
-from stats.models import Match, MatchBadge, KillEvent
+from accounts.models import Squad, SteamProfile
+from stats.models import Match, MatchParticipation, MatchBadge, KillEvent, get_match_result, PlayerOfTheWeek
+from stats import potw
 from stats import views
 from discordbot.models import ScheduledNotification
 from tests import testsuite
 from url_forward import get_redirect_url_to
+
+
+def create_kill_event(mp_killer, mp_victim, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0):
+    return KillEvent(
+        killer = mp_killer,
+        victim = mp_victim,
+        round = round,
+        kill_type = kill_type,
+        bomb_planted = bomb_planted,
+        killer_x = killer_x,
+        killer_y = killer_y,
+        killer_z = killer_z,
+        victim_x = victim_x,
+        victim_y = victim_y,
+        victim_z = victim_z,
+    )
 
 
 class add_globals_to_context(TestCase):
@@ -147,10 +164,10 @@ class MatchBadge__award(TestCase):
         KillEvent.objects.all().delete()
         KillEvent.objects.bulk_create(
             [
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
             ]
         )
         MatchBadge.award(mp1, list())
@@ -166,14 +183,14 @@ class MatchBadge__award(TestCase):
         KillEvent.objects.all().delete()
         KillEvent.objects.bulk_create(
             [
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 2, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 2, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 2, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 2, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 2),
+                create_kill_event(mp1, mp2, round = 2),
+                create_kill_event(mp1, mp2, round = 2),
+                create_kill_event(mp1, mp2, round = 2),
             ]
         )
         MatchBadge.award(mp1, list())
@@ -189,31 +206,11 @@ class MatchBadge__award(TestCase):
         KillEvent.objects.all().delete()
         KillEvent.objects.bulk_create(
             [
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-            ]
-        )
-        MatchBadge.award(mp1, list())
-        self.assertEqual(len(MatchBadge.objects.all()), 1)
-        badge = MatchBadge.objects.filter(badge_type = 'ace').get()
-        self.assertEqual(badge.participation.pk, mp1.pk)
-        self.assertEqual(badge.frequency, 1)
-
-    def test_ace(self):
-        pmatch = Match__create_from_data().test()
-        mp1 = pmatch.get_participation('76561197967680028')
-        mp2 = pmatch.get_participation('76561197961345487')
-        KillEvent.objects.all().delete()
-        KillEvent.objects.bulk_create(
-            [
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
             ]
         )
         MatchBadge.award(mp1, list())
@@ -229,16 +226,16 @@ class MatchBadge__award(TestCase):
         KillEvent.objects.all().delete()
         KillEvent.objects.bulk_create(
             [
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 2, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 2, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 2, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 2, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
-                KillEvent(killer = mp1, victim = mp2, round = 2, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 2),
+                create_kill_event(mp1, mp2, round = 2),
+                create_kill_event(mp1, mp2, round = 2),
+                create_kill_event(mp1, mp2, round = 2),
+                create_kill_event(mp1, mp2, round = 2),
             ]
         )
         MatchBadge.award(mp1, list())
@@ -310,6 +307,228 @@ class Squad__do_changelog_announcements(TestCase):
             self.assertIn(c['date'], text)
             self.assertIn(get_redirect_url_to(c['url']), text)
         self.assertNotIn(Squad__do_changelog_announcements.changelog[-1]['url'], text)
+
+
+class get_next_potw_mode(TestCase):
+
+    def test(self):
+        self.assertEqual(potw.get_next_mode(potw.mode_cycle[ 0].id), potw.mode_cycle[1])
+        self.assertEqual(potw.get_next_mode(potw.mode_cycle[-1].id), potw.mode_cycle[0])
+
+
+class PlayerOfTheWeek__get_next_badge_data(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        testsuite.fake_api.inject('accounts.models')
+
+    @classmethod
+    def tearDownClass(cls):
+        testsuite.fake_api.restore('accounts.models')
+
+    def setUp(self):
+        self.squad = Squad.objects.create(name='squad')
+        self.team1 = [
+            SteamProfile.objects.create(steamid = '12345678900000001'),
+            SteamProfile.objects.create(steamid = '12345678900000002'),
+            SteamProfile.objects.create(steamid = '12345678900000003'),
+        ]
+        self.team2 = [
+            SteamProfile.objects.create(steamid = '12345678900000004'),
+            SteamProfile.objects.create(steamid = '12345678900000005'),
+            SteamProfile.objects.create(steamid = '12345678900000006'),
+        ]
+
+        # Add players to squad
+        for player in self.players:
+            self.squad.members.add(player)
+
+        # Create an initial match
+        self.pmatch = self._create_match(0)
+
+    @property
+    def players(self):
+        return self.team1 + self.team2
+
+    def _create_match(self, timestamp):
+        m = Match.objects.create(
+            sharecode = f'sharecode-{timestamp}',
+            timestamp = timestamp,
+            score_team1 = 12,
+            score_team2 = 13,
+            duration = 1653,
+            map_name = 'de_dust2',
+        )
+        for uidx, user in enumerate(self.players):
+            mp = MatchParticipation(player = user, pmatch = m)
+            mp.position  = uidx % 3
+            mp.team      = 1 + uidx // 3
+            mp.result    = get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
+            mp.kills     =  20   + uidx
+            mp.assists   =  10   - uidx
+            mp.deaths    =  15   + uidx
+            mp.score     =  30   - uidx
+            mp.mvps      =   5   + uidx
+            mp.headshots =  15   - uidx
+            mp.adr       = 120.5 + uidx
+            mp.save()
+        return m
+
+    def test_kd_challenge(self):
+        badge = PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'k/d')
+        self.assertEqual(badge['mode'], 'k/d')
+        self.assertEqual(badge['week'], 1)
+        self.assertEqual(badge['year'], 1970)
+        for entry in badge['leaderboard']:
+            player = entry['player']
+
+            if entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team1)
+
+            if not entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team2)
+
+            if entry.get('place_candidate') is None:
+                self.assertIn(player, self.team1)
+
+            if entry.get('place_candidate') == 1:
+                self.assertEqual(player.pk, self.team2[0].pk)
+
+            if entry.get('place_candidate') == 2:
+                self.assertEqual(player.pk, self.team2[1].pk)
+
+            if entry.get('place_candidate') == 3:
+                self.assertEqual(player.pk, self.team2[2].pk)
+
+        return badge
+
+    def test_streak_challenge(self):
+        mp1 = self.pmatch.get_participation('12345678900000001')
+        mp4 = self.pmatch.get_participation('12345678900000004')
+        mp5 = self.pmatch.get_participation('12345678900000005')
+        KillEvent.objects.all().delete()
+        KillEvent.objects.bulk_create(
+            sum(
+                [
+                    [create_kill_event(mp5, mp1, round = 1)] * 3,
+                    [create_kill_event(mp5, mp1, round = 2)] * 5,
+                    [create_kill_event(mp4, mp1, round = 1)] * 5,
+                ],
+                list(),
+            )
+        )
+
+        badge = PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'streaks')
+        self.assertEqual(badge['mode'], 'streaks')
+        self.assertEqual(badge['week'], 1)
+        self.assertEqual(badge['year'], 1970)
+        for entry in badge['leaderboard']:
+            player = entry['player']
+
+            if entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team1 + [self.team2[2]])
+
+            if not entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team2[:2])
+
+            if entry.get('place_candidate') is None:
+                self.assertIn(player, self.team1 + [self.team2[2]])
+
+            if entry.get('place_candidate') == 1:
+                self.assertEqual(player.pk, self.team2[1].pk)
+
+            if entry.get('place_candidate') == 2:
+                self.assertEqual(player.pk, self.team2[0].pk)
+
+            self.assertNotEqual(entry.get('place_candidate'), 3)
+
+        return badge
+
+    def test_adr_challenge(self):
+        badge = PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'adr')
+        self.assertEqual(badge['mode'], 'adr')
+        self.assertEqual(badge['week'], 1)
+        self.assertEqual(badge['year'], 1970)
+        for entry in badge['leaderboard']:
+            player = entry['player']
+
+            if entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team1)
+
+            if not entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team2)
+
+            if entry.get('place_candidate') is None:
+                self.assertIn(player, self.team1)
+
+            if entry.get('place_candidate') == 1:
+                self.assertEqual(player.pk, self.team2[-1].pk)
+
+            if entry.get('place_candidate') == 2:
+                self.assertEqual(player.pk, self.team2[-2].pk)
+
+            if entry.get('place_candidate') == 3:
+                self.assertEqual(player.pk, self.team2[-3].pk)
+
+        return badge
+
+    def test_accuracy_challenge(self):
+        badge = PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'accuracy')
+        self.assertEqual(badge['mode'], 'accuracy')
+        self.assertEqual(badge['week'], 1)
+        self.assertEqual(badge['year'], 1970)
+        for entry in badge['leaderboard']:
+            player = entry['player']
+
+            if entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team1)
+
+            if not entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team2)
+
+            if entry.get('place_candidate') is None:
+                self.assertIn(player, self.team1)
+
+            if entry.get('place_candidate') == 1:
+                self.assertEqual(player.pk, self.team2[0].pk)
+
+            if entry.get('place_candidate') == 2:
+                self.assertEqual(player.pk, self.team2[1].pk)
+
+            if entry.get('place_candidate') == 3:
+                self.assertEqual(player.pk, self.team2[2].pk)
+
+        return badge
+
+    def test_mode(self):
+        data1 = PlayerOfTheWeek.get_next_badge_data(self.squad)
+        badge1 = PlayerOfTheWeek.create_badge(data1)
+        pmatch2 = self._create_match(badge1.timestamp)
+        data2 = PlayerOfTheWeek.get_next_badge_data(self.squad)
+        self.assertEqual(data2['mode'], potw.mode_cycle[1].id)
+        self.assertEqual(data2['week'], 2)
+        self.assertEqual(data2['year'], 1970)
+
+
+class PlayerOfTheWeek__create_badge(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        testsuite.fake_api.inject('accounts.models')
+
+    @classmethod
+    def tearDownClass(cls):
+        testsuite.fake_api.restore('accounts.models')
+
+    def test(self):
+        get_next_badge_data = PlayerOfTheWeek__get_next_badge_data()
+        get_next_badge_data.setUp()
+        data = get_next_badge_data.test_kd_challenge()
+        get_next_badge_data.tearDown()
+        badge = PlayerOfTheWeek.create_badge(data)
+        self.assertEqual(badge.mode, 'k/d')
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
+        self.assertIn(potw.get_mode_by_id(badge.mode).name, ScheduledNotification.objects.get().text)
 
 
 if __name__ == '__main__':
