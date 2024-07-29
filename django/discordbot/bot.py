@@ -319,7 +319,7 @@ async def squadstats(ctx, features:str, squad:str=None, days:int=None):
 
 @bot.tree.command(description='Credits')
 async def who_is_your_creator(ctx):
-    await ctx.response.send_message('The only and almighty, *the void of the Aether!!1*'.upper())
+    await ctx.response.send_message('The only and almighty, *TEH VOID OF THE AETHER!!1*'.upper())
 
 
 if os.environ.get('CS2PB_DISCORD_ENABLED', False):
