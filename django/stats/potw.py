@@ -1,7 +1,8 @@
 class Mode:
 
-    def __init__(self, id, description):
+    def __init__(self, id, name, description):
         self.id = id
+        self.name = name
         self.description = description
 
     def accumulate(self, stats, mp):
@@ -9,6 +10,12 @@ class Mode:
 
     def aggregate(self, stats):
         raise NotImplementedError()
+
+    def does_fail_requirements(self, stats):
+        if stats['wins'] == 0:
+            return 'Will not be awarded unless at least one match is won.'
+        else:
+            return None
 
 
 class KDChallenge(Mode):
@@ -27,12 +34,12 @@ class ADRChallenge(Mode):
 
     def accumulate(self, stats, mp):
         stats.setdefault('damage', 0)
-        stats.setdefault('rounds', 0)
+        stats.setdefault('reference', 0)
         stats['damage'] += mp.adr * mp.pmatch.rounds
-        stats['reference'] += mp.pmatch.rounds
+        stats['reference'] += 100 * mp.pmatch.rounds
 
     def aggregate(self, stats):
-        return stats['damage'] / max((1, stats['rounds']))
+        return 100 * stats['damage'] / max((100, stats['reference']))
 
 
 class StreakChallenge(Mode):
@@ -41,24 +48,50 @@ class StreakChallenge(Mode):
         stats.setdefault('score', 0)
         stats['score'] += sum(
             (
-                 1 * mp.streak(2),
-                 5 * mp.streak(3),
-                20 * mp.streak(4),
-                50 * mp.streak(5),
+                 1 * mp.streaks(2),
+                 5 * mp.streaks(3),
+                20 * mp.streaks(4),
+                50 * mp.streaks(5),
             )
         )
 
     def aggregate(self, stats):
         return stats['score']
 
+    def does_fail_requirements(self, stats):
+        super_ret = super().does_fail_requirements(stats)
+        if super_ret is not None:
+            return super_ret
+        elif stats['score'] == 0:
+            return 'Will not be awarded unless at least a two-kill is performed.'
+        else:
+            return None
+
 
 mode_cycle = [
-    KDChallenge(id = 'k/d', description = 'Max out your kill/death ratio!'),
-    ADRChallenge(id = 'adr', description = 'Max out your average damage per round!'),
-    StreakChallenge(id = 'streaks', description = 'Score two-kills, three-kills, quad-kills, and aces!'),
+    KDChallenge(
+        id = 'k/d',
+        name = 'K/D Challenge',
+        description = 'Max out your kill/death ratio!',
+    ),
+    StreakChallenge(
+        id = 'streaks',
+        name = 'Streak Challenge',
+        description = 'Score two-kills, three-kills, quad-kills, and aces!',
+    ),
+    ADRChallenge(
+        id = 'adr',
+        name = 'ADR Challenge',
+        description = 'Max out your average damage per round!',
+    ),
 ]
 
 
 def get_next_mode(mode_id):
     idx = [m.id for m in mode_cycle].index(mode_id)
     return mode_cycle[(idx + 1) % len(mode_cycle)]
+
+
+def get_mode_by_id(mode_id):
+    idx = [m.id for m in mode_cycle].index(mode_id)
+    return mode_cycle[idx]

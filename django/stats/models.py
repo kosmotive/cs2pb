@@ -467,10 +467,10 @@ class PlayerOfTheWeek(models.Model):
             return badges.latest('timestamp')
 
     @staticmethod
-    def get_next_badge_data(squad):
+    def get_next_badge_data(squad, force_mode = None):
         prev_badge = PlayerOfTheWeek.get_latest_badge(squad)
         prev_date  = datetime.fromtimestamp(prev_badge.timestamp)
-        mode = potw.get_next_mode(prev_badge.mode.id)
+        mode = potw.get_next_mode(prev_badge.mode.id) if force_mode is None else potw.get_mode_by_id(force_mode)
         next_timestamp = round(datetime.timestamp(prev_date + timedelta(days = 7)))
         player_stats   = dict()
         match_participations = squad.match_participations(
@@ -478,10 +478,12 @@ class PlayerOfTheWeek(models.Model):
             pmatch__timestamp__lte = next_timestamp)
 
         # Accumulate stats
+        stat_fields = set()
         for mp in match_participations:
             if mp.player.steamid not in player_stats:
                 player_stats[mp.player.steamid] = dict(wins = 0)
             mode.accumulate(player_stats[mp.player.steamid], mp)
+            stat_fields |= frozenset(player_stats[mp.player.steamid].keys()) - frozenset(['wins'])
             if mp.result == 'w':
                 player_stats[mp.player.steamid]['wins'] += 1
 
@@ -500,14 +502,11 @@ class PlayerOfTheWeek(models.Model):
         else:
             next_place = 1
             for steamid in top_steamids:
-                player_data = {
-                    'player': SteamProfile.objects.get(pk = steamid),
-                    'kills':  player_stats[steamid]['kills'],
-                    'deaths': player_stats[steamid]['deaths'],
-                }
-                if player_stats[steamid]['wins'] == 0:
+                player_data = dict(player = SteamProfile.objects.get(pk = steamid)) | {field: player_stats[steamid][field] for field in stat_fields}
+                fail_requirements = mode.does_fail_requirements(player_stats[steamid])
+                if fail_requirements != None:
                     player_data['place_candidate'] = None
-                    player_data['unfulfilled_requirement'] = 'Will not be awarded unless at least one match is won.'
+                    player_data['unfulfilled_requirement'] = str(fail_requirements)
                 elif next_place <= 3 and len(top_steamids) > next_place:
                     player_data['place_candidate'] = next_place
                     next_place += 1
@@ -530,7 +529,8 @@ class PlayerOfTheWeek(models.Model):
             elif player_data['place_candidate'] == 2: badge.player2 = player_data['player']
             elif player_data['place_candidate'] == 3: badge.player3 = player_data['player']
         badge.save()
-        text = f'May I have your attention? 🥇 <{badge.player1.steamid}> is the **Player of the Week {badge.week}/{badge.year}**!'
+        mode = potw.get_mode_by_id(badge.mode)
+        text = f'Attention now, the results of the {mode.name} are in! 🥇 <{badge.player1.steamid}> is the **Player of the Week {badge.week}/{badge.year}**!'
         if badge.player2 is not None:
             if badge.player3 is None: text = f'{text} Second place goes to 🥈 <{badge.player2.steamid}>.'
             else: text = f'{text} Second and third places go to 🥈 <{badge.player2.steamid}> and 🥉 <{badge.player3.steamid}>, respectively.'
