@@ -184,7 +184,9 @@ async def link(ctx):
 
 
 async def get_full_discord_name(user):
-    return None if user is None else f'{user.name}#{user.discriminator}'
+    # FIXME: some users might not have a `discord_name` set up in their profile,
+    #        so it would be better to resolve to an abstract User object?
+    return None if user is None else user.name
 
 
 @bot.tree.command(description='Permits the bot to track your performance without gaps.')
