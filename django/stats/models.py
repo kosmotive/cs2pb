@@ -539,7 +539,6 @@ class PlayerOfTheWeek(models.Model):
 
     @staticmethod
     def create_missing_badges(squad=None):
-        pass
         if squad is None:
             for squad in Squad.objects.all():
                 PlayerOfTheWeek.create_missing_badges(squad)

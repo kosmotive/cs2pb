@@ -328,7 +328,6 @@ div.squad-members-appendix div.profile-card-appendix-row {
 
 div.squad .potw-header {
     padding: 3mm;
-    font-size: 80%;
     background-color: #eff;
 }
 
@@ -344,6 +343,7 @@ div.squad .potw-aspirants {
 
 div.squad .potw-aspirants .potw-aspirants-unfulfilled-requirement {
     font-size: 80%;
+    padding: 3mm;
 }
 
 div.squad .potw-aspirants-list {
