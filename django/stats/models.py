@@ -455,7 +455,7 @@ class PlayerOfTheWeek(models.Model):
         prehistoric_badge_date = prehistoric_match_date + timedelta(days = -prehistoric_match_date.weekday())
         prehistoric_badge_date = prehistoric_badge_date.replace(hour=4, minute=0)
         prehistoric_timestamp  = round(datetime.timestamp(prehistoric_badge_date))
-        prehistoric_badge = PlayerOfTheWeek(timestamp = prehistoric_timestamp, squad = squad, mode = potw.mode_cycle[-1])
+        prehistoric_badge = PlayerOfTheWeek(timestamp = prehistoric_timestamp, squad = squad, mode = potw.mode_cycle[-1].id)
         return prehistoric_badge
 
     @staticmethod
@@ -470,7 +470,7 @@ class PlayerOfTheWeek(models.Model):
     def get_next_badge_data(squad, force_mode = None):
         prev_badge = PlayerOfTheWeek.get_latest_badge(squad)
         prev_date  = datetime.fromtimestamp(prev_badge.timestamp)
-        mode = potw.get_next_mode(prev_badge.mode.id) if force_mode is None else potw.get_mode_by_id(force_mode)
+        mode = potw.get_next_mode(prev_badge.mode) if force_mode is None else potw.get_mode_by_id(force_mode)
         next_timestamp = round(datetime.timestamp(prev_date + timedelta(days = 7)))
         player_stats   = dict()
         match_participations = squad.match_participations(

@@ -472,6 +472,13 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
         return badge
 
+    def test_mode(self):
+        data1 = PlayerOfTheWeek.get_next_badge_data(self.squad)
+        badge1 = PlayerOfTheWeek.create_badge(data1)
+        pmatch2 = self._create_match(badge1.timestamp)
+        data2 = PlayerOfTheWeek.get_next_badge_data(self.squad)
+        self.assertEqual(data2['mode'], potw.mode_cycle[1].id)
+
 
 class PlayerOfTheWeek__create_badge(TestCase):
 
