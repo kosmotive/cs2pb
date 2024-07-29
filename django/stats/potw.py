@@ -68,6 +68,18 @@ class StreakChallenge(Mode):
             return None
 
 
+class AccuracyChallenge(Mode):
+
+    def accumulate(self, stats, mp):
+        stats.setdefault('headshots', 0)
+        stats.setdefault('rounds', 0)
+        stats['headshots'] += mp.headshots
+        stats['rounds'] += mp.pmatch.rounds
+
+    def aggregate(self, stats):
+        return stats['headshots'] / max((1, stats['rounds']))
+
+
 mode_cycle = [
     KDChallenge(
         id = 'k/d',
@@ -83,6 +95,11 @@ mode_cycle = [
         id = 'adr',
         name = 'ADR Challenge',
         description = 'Max out your average damage per round!',
+    ),
+    AccuracyChallenge(
+        id = 'accuracy',
+        name = 'Accuracy Challenge',
+        description = 'Aim for the head!',
     ),
 ]
 

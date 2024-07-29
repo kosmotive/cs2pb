@@ -472,12 +472,42 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
         return badge
 
+    def test_accuracy_challenge(self):
+        badge = PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'accuracy')
+        self.assertEqual(badge['mode'], 'accuracy')
+        self.assertEqual(badge['week'], 1)
+        self.assertEqual(badge['year'], 1970)
+        for entry in badge['leaderboard']:
+            player = entry['player']
+
+            if entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team1)
+
+            if not entry.get('unfulfilled_requirement', ''):
+                self.assertIn(player, self.team2)
+
+            if entry.get('place_candidate') is None:
+                self.assertIn(player, self.team1)
+
+            if entry.get('place_candidate') == 1:
+                self.assertEqual(player.pk, self.team2[0].pk)
+
+            if entry.get('place_candidate') == 2:
+                self.assertEqual(player.pk, self.team2[1].pk)
+
+            if entry.get('place_candidate') == 3:
+                self.assertEqual(player.pk, self.team2[2].pk)
+
+        return badge
+
     def test_mode(self):
         data1 = PlayerOfTheWeek.get_next_badge_data(self.squad)
         badge1 = PlayerOfTheWeek.create_badge(data1)
         pmatch2 = self._create_match(badge1.timestamp)
         data2 = PlayerOfTheWeek.get_next_badge_data(self.squad)
         self.assertEqual(data2['mode'], potw.mode_cycle[1].id)
+        self.assertEqual(data2['week'], 2)
+        self.assertEqual(data2['year'], 1970)
 
 
 class PlayerOfTheWeek__create_badge(TestCase):
@@ -493,7 +523,7 @@ class PlayerOfTheWeek__create_badge(TestCase):
     def test(self):
         get_next_badge_data = PlayerOfTheWeek__get_next_badge_data()
         get_next_badge_data.setUp()
-        data = get_next_badge_data.test()
+        data = get_next_badge_data.test_kd_challenge()
         get_next_badge_data.tearDown()
         badge = PlayerOfTheWeek.create_badge(data)
         self.assertEqual(badge.mode, 'k/d')
