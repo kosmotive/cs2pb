@@ -153,7 +153,7 @@ def plot_trends(squad, name, days, features_add=[], features_remove=[], **filter
 
 
 async def tick():
-    user_lookup = {f'{user.name}#{user.discriminator}': user.mention for user in bot.users}.get
+    user_lookup = {user.name: user.mention for user in bot.users}.get
     new_notifications = await pop_scheduled_notifications(user_lookup)
     for n in new_notifications:
         if n['channel_id'] is None: continue
@@ -184,7 +184,9 @@ async def link(ctx):
 
 
 async def get_full_discord_name(user):
-    return None if user is None else f'{user.name}#{user.discriminator}'
+    # FIXME: some users might not have a `discord_name` set up in their profile,
+    #        so it would be better to resolve to an abstract User object?
+    return None if user is None else user.name
 
 
 @bot.tree.command(description='Permits the bot to track your performance without gaps.')
@@ -202,7 +204,7 @@ async def join(ctx):
             await ctx.response.send_message(f'This invitation is only for you ma friend:\n{url}', ephemeral=True)
 
 
-mention_pattern = re.compile(r'^ *<@!([0-9]+)> *$')
+mention_pattern = re.compile(r'^ *<@([0-9]+)> *$')
 
 
 async def resolve_mention(token):
@@ -250,7 +252,7 @@ async def stats(ctx, squad:str=None, player1:str=None, player2:str=None, days:in
                 result = await plot_stats(squad, name0, **kwargs)
         except UnrecognizedNameError as ex:
             members = ', '.join([m.name for m in squad.members_list])
-            await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord names including the discriminators, or Steam profile names, for example: {members}')
+            await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord IDs, or Steam profile names, for example: {members}')
             return
         except UnrecognizedFeatureError as ex:
             features = '\n'.join([f'\n`{s.slug}`: **{s.name}**\n{s.description}' for s in Features.ALL])
@@ -281,7 +283,7 @@ async def trends(ctx, squad:str=None, player:str=None, days:int=None, features:s
             result = await plot_trends(squad, name, days, **kwargs)
         except UnrecognizedNameError as ex:
             members = ', '.join([m.name for m in squad.members_list])
-            await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord names including the discriminators, or Steam profile names, for example: {members}')
+            await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord IDs, or Steam profile names, for example: {members}')
             return
         except UnrecognizedFeatureError as ex:
             features = '\n'.join([f'\n`{s.slug}`: **{s.name}**\n{s.description}' for s in Features.ALL])
@@ -317,11 +319,12 @@ async def squadstats(ctx, features:str, squad:str=None, days:int=None):
 
 @bot.tree.command(description='Credits')
 async def who_is_your_creator(ctx):
-    await ctx.response.send_message('The only and almighty, *the void of the Aether!!1*'.upper())
+    await ctx.response.send_message('The only and almighty, *TEH VOID OF THE AETHER!!1*'.upper())
 
 
 if os.environ.get('CS2PB_DISCORD_ENABLED', False):
     log.info(f'Discord integration enabled')
+    enabled = True
 
     with open('discordbot/settings.json') as fin:
         settings = json.load(fin)
@@ -334,3 +337,4 @@ if os.environ.get('CS2PB_DISCORD_ENABLED', False):
 
 else:
     log.warning(f'Discord integration disabled')
+    enabled = False

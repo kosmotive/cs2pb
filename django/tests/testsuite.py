@@ -1,3 +1,4 @@
+import importlib
 import pathlib
 import urllib.request
 
@@ -15,3 +16,29 @@ def get_demo_path(demo_id):
         urllib.request.urlretrieve(f'http://evoid.de/cs2pb-test-data/demos/{demo_filename}', str(demo_filepath))
 
     return str(demo_filepath)
+
+
+class fake_api:
+
+    @staticmethod
+    def fetch_profile(steamid):
+        return dict(
+            personaname = f'name-of-{steamid}',
+            avatar = f'https://{steamid}/avatar-s.url',
+            avatarmedium = f'https://{steamid}/avatar-m.url',
+            avatarfull = f'https://{steamid}/avatar-l.url',
+        )
+
+    @staticmethod
+    def inject(*modules):
+        for module_name in modules:
+            m = importlib.import_module(module_name)
+            setattr(m, 'api', fake_api)
+
+    @staticmethod
+    def restore(*modules):
+        from api import api
+        for module_name in modules:
+            m = importlib.import_module(module_name)
+            setattr(m, 'api', api)
+

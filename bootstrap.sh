@@ -2,6 +2,12 @@
 
 export REF="65ea3446c0b8d1397e125d94008ecb90e6aaf544"
 
+if [ -f .no-bootstrap ]; then
+    echo "Bootstrap by accident? Bootstrap is blocked."
+    echo "Remove the file .no-bootstrap to bootstrap."
+    exit
+fi
+
 git clone git@github.com:kodikit/cs2pb-bootstrap.git
 cd cs2pb-bootstrap
 git checkout $REF
