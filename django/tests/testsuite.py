@@ -20,18 +20,14 @@ def get_demo_path(demo_id):
 
 class fake_api:
 
-    profiles = {
-        '1234567890': dict(
-            personaname = 'steamname',
-            avatar = 'https://avatar-s.url',
-            avatarmedium = 'https://avatar-m.url',
-            avatarfull = 'https://avatar-l.url',
-        )
-    }
-
     @staticmethod
     def fetch_profile(steamid):
-        return fake_api.profiles[steamid]
+        return dict(
+            personaname = f'name-of-{steamid}',
+            avatar = f'https://{steamid}/avatar-s.url',
+            avatarmedium = f'https://{steamid}/avatar-m.url',
+            avatarfull = f'https://{steamid}/avatar-l.url',
+        )
 
     @staticmethod
     def inject(*modules):

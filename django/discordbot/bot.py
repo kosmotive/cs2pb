@@ -153,7 +153,7 @@ def plot_trends(squad, name, days, features_add=[], features_remove=[], **filter
 
 
 async def tick():
-    user_lookup = {f'{user.name}#{user.discriminator}': user.mention for user in bot.users}.get
+    user_lookup = {user.name: user.mention for user in bot.users}.get
     new_notifications = await pop_scheduled_notifications(user_lookup)
     for n in new_notifications:
         if n['channel_id'] is None: continue
