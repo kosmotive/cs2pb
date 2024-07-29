@@ -11,6 +11,9 @@ class Mode:
     def aggregate(self, stats):
         raise NotImplementedError()
 
+    def details(self, stats):
+        return None
+
     def does_fail_requirements(self, stats):
         if stats['wins'] == 0:
             return 'Will not be awarded unless at least one match is won.'
@@ -51,21 +54,29 @@ class ADRChallenge(Mode):
 class StreakChallenge(Mode):
 
     fields = ['score']
-    labels = ['score']
 
     def accumulate(self, stats, mp):
-        stats.setdefault('score', 0)
-        stats['score'] += sum(
+        stats.setdefault('2-kills', 0)
+        stats.setdefault('3-kills', 0)
+        stats.setdefault('4-kills', 0)
+        stats.setdefault('5-kills', 0)
+        stats['2-kills'] += mp.streaks(2)
+        stats['3-kills'] += mp.streaks(3)
+        stats['4-kills'] += mp.streaks(4)
+        stats['5-kills'] += mp.streaks(5)
+
+    def aggregate(self, stats):
+        return sum(
             (
-                 1 * mp.streaks(2),
-                 5 * mp.streaks(3),
-                20 * mp.streaks(4),
-                50 * mp.streaks(5),
+                stats['2-kills'] *  1,
+                stats['3-kills'] *  5,
+                stats['4-kills'] * 20,
+                stats['5-kills'] * 50,
             )
         )
 
-    def aggregate(self, stats):
-        return stats['score']
+    def details(self, stats):
+        return [' + '.join((str(stats[f'{n}-kills']) + f'× <b>{n}-kill</b>' for n in range(2, 6) if stats[f'{n}-kills'] > 0))]
 
     def does_fail_requirements(self, stats):
         super_ret = super().does_fail_requirements(stats)

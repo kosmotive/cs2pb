@@ -478,7 +478,7 @@ class PlayerOfTheWeek(models.Model):
             pmatch__timestamp__lte = next_timestamp)
 
         # Accumulate stats
-        stat_fields = set()
+        stat_fields = {'score'}
         for mp in match_participations:
             if mp.player.steamid not in player_stats:
                 player_stats[mp.player.steamid] = dict(wins = 0)
@@ -530,7 +530,7 @@ class PlayerOfTheWeek(models.Model):
             elif player_data['place_candidate'] == 3: badge.player3 = player_data['player']
         badge.save()
         mode = potw.get_mode_by_id(badge.mode)
-        text = f'Attention now, the results of the {mode.name} are in! 🥇 <{badge.player1.steamid}> is the **Player of the Week {badge.week}/{badge.year}**!'
+        text = f'Attention now, the results of the *{mode.name}* are in! 🥇 <{badge.player1.steamid}> is the **Player of the Week {badge.week}/{badge.year}**!'
         if badge.player2 is not None:
             if badge.player3 is None: text = f'{text} Second place goes to 🥈 <{badge.player2.steamid}>.'
             else: text = f'{text} Second and third places go to 🥈 <{badge.player2.steamid}> and 🥉 <{badge.player3.steamid}>, respectively.'
@@ -540,17 +540,17 @@ class PlayerOfTheWeek(models.Model):
     @staticmethod
     def create_missing_badges(squad=None):
         pass
-#        if squad is None:
-#            for squad in Squad.objects.all():
-#                PlayerOfTheWeek.create_missing_badges(squad)
-#        else:
-#            try:
-#                while True:
-#                    next_badge_data = PlayerOfTheWeek.get_next_badge_data(squad)
-#                    next_badge = PlayerOfTheWeek.create_badge(next_badge_data)
-#                    if next_badge is None: break
-#            except Match.DoesNotExist:
-#                log.error(f'Failed to create missing badges.', exc_info=True)
+        if squad is None:
+            for squad in Squad.objects.all():
+                PlayerOfTheWeek.create_missing_badges(squad)
+        else:
+            try:
+                while True:
+                    next_badge_data = PlayerOfTheWeek.get_next_badge_data(squad)
+                    next_badge = PlayerOfTheWeek.create_badge(next_badge_data)
+                    if next_badge is None: break
+            except Match.DoesNotExist:
+                log.error(f'Failed to create missing badges.', exc_info=True)
 
     class Meta:
         verbose_name        = 'Player-of-the-Week badge';

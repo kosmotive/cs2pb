@@ -130,10 +130,13 @@ def squads(request, squad=None, expanded_stats=False):
                 max([player_data[field] for player_data in upcoming_potw['leaderboard']])
                 for field in upcoming_potw_mode.fields
             )
+
             for player_data in upcoming_potw['leaderboard']:
+                player_data[f'details'] = upcoming_potw_mode.details(player_data)
                 for fidx, field in enumerate(upcoming_potw_mode.fields):
                     player_data[f'field{fidx + 1}'] = player_data[field]
                     player_data[f'field{fidx + 1}_rel'] = player_data[field] / potw_denominator
+
         context['squads'].append(squad_data)
 
     context['request'] = request
