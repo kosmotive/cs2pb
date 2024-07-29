@@ -25,11 +25,17 @@
             <a href="{{ squad.share_link }}">Share</a>
         </div>
 
-        <div class="squad-members autoscale fixed-margin-top">{% for member in squad.members %}
+        <div class="autoscale squad-members-rows fixed-margin-top">
+        {% for row in squad.card_rows %}
+
+            <div class="squad-members">{% for member in row %}
     
-            {% include 'stats/profile-card.html' with player=member request=request expand_url=squad.expand_url %}
+                {% include 'stats/profile-card.html' with player=member request=request expand_url=squad.expand_url %}
     
-        {% endfor %}</div>
+            {% endfor %}</div>
+
+        {% endfor %}
+        </div>
 
         <div class="squad-members-appendix">
 

@@ -79,6 +79,25 @@ def squad_expanded_stats(request, squad):
     return squads(request, squad, expanded_stats=True)
 
 
+def split_into_chunks(data, n):
+    chunks = [data]
+    while True:
+        if len(chunks[-1]) > n:
+            chunks = chunks[:-1] + [chunks[-1][:n]] + [chunks[-1][n:]]
+        else:
+            break
+    return chunks
+
+
+def split_into_chunks_ex(data, n_min, n_max):
+    """
+    Split data into chunks of variable length by avoiding short tails.
+    """
+    splits = {n: split_into_chunks(data, n) for n in range(n_min, n_max + 1)}
+    tail_size_by_n = {n: len(splits[n][-1]) for n in splits.keys()}
+    return splits[max(tail_size_by_n, key = tail_size_by_n.get)]
+
+
 def squads(request, squad=None, expanded_stats=False):
     context = dict()
 
@@ -108,6 +127,10 @@ def squads(request, squad=None, expanded_stats=False):
         cards = sorted_cards([compute_card(m, squad, features, [2,3,np.inf]) for m in squad.members.all()])
         kd_by_member = {m.steamid: Features.kd(FeatureContext.create_default(m, squad))['value'] for m in squad.members.all()}
         kd_list = [kd_by_member[card['profile'].steamid] for card in cards]
+
+        # Split the cards into rows
+        rows = split_into_chunks_ex(cards, n_min = 4, n_max = 7)
+
         try:
             upcoming_potw = PlayerOfTheWeek.get_next_badge_data(squad)
             upcoming_potw_mode = potw.get_mode_by_id(upcoming_potw['mode'])
@@ -119,7 +142,7 @@ def squads(request, squad=None, expanded_stats=False):
             'name': squad.name,
             'share_link': squad.absolute_url(request),
             'expand_url': None if expanded_stats else reverse('squad_expanded_stats', kwargs=dict(squad = squad.uuid)),
-            'members': cards,
+            'card_rows': rows,
             'upcoming_player_of_the_week': upcoming_potw,
             'upcoming_player_of_the_week_mode': upcoming_potw_mode,
         }

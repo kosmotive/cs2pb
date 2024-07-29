@@ -45,6 +45,10 @@ div.squad .squad-sharelink a:hover {
     color: #aaa;
 }
 
+div.squad .squad-members-rows {
+    margin-bottom: 25mm;
+}
+
 div.squad .squad-members {
     margin-top: 2cm;
     white-space: nowrap;
@@ -65,7 +69,7 @@ div.profile-card {
     display: inline-block;
     padding: 5mm;
     position: relative;
-    margin-bottom: 15mm;
+    margin-bottom: 5mm;
 }
 
 div.profile-card .expand-profile-button {
@@ -193,11 +197,10 @@ div.profile-card .badge-list {
 }
 
 div.profile-card .badge-list .badge {
-    width: 9mm;
-    height: 9mm;
+    width: 7.5mm;
+    height: 7.5mm;
     position: relative;
     display: inline-block;
-    margin-left: 1mm;
     filter: drop-shadow(0 0 1mm rgba(0,0,0,0.1));
 }
 
@@ -237,8 +240,8 @@ div.squad-members-appendix .legend-item {
     vertical-align: middle;
     margin-left: 5mm;
     position: relative;
-    width: 65mm;
-    height: 3em;
+    width: 70mm;
+    height: 3.5em;
     margin-top: 2mm;
     margin-bottom: 2mm;
 }
@@ -260,7 +263,7 @@ div.squad-members-appendix .legend-item .badge {
 div.squad-members-appendix .legend-item .legend-item-label {
     display: inline-block;
     vertical-align: middle;
-    font-size: 90%;
+    font-size: 100%;
     position: absolute;
     left: 9mm;
     white-space: nowrap;
@@ -268,10 +271,10 @@ div.squad-members-appendix .legend-item .legend-item-label {
 
 div.squad-members-appendix .legend-item .legend-item-description {
     display: block;
-    font-size: 66%;
+    font-size: 80%;
     position: absolute;
     left: 9mm;
-    top: 2em;
+    top: 1.8em;
 }
 
 div.squad-members-appendix div.squad-members-appendix-header {
