@@ -252,7 +252,7 @@ async def stats(ctx, squad:str=None, player1:str=None, player2:str=None, days:in
                 result = await plot_stats(squad, name0, **kwargs)
         except UnrecognizedNameError as ex:
             members = ', '.join([m.name for m in squad.members_list])
-            await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord names including the discriminators, or Steam profile names, for example: {members}')
+            await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord IDs, or Steam profile names, for example: {members}')
             return
         except UnrecognizedFeatureError as ex:
             features = '\n'.join([f'\n`{s.slug}`: **{s.name}**\n{s.description}' for s in Features.ALL])
@@ -283,7 +283,7 @@ async def trends(ctx, squad:str=None, player:str=None, days:int=None, features:s
             result = await plot_trends(squad, name, days, **kwargs)
         except UnrecognizedNameError as ex:
             members = ', '.join([m.name for m in squad.members_list])
-            await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord names including the discriminators, or Steam profile names, for example: {members}')
+            await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord IDs, or Steam profile names, for example: {members}')
             return
         except UnrecognizedFeatureError as ex:
             features = '\n'.join([f'\n`{s.slug}`: **{s.name}**\n{s.description}' for s in Features.ALL])

@@ -90,7 +90,7 @@ class bot(TestCase):
         ])
 
     def test_resolve_mention__mention(self):
-        actual = async_to_sync(botimpl.resolve_mention)('<@!9216784356>')
+        actual = async_to_sync(botimpl.resolve_mention)('<@9216784356>')
         self.assertEqual(actual, 'discordname1')
 
     def test_resolve_mention__discordname(self):
