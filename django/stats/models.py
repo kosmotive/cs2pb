@@ -539,17 +539,18 @@ class PlayerOfTheWeek(models.Model):
 
     @staticmethod
     def create_missing_badges(squad=None):
-        if squad is None:
-            for squad in Squad.objects.all():
-                PlayerOfTheWeek.create_missing_badges(squad)
-        else:
-            try:
-                while True:
-                    next_badge_data = PlayerOfTheWeek.get_next_badge_data(squad)
-                    next_badge = PlayerOfTheWeek.create_badge(next_badge_data)
-                    if next_badge is None: break
-            except Match.DoesNotExist:
-                log.error(f'Failed to create missing badges.', exc_info=True)
+        pass
+#        if squad is None:
+#            for squad in Squad.objects.all():
+#                PlayerOfTheWeek.create_missing_badges(squad)
+#        else:
+#            try:
+#                while True:
+#                    next_badge_data = PlayerOfTheWeek.get_next_badge_data(squad)
+#                    next_badge = PlayerOfTheWeek.create_badge(next_badge_data)
+#                    if next_badge is None: break
+#            except Match.DoesNotExist:
+#                log.error(f'Failed to create missing badges.', exc_info=True)
 
     class Meta:
         verbose_name        = 'Player-of-the-Week badge';

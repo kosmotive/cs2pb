@@ -20,6 +20,9 @@ class Mode:
 
 class KDChallenge(Mode):
 
+    fields = ['kills', 'deaths']
+    labels = ['kills', 'deaths']
+
     def accumulate(self, stats, mp):
         stats.setdefault('kills', 0)
         stats.setdefault('deaths', 0)
@@ -32,6 +35,9 @@ class KDChallenge(Mode):
 
 class ADRChallenge(Mode):
 
+    fields = ['damage', 'reference']
+    labels = ['damage dealt', 'expected damage']
+
     def accumulate(self, stats, mp):
         stats.setdefault('damage', 0)
         stats.setdefault('reference', 0)
@@ -43,6 +49,9 @@ class ADRChallenge(Mode):
 
 
 class StreakChallenge(Mode):
+
+    fields = ['score']
+    labels = ['score']
 
     def accumulate(self, stats, mp):
         stats.setdefault('score', 0)
@@ -69,6 +78,9 @@ class StreakChallenge(Mode):
 
 
 class AccuracyChallenge(Mode):
+
+    fields = ['headshots', 'rounds']
+    labels = ['headshots', 'rounds']
 
     def accumulate(self, stats, mp):
         stats.setdefault('headshots', 0)
