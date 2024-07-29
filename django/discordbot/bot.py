@@ -322,6 +322,7 @@ async def who_is_your_creator(ctx):
 
 if os.environ.get('CS2PB_DISCORD_ENABLED', False):
     log.info(f'Discord integration enabled')
+    enabled = True
 
     with open('discordbot/settings.json') as fin:
         settings = json.load(fin)
@@ -334,3 +335,4 @@ if os.environ.get('CS2PB_DISCORD_ENABLED', False):
 
 else:
     log.warning(f'Discord integration disabled')
+    enabled = False
