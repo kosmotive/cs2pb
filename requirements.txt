@@ -13,7 +13,7 @@ csgo @ git+https://github.com/SyberiaK/csgo@4a60581
 cycler==0.12.1
 demoparser2==0.27.0
 discord.py==2.0.1
-Django==4.1
+Django==4.1.13
 fonttools==4.53.1
 frozenlist==1.4.1
 gevent==23.9.0
