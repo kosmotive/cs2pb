@@ -1,9 +1,14 @@
 from types import SimpleNamespace
+from unittest.mock import patch
+import time
+import uuid
 
-from django.test import TestCase
+from django.http import HttpResponseNotFound
+from django.test import TestCase, RequestFactory
+from django.urls import reverse
 
-from accounts.models import Squad, SteamProfile
-from stats.models import Match, MatchParticipation, MatchBadge, KillEvent, get_match_result, PlayerOfTheWeek
+from accounts.models import Account, Squad, SteamProfile
+from stats import models
 from stats import potw
 from stats import views
 from discordbot.models import ScheduledNotification
@@ -12,7 +17,7 @@ from url_forward import get_redirect_url_to
 
 
 def create_kill_event(mp_killer, mp_victim, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0):
-    return KillEvent(
+    return models.KillEvent(
         killer = mp_killer,
         victim = mp_victim,
         round = round,
@@ -134,7 +139,7 @@ class Match__create_from_data(TestCase):
                 76561198064174518,
             ],
         }
-        pmatch = Match.create_from_data(pmatch_data)
+        pmatch = models.Match.create_from_data(pmatch_data)
 
         self.assertEqual(pmatch.sharecode, pmatch_data['sharecode'])
         self.assertEqual(pmatch.timestamp, pmatch_data['timestamp'])
@@ -154,15 +159,15 @@ class MatchBadge__award(TestCase):
     def test_no_awards(self):
         pmatch = Match__create_from_data().test()
         participation = pmatch.get_participation('76561197967680028')
-        MatchBadge.award(participation, list())
-        self.assertEqual(len(MatchBadge.objects.all()), 0)
+        models.MatchBadge.award(participation, list())
+        self.assertEqual(len(models.MatchBadge.objects.all()), 0)
 
     def test_quad_kill(self):
         pmatch = Match__create_from_data().test()
         mp1 = pmatch.get_participation('76561197967680028')
         mp2 = pmatch.get_participation('76561197961345487')
-        KillEvent.objects.all().delete()
-        KillEvent.objects.bulk_create(
+        models.KillEvent.objects.all().delete()
+        models.KillEvent.objects.bulk_create(
             [
                 create_kill_event(mp1, mp2, round = 1),
                 create_kill_event(mp1, mp2, round = 1),
@@ -170,9 +175,9 @@ class MatchBadge__award(TestCase):
                 create_kill_event(mp1, mp2, round = 1),
             ]
         )
-        MatchBadge.award(mp1, list())
-        self.assertEqual(len(MatchBadge.objects.all()), 1)
-        badge = MatchBadge.objects.filter(badge_type = 'quad-kill').get()
+        models.MatchBadge.award(mp1, list())
+        self.assertEqual(len(models.MatchBadge.objects.all()), 1)
+        badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 1)
 
@@ -180,8 +185,8 @@ class MatchBadge__award(TestCase):
         pmatch = Match__create_from_data().test()
         mp1 = pmatch.get_participation('76561197967680028')
         mp2 = pmatch.get_participation('76561197961345487')
-        KillEvent.objects.all().delete()
-        KillEvent.objects.bulk_create(
+        models.KillEvent.objects.all().delete()
+        models.KillEvent.objects.bulk_create(
             [
                 create_kill_event(mp1, mp2, round = 1),
                 create_kill_event(mp1, mp2, round = 1),
@@ -193,9 +198,9 @@ class MatchBadge__award(TestCase):
                 create_kill_event(mp1, mp2, round = 2),
             ]
         )
-        MatchBadge.award(mp1, list())
-        self.assertEqual(len(MatchBadge.objects.all()), 1)
-        badge = MatchBadge.objects.filter(badge_type = 'quad-kill').get()
+        models.MatchBadge.award(mp1, list())
+        self.assertEqual(len(models.MatchBadge.objects.all()), 1)
+        badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
 
@@ -203,8 +208,8 @@ class MatchBadge__award(TestCase):
         pmatch = Match__create_from_data().test()
         mp1 = pmatch.get_participation('76561197967680028')
         mp2 = pmatch.get_participation('76561197961345487')
-        KillEvent.objects.all().delete()
-        KillEvent.objects.bulk_create(
+        models.KillEvent.objects.all().delete()
+        models.KillEvent.objects.bulk_create(
             [
                 create_kill_event(mp1, mp2, round = 1),
                 create_kill_event(mp1, mp2, round = 1),
@@ -213,9 +218,9 @@ class MatchBadge__award(TestCase):
                 create_kill_event(mp1, mp2, round = 1),
             ]
         )
-        MatchBadge.award(mp1, list())
-        self.assertEqual(len(MatchBadge.objects.all()), 1)
-        badge = MatchBadge.objects.filter(badge_type = 'ace').get()
+        models.MatchBadge.award(mp1, list())
+        self.assertEqual(len(models.MatchBadge.objects.all()), 1)
+        badge = models.MatchBadge.objects.filter(badge_type = 'ace').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 1)
 
@@ -223,8 +228,8 @@ class MatchBadge__award(TestCase):
         pmatch = Match__create_from_data().test()
         mp1 = pmatch.get_participation('76561197967680028')
         mp2 = pmatch.get_participation('76561197961345487')
-        KillEvent.objects.all().delete()
-        KillEvent.objects.bulk_create(
+        models.KillEvent.objects.all().delete()
+        models.KillEvent.objects.bulk_create(
             [
                 create_kill_event(mp1, mp2, round = 1),
                 create_kill_event(mp1, mp2, round = 1),
@@ -238,9 +243,9 @@ class MatchBadge__award(TestCase):
                 create_kill_event(mp1, mp2, round = 2),
             ]
         )
-        MatchBadge.award(mp1, list())
-        self.assertEqual(len(MatchBadge.objects.all()), 1)
-        badge = MatchBadge.objects.filter(badge_type = 'ace').get()
+        models.MatchBadge.award(mp1, list())
+        self.assertEqual(len(models.MatchBadge.objects.all()), 1)
+        badge = models.MatchBadge.objects.filter(badge_type = 'ace').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
 
@@ -318,14 +323,7 @@ class get_next_potw_mode(TestCase):
 
 class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        testsuite.fake_api.inject('accounts.models')
-
-    @classmethod
-    def tearDownClass(cls):
-        testsuite.fake_api.restore('accounts.models')
-
+    @testsuite.fake_api('accounts.models')
     def setUp(self):
         self.squad = Squad.objects.create(name='squad')
         self.team1 = [
@@ -351,7 +349,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
         return self.team1 + self.team2
 
     def _create_match(self, timestamp):
-        m = Match.objects.create(
+        m = models.Match.objects.create(
             sharecode = f'sharecode-{timestamp}',
             timestamp = timestamp,
             score_team1 = 12,
@@ -360,10 +358,10 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
             map_name = 'de_dust2',
         )
         for uidx, user in enumerate(self.players):
-            mp = MatchParticipation(player = user, pmatch = m)
+            mp = models.MatchParticipation(player = user, pmatch = m)
             mp.position  = uidx % 3
             mp.team      = 1 + uidx // 3
-            mp.result    = get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
+            mp.result    = models.get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
             mp.kills     =  20   + uidx
             mp.assists   =  10   - uidx
             mp.deaths    =  15   + uidx
@@ -375,7 +373,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
         return m
 
     def test_kd_challenge(self):
-        badge = PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'k/d')
+        badge = models.PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'k/d')
         self.assertEqual(badge['mode'], 'k/d')
         self.assertEqual(badge['week'], 1)
         self.assertEqual(badge['year'], 1970)
@@ -406,8 +404,8 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
         mp1 = self.pmatch.get_participation('12345678900000001')
         mp4 = self.pmatch.get_participation('12345678900000004')
         mp5 = self.pmatch.get_participation('12345678900000005')
-        KillEvent.objects.all().delete()
-        KillEvent.objects.bulk_create(
+        models.KillEvent.objects.all().delete()
+        models.KillEvent.objects.bulk_create(
             sum(
                 [
                     [create_kill_event(mp5, mp1, round = 1)] * 3,
@@ -418,7 +416,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
             )
         )
 
-        badge = PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'streaks')
+        badge = models.PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'streaks')
         self.assertEqual(badge['mode'], 'streaks')
         self.assertEqual(badge['week'], 1)
         self.assertEqual(badge['year'], 1970)
@@ -445,7 +443,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
         return badge
 
     def test_adr_challenge(self):
-        badge = PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'adr')
+        badge = models.PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'adr')
         self.assertEqual(badge['mode'], 'adr')
         self.assertEqual(badge['week'], 1)
         self.assertEqual(badge['year'], 1970)
@@ -473,7 +471,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
         return badge
 
     def test_accuracy_challenge(self):
-        badge = PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'accuracy')
+        badge = models.PlayerOfTheWeek.get_next_badge_data(self.squad, force_mode = 'accuracy')
         self.assertEqual(badge['mode'], 'accuracy')
         self.assertEqual(badge['week'], 1)
         self.assertEqual(badge['year'], 1970)
@@ -501,10 +499,10 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
         return badge
 
     def test_mode(self):
-        data1 = PlayerOfTheWeek.get_next_badge_data(self.squad)
-        badge1 = PlayerOfTheWeek.create_badge(data1)
+        data1 = models.PlayerOfTheWeek.get_next_badge_data(self.squad)
+        badge1 = models.PlayerOfTheWeek.create_badge(data1)
         pmatch2 = self._create_match(badge1.timestamp)
-        data2 = PlayerOfTheWeek.get_next_badge_data(self.squad)
+        data2 = models.PlayerOfTheWeek.get_next_badge_data(self.squad)
         self.assertEqual(data2['mode'], potw.mode_cycle[1].id)
         self.assertEqual(data2['week'], 2)
         self.assertEqual(data2['year'], 1970)
@@ -512,24 +510,152 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
 class PlayerOfTheWeek__create_badge(TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        testsuite.fake_api.inject('accounts.models')
-
-    @classmethod
-    def tearDownClass(cls):
-        testsuite.fake_api.restore('accounts.models')
-
+    @testsuite.fake_api('accounts.models')
     def test(self):
         get_next_badge_data = PlayerOfTheWeek__get_next_badge_data()
         get_next_badge_data.setUp()
         data = get_next_badge_data.test_kd_challenge()
         get_next_badge_data.tearDown()
-        badge = PlayerOfTheWeek.create_badge(data)
+        badge = models.PlayerOfTheWeek.create_badge(data)
         self.assertEqual(badge.mode, 'k/d')
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         self.assertIn(potw.get_mode_by_id(badge.mode).name, ScheduledNotification.objects.get().text)
 
 
-if __name__ == '__main__':
-    unittest.main()
+class squads(TestCase):
+
+    @testsuite.fake_api('accounts.models')
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.player = SteamProfile.objects.create(steamid='12345678900000001')
+        self.squad = Squad.objects.create(name='Test Squad')
+        self.squad.members.add(self.player)
+        self.account = Account.objects.create(steam_profile=self.player)
+
+    def test_squads_with_valid_squad(self):
+        response = self.client.get(reverse('squads', kwargs={'squad': self.squad.uuid}))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['squad'], self.squad.uuid)
+
+    def test_squads_with_invalid_squad(self):
+        invalid_uuid = str(uuid.uuid4())
+        response = self.client.get(reverse('squads', kwargs={'squad': invalid_uuid}))
+        self.assertIsInstance(response, HttpResponseNotFound)
+
+    def test_squads_with_authenticated_user(self):
+        self.client.force_login(self.account)
+        response = self.client.get(reverse('squads'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context['squads']), 1)
+        self.assertEqual(response.context['squads'][0]['name'], self.squad.name)
+
+    def test_squads_with_unauthenticated_user(self):
+        response = self.client.get(reverse('squads'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('login'))
+
+    @patch('stats.views.PlayerOfTheWeek.get_next_badge_data')
+    def test_squads_with_upcoming_potw(self, mock_get_next_badge_data):
+        mock_get_next_badge_data.return_value = {
+            'timestamp': int(time.time()) + 1000,
+            'squad': self.squad,
+            'mode': 'k/d',
+            'leaderboard': [
+                {'player': self.player, 'place_candidate': 1, 'kills': 10, 'deaths': 20},
+                {'player': self.player, 'place_candidate': 2, 'kills': 5, 'deaths': 15},
+            ]
+        }
+        self.client.force_login(self.account)
+        response = self.client.get(reverse('squads'))
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.context['squads'][0]['upcoming_player_of_the_week'])
+        self.assertEqual(len(response.context['squads'][0]['upcoming_player_of_the_week']['leaderboard']), 2)
+        self.assertEqual(response.context['squads'][0]['upcoming_player_of_the_week_mode'].id, 'k/d')
+
+
+class split_into_chunks(TestCase):
+
+    def test_split_into_chunks(self):
+        # Test case 1: data length is divisible by n
+        data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        n = 5
+        expected_result = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
+        result = views.split_into_chunks(data, n)
+        self.assertEqual(result, expected_result)
+
+        # Test case 2: data length is not divisible by n
+        data = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        n = 4
+        expected_result = [[1, 2, 3, 4], [5, 6, 7, 8], [9]]
+        result = views.split_into_chunks(data, n)
+        self.assertEqual(result, expected_result)
+
+        # Test case 3: data length is less than n
+        data = [1, 2, 3]
+        n = 5
+        expected_result = [[1, 2, 3]]
+        result = views.split_into_chunks(data, n)
+        self.assertEqual(result, expected_result)
+
+        # Test case 4: data length is equal to n
+        data = [1, 2, 3, 4, 5]
+        n = 5
+        expected_result = [[1, 2, 3, 4, 5]]
+        result = views.split_into_chunks(data, n)
+        self.assertEqual(result, expected_result)
+
+
+class matches(TestCase):
+    
+    @testsuite.fake_api('accounts.models')
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.player = SteamProfile.objects.create(steamid='12345678900000001')
+        self.squad = Squad.objects.create(name='Test Squad')
+        self.squad.members.add(self.player)
+        self.account = Account.objects.create(steam_profile=self.player)
+        self.session = models.GamingSession.objects.create(squad=self.squad)
+        self.match = models.Match.objects.create(timestamp=int(time.time()), score_team1=12, score_team2=13, duration=1653, map_name='de_dust2')
+        self.match.sessions.add(self.session)
+        self.participation = models.MatchParticipation.objects.create(player=self.player, pmatch=self.match, position=0, team=1, result=0, kills=20, assists=10, deaths=15, score=30, mvps=5, headshots=15, adr=120.5)
+
+    def test_matches_with_squad(self):
+        response = self.client.get(reverse('matches', kwargs={'squad': self.squad.uuid}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/sessions.html')
+        self.assertEqual(response.context['squad'], self.squad.uuid)
+        self.assertEqual(response.context['sessions'].count(), 1)
+        self.assertEqual(response.context['sessions'][0], self.session)
+
+    def test_matches_without_squad(self):
+        self.client.force_login(self.account)
+        response = self.client.get(reverse('matches'))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/sessions.html')
+        self.assertEqual(response.context.get('squad'), None)
+        self.assertEqual(response.context['sessions'].count(), 1)
+        self.assertEqual(response.context['sessions'][0], self.session)
+
+    def test_matches_with_last_timestamp(self):
+        # There should be no session older than the match
+        last_timestamp = self.match.timestamp
+        self.client.force_login(self.account)
+        response = self.client.get(reverse('matches', kwargs={'last_timestamp': last_timestamp}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/sessions-list.html')
+        self.assertIsNone(response.context['last_timestamp'])
+        self.assertEqual(response.context['sessions'].count(), 0)
+
+        # But there should be a session with a timestamp newer than the match
+        last_timestamp = self.match.timestamp + 60 * 60
+        self.client.force_login(self.account)
+        response = self.client.get(reverse('matches', kwargs={'last_timestamp': last_timestamp}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/sessions-list.html')
+        self.assertEqual(response.context['last_timestamp'], self.match.timestamp)
+        self.assertEqual(response.context['sessions'].count(), 1)
+
+    def test_matches_without_authentication(self):
+        response = self.client.get(reverse('matches'))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('login'))

@@ -48,7 +48,3 @@ class fetch_match_details(unittest.TestCase):
         self.assertEqual(round(pmatch['adr']['76561198309743637'], 1), 84.5)
         self.assertEqual(round(pmatch['adr']['76561198140806020'], 1), 98.9)
         self.assertEqual(round(pmatch['adr']['76561198064174518'], 1), 63.6)
-
-
-if __name__ == '__main__':
-    unittest.main()

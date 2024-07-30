@@ -1,3 +1,4 @@
+import functools
 import importlib
 import pathlib
 import urllib.request
@@ -18,7 +19,7 @@ def get_demo_path(demo_id):
     return str(demo_filepath)
 
 
-class fake_api:
+class _fake_api:
 
     @staticmethod
     def fetch_profile(steamid):
@@ -33,7 +34,7 @@ class fake_api:
     def inject(*modules):
         for module_name in modules:
             m = importlib.import_module(module_name)
-            setattr(m, 'api', fake_api)
+            setattr(m, 'api', _fake_api)
 
     @staticmethod
     def restore(*modules):
@@ -42,3 +43,15 @@ class fake_api:
             m = importlib.import_module(module_name)
             setattr(m, 'api', api)
 
+
+def fake_api(*modules):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            _fake_api.inject(*modules)
+            try:
+                return func(*args, **kwargs)
+            finally:
+                _fake_api.restore(*modules)
+        return wrapper
+    return decorator
