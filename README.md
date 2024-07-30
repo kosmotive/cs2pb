@@ -2,6 +2,7 @@
 
 [![Run test-suite](https://github.com/kodikit/cs2pb/actions/workflows/django-tests.yaml/badge.svg)](https://github.com/kodikit/cs2pb/actions/workflows/django-tests.yaml)
 [![Check settings](https://github.com/kodikit/cs2pb/actions/workflows/check-settings.yaml/badge.svg)](https://github.com/kodikit/cs2pb/actions/workflows/check-settings.yaml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kostrykin/48d2e30f4e914519ccb60090cf2ee742/raw/cs2pb.json)](https://github.com/kodikit/cs2pb/actions/workflows/django-tests.yaml)
 
 <img width="894" src="https://github.com/user-attachments/assets/b25b17c1-6636-4a01-9f52-4c761c2a033f">
 
