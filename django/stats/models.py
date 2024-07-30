@@ -595,7 +595,7 @@ class MatchBadge(models.Model):
             log.info(f'Surpass-yourself badge awarded to {participation.player.name} for K/D {participation.kd} whre threshold was {threshold}')
             if not dry:
                 MatchBadge.objects.create(badge_type=badge_type, participation=participation)
-                text = f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in honor of their far-above average performance on *{participation.pmatch.map_name}* recently!'
+                text = f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in recognition of their far-above average performance on *{participation.pmatch.map_name}* recently!'
                 for squad in participation.player.squads.all():
                     ScheduledNotification.objects.create(squad=squad, text=text)
 
