@@ -323,14 +323,7 @@ class get_next_potw_mode(TestCase):
 
 class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        testsuite.fake_api.inject('accounts.models')
-
-    @classmethod
-    def tearDownClass(cls):
-        testsuite.fake_api.restore('accounts.models')
-
+    @testsuite.fake_api('accounts.models')
     def setUp(self):
         self.squad = Squad.objects.create(name='squad')
         self.team1 = [
@@ -517,14 +510,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
 class PlayerOfTheWeek__create_badge(TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        testsuite.fake_api.inject('accounts.models')
-
-    @classmethod
-    def tearDownClass(cls):
-        testsuite.fake_api.restore('accounts.models')
-
+    @testsuite.fake_api('accounts.models')
     def test(self):
         get_next_badge_data = PlayerOfTheWeek__get_next_badge_data()
         get_next_badge_data.setUp()
@@ -538,14 +524,7 @@ class PlayerOfTheWeek__create_badge(TestCase):
 
 class squads(TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        testsuite.fake_api.inject('accounts.models')
-
-    @classmethod
-    def tearDownClass(cls):
-        testsuite.fake_api.restore('accounts.models')
-
+    @testsuite.fake_api('accounts.models')
     def setUp(self):
         self.factory = RequestFactory()
         self.player = SteamProfile.objects.create(steamid='12345678900000001')
