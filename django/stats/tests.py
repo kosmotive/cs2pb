@@ -1,8 +1,11 @@
 from types import SimpleNamespace
+from unittest.mock import patch
 
-from django.test import TestCase
+from django.http import HttpResponseNotFound
+from django.test import TestCase, RequestFactory
+from django.urls import reverse
 
-from accounts.models import Squad, SteamProfile
+from accounts.models import Account, Squad, SteamProfile
 from stats.models import Match, MatchParticipation, MatchBadge, KillEvent, get_match_result, PlayerOfTheWeek
 from stats import potw
 from stats import views
@@ -529,6 +532,59 @@ class PlayerOfTheWeek__create_badge(TestCase):
         self.assertEqual(badge.mode, 'k/d')
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         self.assertIn(potw.get_mode_by_id(badge.mode).name, ScheduledNotification.objects.get().text)
+
+
+class squads(TestCase):
+    
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.user = SteamProfile.objects.create_user(steamid='12345678900000001', password='testpassword')
+        self.squad = Squad.objects.create(name='Test Squad')
+        self.account = Account.objects.create(steam_profile='12345678900000001', squad=self.squad)
+
+    def test_squads_with_valid_squad(self):
+        request = self.factory.get(reverse('squads'), {'squad': self.squad.uuid})
+        request.user = self.user
+        response = views.squads(request, squad=self.squad.uuid)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['squad'], self.squad.uuid)
+
+    def test_squads_with_invalid_squad(self):
+        request = self.factory.get(reverse('squads'), {'squad': 'invalid_uuid'})
+        request.user = self.user
+        response = views.squads(request, squad='invalid_uuid')
+        self.assertIsInstance(response, HttpResponseNotFound)
+
+    def test_squads_with_authenticated_user(self):
+        request = self.factory.get(reverse('squads'))
+        request.user = self.user
+        response = views.squads(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context['squads']), 1)
+        self.assertEqual(response.context['squads'][0]['name'], self.squad.name)
+
+    def test_squads_with_unauthenticated_user(self):
+        request = self.factory.get(reverse('squads'))
+        response = views.squads(request)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse('login'))
+
+    @patch('stats.views.PlayerOfTheWeek.get_next_badge_data')
+    def test_squads_with_upcoming_potw(self, mock_get_next_badge_data):
+        mock_get_next_badge_data.return_value = {
+            'mode': 'test_mode',
+            'leaderboard': [
+                {'field1': 10, 'field2': 20},
+                {'field1': 5, 'field2': 15},
+            ]
+        }
+        request = self.factory.get(reverse('squads'))
+        request.user = self.user
+        response = views.squads(request)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.context['squads'][0]['upcoming_player_of_the_week'])
+        self.assertEqual(len(response.context['squads'][0]['upcoming_player_of_the_week']['leaderboard']), 2)
+        self.assertEqual(response.context['squads'][0]['upcoming_player_of_the_week_mode'], 'test_mode')
 
 
 if __name__ == '__main__':
