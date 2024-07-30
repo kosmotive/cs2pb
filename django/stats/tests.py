@@ -571,3 +571,35 @@ class squads(TestCase):
         self.assertIsNotNone(response.context['squads'][0]['upcoming_player_of_the_week'])
         self.assertEqual(len(response.context['squads'][0]['upcoming_player_of_the_week']['leaderboard']), 2)
         self.assertEqual(response.context['squads'][0]['upcoming_player_of_the_week_mode'].id, 'k/d')
+
+
+class split_into_chunks(TestCase):
+
+    def test_split_into_chunks(self):
+        # Test case 1: data length is divisible by n
+        data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        n = 5
+        expected_result = [[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]]
+        result = views.split_into_chunks(data, n)
+        self.assertEqual(result, expected_result)
+
+        # Test case 2: data length is not divisible by n
+        data = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        n = 4
+        expected_result = [[1, 2, 3, 4], [5, 6, 7, 8], [9]]
+        result = views.split_into_chunks(data, n)
+        self.assertEqual(result, expected_result)
+
+        # Test case 3: data length is less than n
+        data = [1, 2, 3]
+        n = 5
+        expected_result = [[1, 2, 3]]
+        result = views.split_into_chunks(data, n)
+        self.assertEqual(result, expected_result)
+
+        # Test case 4: data length is equal to n
+        data = [1, 2, 3, 4, 5]
+        n = 5
+        expected_result = [[1, 2, 3, 4, 5]]
+        result = views.split_into_chunks(data, n)
+        self.assertEqual(result, expected_result)
