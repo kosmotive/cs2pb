@@ -535,10 +535,10 @@ class PlayerOfTheWeek__create_badge(TestCase):
 
 
 class squads(TestCase):
-    
+
     def setUp(self):
         self.factory = RequestFactory()
-        self.user = SteamProfile.objects.create_user(steamid='12345678900000001', password='testpassword')
+        self.user = SteamProfile.objects.create(steamid='12345678900000001', password='testpassword')
         self.squad = Squad.objects.create(name='Test Squad')
         self.account = Account.objects.create(steam_profile='12345678900000001', squad=self.squad)
 
