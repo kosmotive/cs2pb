@@ -42,14 +42,7 @@ botimpl.bot = FakeBot()
 
 class bot(TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        testsuite.fake_api.inject('accounts.models')
-
-    @classmethod
-    def tearDownClass(cls):
-        testsuite.fake_api.restore('accounts.models')
-
+    @testsuite.fake_api('accounts.models')
     def setUp(self):
         """
         Sets up multiple users:
