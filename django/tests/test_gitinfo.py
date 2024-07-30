@@ -54,7 +54,3 @@ class get_changelog(unittest.TestCase):
             if previous_date is not None:
                 self.assertLessEqual(entry['date'], previous_date)
             previous_date = entry['date']
-
-
-if __name__ == '__main__':
-    unittest.main()

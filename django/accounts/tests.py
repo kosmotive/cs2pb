@@ -23,7 +23,3 @@ class verify_discord_name(TestCase):
 
     def test_too_long(self):
         self.assertFalse(accounts.forms.verify_discord_name('k' * 33))
-
-
-if __name__ == '__main__':
-    unittest.main()

@@ -135,7 +135,7 @@ def squads(request, squad=None, expanded_stats=False):
             upcoming_potw = PlayerOfTheWeek.get_next_badge_data(squad)
             upcoming_potw_mode = potw.get_mode_by_id(upcoming_potw['mode'])
         except Match.DoesNotExist:
-            log.error(f'Failed to fetch upcoming Player of the Week', exc_info=True)
+            log.warning(f'Failed to fetch upcoming Player of the Week because no matches were added yet', exc_info=True)
             upcoming_potw = None
             upcoming_potw_mode = None
         squad_data = {

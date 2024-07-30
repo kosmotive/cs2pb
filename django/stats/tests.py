@@ -1,5 +1,7 @@
 from types import SimpleNamespace
 from unittest.mock import patch
+import time
+import uuid
 
 from django.http import HttpResponseNotFound
 from django.test import TestCase, RequestFactory
@@ -536,56 +538,57 @@ class PlayerOfTheWeek__create_badge(TestCase):
 
 class squads(TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        testsuite.fake_api.inject('accounts.models')
+
+    @classmethod
+    def tearDownClass(cls):
+        testsuite.fake_api.restore('accounts.models')
+
     def setUp(self):
         self.factory = RequestFactory()
-        self.user = SteamProfile.objects.create(steamid='12345678900000001', password='testpassword')
+        self.player = SteamProfile.objects.create(steamid='12345678900000001')
         self.squad = Squad.objects.create(name='Test Squad')
-        self.account = Account.objects.create(steam_profile='12345678900000001', squad=self.squad)
+        self.squad.members.add(self.player)
+        self.account = Account.objects.create(steam_profile=self.player)
 
     def test_squads_with_valid_squad(self):
-        request = self.factory.get(reverse('squads'), {'squad': self.squad.uuid})
-        request.user = self.user
-        response = views.squads(request, squad=self.squad.uuid)
+        response = self.client.get(reverse('squads', kwargs={'squad': self.squad.uuid}))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['squad'], self.squad.uuid)
 
     def test_squads_with_invalid_squad(self):
-        request = self.factory.get(reverse('squads'), {'squad': 'invalid_uuid'})
-        request.user = self.user
-        response = views.squads(request, squad='invalid_uuid')
+        invalid_uuid = str(uuid.uuid4())
+        response = self.client.get(reverse('squads', kwargs={'squad': invalid_uuid}))
         self.assertIsInstance(response, HttpResponseNotFound)
 
     def test_squads_with_authenticated_user(self):
-        request = self.factory.get(reverse('squads'))
-        request.user = self.user
-        response = views.squads(request)
+        self.client.force_login(self.account)
+        response = self.client.get(reverse('squads'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.context['squads']), 1)
         self.assertEqual(response.context['squads'][0]['name'], self.squad.name)
 
     def test_squads_with_unauthenticated_user(self):
-        request = self.factory.get(reverse('squads'))
-        response = views.squads(request)
+        response = self.client.get(reverse('squads'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('login'))
 
     @patch('stats.views.PlayerOfTheWeek.get_next_badge_data')
     def test_squads_with_upcoming_potw(self, mock_get_next_badge_data):
         mock_get_next_badge_data.return_value = {
-            'mode': 'test_mode',
+            'timestamp': time.time() + 1000,
+            'squad': self.squad,
+            'mode': 'k/d',
             'leaderboard': [
-                {'field1': 10, 'field2': 20},
-                {'field1': 5, 'field2': 15},
+                {'player': self.player, 'place_candidate': 1, 'kills': 10, 'deaths': 20},
+                {'player': self.player, 'place_candidate': 2, 'kills': 5, 'deaths': 15},
             ]
         }
-        request = self.factory.get(reverse('squads'))
-        request.user = self.user
-        response = views.squads(request)
+        self.client.force_login(self.account)
+        response = self.client.get(reverse('squads'))
         self.assertEqual(response.status_code, 200)
         self.assertIsNotNone(response.context['squads'][0]['upcoming_player_of_the_week'])
         self.assertEqual(len(response.context['squads'][0]['upcoming_player_of_the_week']['leaderboard']), 2)
-        self.assertEqual(response.context['squads'][0]['upcoming_player_of_the_week_mode'], 'test_mode')
-
-
-if __name__ == '__main__':
-    unittest.main()
+        self.assertEqual(response.context['squads'][0]['upcoming_player_of_the_week_mode'].id, 'k/d')
