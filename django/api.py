@@ -57,6 +57,16 @@ def fetch_match_details(pmatch):
     pmatch['adr'] = {str(steam_id): get_damage(steam_id) / num_rounds for steam_id in pmatch['steam_ids']}
 
 
+def _is_wingman_match(pmatch):
+    """
+    Deduce whether the match is a wingman match (2 on 2).
+
+    In wingman matches, there are 5 players per team, but for 3 of them the steam ID is 0.
+    We thus deduce whether the match is a wingman match by counting the occurances of 0 as the steam ID.
+    """
+    return (np.asarray(pmatch['steam_ids']) == 0).sum() == 6
+
+
 class API:
 
     def __init__(self, **steam_api):
@@ -78,6 +88,7 @@ class API:
                 )
                 for sharecode, pmatch in zip(sharecodes, matches)
             ]
+        matches = [pmatch for pmatch in matches if not _is_wingman_match(pmatch)]
         log.debug('All matches fetched')
         return matches
 
@@ -159,7 +170,11 @@ class SteamAPI:
 
     def fetch_profile(self, steamid):
         response = self.http.request(f'http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={STEAM_API_KEY}&steamids={steamid}')
-        return response.json()['response']['players'][0]
+        try:
+            return response.json()['response']['players'][0]
+        except IndexError:
+            log.critical(f'Failed to fetch steam profile: {steamid}')
+            raise
 
 
 class DemoParser:
