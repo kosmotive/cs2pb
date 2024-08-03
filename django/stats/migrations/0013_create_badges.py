@@ -19,7 +19,7 @@ def backwards(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('stats', '00012_playeroftheweek_mode'),
+        ('stats', '0012_playeroftheweek_mode'),
     ]
 
     operations = [
