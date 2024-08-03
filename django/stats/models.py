@@ -563,7 +563,6 @@ class MatchBadgeType(models.Model):
 
     slug = models.SlugField(primary_key=True)
     name = models.CharField(max_length=100, unique=True)
-    is_minor = models.BooleanField(default=False)  # will not be included in the player card if set to True
 
     class Meta:
         verbose_name        = 'Match-based badge type';
