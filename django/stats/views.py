@@ -23,6 +23,19 @@ ADMIN_MAIL_ADDRESS = os.environ['CS2PB_ADMIN_MAIL_ADDRESS']
 assert len(ADMIN_MAIL_ADDRESS) > 0
 
 
+badge_order = [
+    'potw-1',
+    'potw-2',
+    'potw-3',
+    'carrier',
+    'rising-star',
+    'surpass-yourself',
+    'peach',
+    'ace',
+    'quad-kill',
+]
+
+
 def get_badges(squad, player):
     potw = [
         len(PlayerOfTheWeek.objects.filter(player1 = player)),
@@ -33,11 +46,19 @@ def get_badges(squad, player):
     for place, count in enumerate(potw, start=1):
         if count > 0:
             badges.append(dict(slug=f'potw-{place}', count=count))
-    for badge in player.match_badges().filter(badge_type__is_minor = False).values('badge_type').annotate(count = Count('badge_type')).order_by('badge_type'):
+    for badge in player.match_badges().all().values('badge_type').annotate(count = Count('badge_type')).order_by('badge_type'):
         if badge['count'] > 0:
-            badges.append(dict(slug=badge['badge_type'], count=badge['count']))
+            badges.append(
+                dict(
+                    slug = badge['badge_type'],
+                    count = badge['count'],
+                )
+            )
     rising_star_count = GamingSession.objects.filter(squad = squad, rising_star = player).count()
     if rising_star_count > 0: badges.append(dict(slug='rising-star', count=rising_star_count))
+    badges.sort(key = lambda badge: badge_order.index(badge['slug']))
+    if len(badges) > 0:
+        badges = badges[:5]
     return badges
 
 

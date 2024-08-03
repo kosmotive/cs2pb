@@ -160,7 +160,7 @@ class MatchBadge__award(TestCase):
         pmatch = Match__create_from_data().test()
         participation = pmatch.get_participation('76561197967680028')
         models.MatchBadge.award(participation, list())
-        self.assertEqual(len(models.MatchBadge.objects.all()), 0)
+        self.assertEqual(len(models.MatchBadge.objects.filter(participation = participation)), 0)
 
     def test_quad_kill(self):
         pmatch = Match__create_from_data().test()
@@ -176,7 +176,7 @@ class MatchBadge__award(TestCase):
             ]
         )
         models.MatchBadge.award(mp1, list())
-        self.assertEqual(len(models.MatchBadge.objects.all()), 1)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'quad-kill')), 1)
         badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 1)
@@ -199,7 +199,7 @@ class MatchBadge__award(TestCase):
             ]
         )
         models.MatchBadge.award(mp1, list())
-        self.assertEqual(len(models.MatchBadge.objects.all()), 1)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'quad-kill')), 1)
         badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
@@ -219,7 +219,7 @@ class MatchBadge__award(TestCase):
             ]
         )
         models.MatchBadge.award(mp1, list())
-        self.assertEqual(len(models.MatchBadge.objects.all()), 1)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'ace')), 1)
         badge = models.MatchBadge.objects.filter(badge_type = 'ace').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 1)
@@ -244,10 +244,44 @@ class MatchBadge__award(TestCase):
             ]
         )
         models.MatchBadge.award(mp1, list())
-        self.assertEqual(len(models.MatchBadge.objects.all()), 1)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'ace')), 1)
         badge = models.MatchBadge.objects.filter(badge_type = 'ace').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
+
+    def test_carrier_badge(self):
+        pmatch = Match__create_from_data().test()
+        mp1 = pmatch.get_participation('76561197967680028')
+        mp2 = pmatch.get_participation('76561197961345487')
+
+        # Test with ADR right below the threshold
+        mp1.adr = 1.99 * mp2.adr
+        mp1.save()
+        models.MatchBadge.award(mp1, list())
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'carrier', participation = mp1)), 0)
+
+        # Test with ADR right above the threshold
+        mp1.adr = 2.01 * mp2.adr
+        mp1.save()
+        models.MatchBadge.award(mp1, list())
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'carrier', participation = mp1)), 1)
+
+    def test_peach_price(self):
+        pmatch = Match__create_from_data().test()
+        mp4 = pmatch.get_participation('76561198067716219')
+        mp5 = pmatch.get_participation('76561197962477966')
+
+        # Test with ADR right below the threshold
+        mp5.adr = 0.67 * mp4.adr
+        mp5.save()
+        models.MatchBadge.award(mp5, list())
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = mp5)), 0)
+
+        # Test with ADR right above the threshold
+        mp5.adr = 0.65 * mp4.adr
+        mp5.save()
+        models.MatchBadge.award(mp5, list())
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = mp5)), 1)
 
 
 class Squad__do_changelog_announcements(TestCase):
