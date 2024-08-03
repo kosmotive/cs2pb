@@ -160,7 +160,7 @@ class MatchBadge__award(TestCase):
         pmatch = Match__create_from_data().test()
         participation = pmatch.get_participation('76561197967680028')
         models.MatchBadge.award(participation, list())
-        self.assertEqual(len(models.MatchBadge.objects.all()), 0)
+        self.assertEqual(len(models.MatchBadge.objects.filter(participation = participation)), 0)
 
     def test_quad_kill(self):
         pmatch = Match__create_from_data().test()

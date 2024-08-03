@@ -622,8 +622,8 @@ class MatchBadge(models.Model):
 
         awarded = teammates[0].pk == participation.pk and any(
             (
-                getattr(teammates[0], kpi) > margin * getattr(teammates[1], kpi),
-                getattr(teammates[0], kpi) < margin * getattr(teammates[1], kpi),
+                order[0] == '-' and getattr(teammates[0], kpi) > margin * getattr(teammates[1], kpi),
+                order[0] != '-' and getattr(teammates[0], kpi) < margin * getattr(teammates[1], kpi),
             )
         )
 
