@@ -620,13 +620,12 @@ class MatchBadge(models.Model):
         if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
         teammates = participation.pmatch.matchparticipation_set.filter(team = participation.team).order_by(order)
 
-        if teammates[0].pk == participation.pk:
-            if order[0] == '-':
-                if teammates[0][kpi] > margin * teammates[1][kpi]:
-                    awarded = True
-            else:
-                if teammates[0][kpi] < margin * teammates[1][kpi]:
-                    awarded = True
+        awarded = teammates[0].pk == participation.pk and any(
+            (
+                getattr(teammates[0], kpi) > margin * getattr(teammates[1], kpi),
+                getattr(teammates[0], kpi) < margin * getattr(teammates[1], kpi),
+            )
+        )
 
         if awarded:
             log.info(f'{participation.player.name} received the {badge_type.name}')
