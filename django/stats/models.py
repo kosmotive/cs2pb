@@ -582,6 +582,8 @@ class MatchBadge(models.Model):
             MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:])
         MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace')
         MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill')
+        MatchBadge.award_margin_badge(participation, 'carrier', order='-adr', margin=2, emoji='🍆')
+        MatchBadge.award_margin_badge(participation, 'peach', order='adr', margin=0.66, emoji='🍑')
 
     @staticmethod
     def award_surpass_yourself_badge(participation, old_participations):
@@ -608,6 +610,28 @@ class MatchBadge(models.Model):
             MatchBadge.objects.create(badge_type = badge_type, participation = participation, frequency = number)
             frequency = '' if number == 1 else f' {number} times'
             text = f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on *{participation.pmatch.map_name}* recently!'
+            for squad in participation.player.squads.all():
+                ScheduledNotification.objects.create(squad=squad, text=text)
+
+    @staticmethod
+    def award_margin_badge(participation, badge_type_slug, order, margin, emoji):
+        kpi = order[1:] if order[0] in '+-' else order
+        badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
+        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
+        teammates = participation.pmatch.matchparticipation_set.filter(team = participation.team).order_by(order)
+
+        if teammates[0].pk == participation.pk
+            if order[0] == '-':
+                if teammates[0][kpi] > margin * teammates[1][kpi]:
+                    awarded = True
+            else:
+                if teammates[0][kpi] < margin * teammates[1][kpi]:
+                    awarded = True
+
+        if awarded:
+            log.info(f'{participation.player.name} received the {badge_type.name}')
+            MatchBadge.objects.create(badge_type = badge_type, participation = participation)
+            text = f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** on *{participation.pmatch.map_name}*!'
             for squad in participation.player.squads.all():
                 ScheduledNotification.objects.create(squad=squad, text=text)
 
