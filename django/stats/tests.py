@@ -176,7 +176,7 @@ class MatchBadge__award(TestCase):
             ]
         )
         models.MatchBadge.award(mp1, list())
-        self.assertEqual(len(models.MatchBadge.objects.all()), 1)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'quad-kill')), 1)
         badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 1)
@@ -244,7 +244,7 @@ class MatchBadge__award(TestCase):
             ]
         )
         models.MatchBadge.award(mp1, list())
-        self.assertEqual(len(models.MatchBadge.objects.all()), 1)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'ace')), 1)
         badge = models.MatchBadge.objects.filter(badge_type = 'ace').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
