@@ -577,14 +577,14 @@ class MatchBadge(models.Model):
     frequency     = models.PositiveSmallIntegerField(null=False, default=1)
 
     @staticmethod
-    def award(participation, old_participations, dry=False):
+    def award(participation, old_participations):
         if len(old_participations) >= 10:
-            MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:], dry=dry)
-        MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace', dry=dry)
-        MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill', dry=dry)
+            MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:])
+        MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace')
+        MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill')
 
     @staticmethod
-    def award_surpass_yourself_badge(participation, old_participations, dry=False):
+    def award_surpass_yourself_badge(participation, old_participations):
         badge_type = MatchBadgeType.objects.get(slug='surpass-yourself')
         if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
         kd_series = [mp.kd for mp in old_participations]
@@ -593,25 +593,23 @@ class MatchBadge(models.Model):
         threshold = kd_mean + 2 * kd_std
         if participation.kd > threshold:
             log.info(f'Surpass-yourself badge awarded to {participation.player.name} for K/D {participation.kd} whre threshold was {threshold}')
-            if not dry:
-                MatchBadge.objects.create(badge_type=badge_type, participation=participation)
-                text = f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in recognition of their far-above average performance on *{participation.pmatch.map_name}* recently!'
-                for squad in participation.player.squads.all():
-                    ScheduledNotification.objects.create(squad=squad, text=text)
+            MatchBadge.objects.create(badge_type=badge_type, participation=participation)
+            text = f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in recognition of their far-above average performance on *{participation.pmatch.map_name}* recently!'
+            for squad in participation.player.squads.all():
+                ScheduledNotification.objects.create(squad=squad, text=text)
 
     @staticmethod
-    def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug, dry=False):
+    def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug):
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
         if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
         number = participation.streaks(n = kill_number)
         if number > 0:
             log.info(f'{participation.player.name} achieved {badge_type.name} {number} time(s)')
-            if not dry:
-                MatchBadge.objects.create(badge_type = badge_type, participation = participation, frequency = number)
-                frequency = '' if number == 1 else f' {number} times'
-                text = f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on *{participation.pmatch.map_name}* recently!'
-                for squad in participation.player.squads.all():
-                    ScheduledNotification.objects.create(squad=squad, text=text)
+            MatchBadge.objects.create(badge_type = badge_type, participation = participation, frequency = number)
+            frequency = '' if number == 1 else f' {number} times'
+            text = f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on *{participation.pmatch.map_name}* recently!'
+            for squad in participation.player.squads.all():
+                ScheduledNotification.objects.create(squad=squad, text=text)
 
     class Meta:
         verbose_name        = 'Match-based badge'
