@@ -19,3 +19,4 @@ __pycache__
 /node/package-lock.json
 /node/resolve.json
 /.no-bootstrap
+/envvars.development

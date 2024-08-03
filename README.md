@@ -33,6 +33,14 @@ Install the dependencies:
 pip install -r requirements.txt
 ```
 
+## Bootstrapping
+
+To bootstrap CS2PB easily, there is a fully automated process:
+```
+sh bootstrap.sh
+```
+Note that this requires access to the private repository [kodikit/cs2pb-bootstrap](https://github.com/kodikit/cs2pb-bootstrap), which you might not have access to. If you don't have access to that repository, you will have to bootstrap manually. To do that, create the file `django/discordbot/settings.json` (see `django/discordbot/settings.json.skeleton` for an example), and setup the following environment variables.
+
 ### Environment variables
 
 The following environment variables are required:
@@ -43,13 +51,9 @@ The following environment variables are required:
 
 - `CS2PB_DISCORD_ENABLED`: Set to `1` to enable the Discord integration.
 
-### Bootstrapping
+### Manual bootstrapping
 
-To bootstrap CS2PB easily, there is a fully automated process:
-```
-sh bootstrap.sh
-```
-Note that this requires access to the private repository [kodikit/cs2pb-bootstrap](https://github.com/kodikit/cs2pb-bootstrap), which you might not have access to. If you don't have access to that repository, you will have to bootstrap manually. To do that, create the file `django/discordbot/settings.json` (see `django/discordbot/settings.json.skeleton` for an example), and then run:
+After setting up the environment variables, run:
 ```
 cd django
 python manage.py migrate
