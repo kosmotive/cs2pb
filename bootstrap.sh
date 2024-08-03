@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export REF="65ea3446c0b8d1397e125d94008ecb90e6aaf544"
+export REF="9af8c4fdfbd027508813bdca352e105229d3041b"
 
 if [ -f .no-bootstrap ]; then
     echo "Bootstrap by accident? Bootstrap is blocked."
@@ -10,11 +10,13 @@ fi
 
 git clone git@github.com:kodikit/cs2pb-bootstrap.git
 cd cs2pb-bootstrap
-git checkout $REF
+git -c advice.detachedHead=false checkout $REF
 cd ..
-cp -R cs2pb-bootstrap/django/* django/
+cp -R cs2pb-bootstrap/django/* ./django/
+cp cs2pb-bootstrap/envvars.development ./
 rm -rf cs2pb-bootstrap
 
+source envvars.development
 cd django
 ./reset.sh init
 cat bootstrap.sql | sqlite3 db.sqlite3
