@@ -8,6 +8,7 @@ import bz2
 import numpy as np
 import logging
 import gevent.exceptions
+import os
 import os.path
 
 from steam.steamid  import SteamID
@@ -259,7 +260,10 @@ class CSGO:
     def wait(self):
         if not self.steam_started:
             log.info('Connecting to Steam')
-            self.steam.login(username='coolcsgobot', password='qahkuGraqce3nettem')
+            self.steam.login(
+                username = os.environ['CS2PB_STEAM_USERNAME'],
+                password = os.environ['CS2PB_STEAM_PASSWORD'],
+            )
             self.steam_started = True
         if not self.csgo.ready:
             log.warning(f'CSGO game coordinator is down, will wait for it')

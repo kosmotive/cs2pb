@@ -51,6 +51,10 @@ The following environment variables are required:
 
 - `CS2PB_DISCORD_ENABLED`: Set to `1` to enable the Discord integration.
 
+- `CS2PB_STEAM_USERNAME`: The username of the Steam account to use.
+
+- `CS2PB_STEAM_PASSWORD`: The password of the Steam account to use.
+
 ### Manual bootstrapping
 
 After setting up the environment variables, run:

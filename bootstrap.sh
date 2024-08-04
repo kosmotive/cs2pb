@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export REF="19f1e6918c23592d6077aedef252383683251e5d"
+export REF="2d0bdc5c37efc9805e71cd869478d82dc93a39ec"
 
 if [ -f .no-bootstrap ]; then
     echo "Bootstrap by accident? Bootstrap is blocked."
