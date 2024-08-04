@@ -76,6 +76,7 @@ class API:
     def fetch_matches(self, first_sharecode, steamuser):
         log.debug(f'Fetching sharecodes (for Steam ID: {steamuser.steamid})')
         sharecodes = self.fetch_sharecodes(first_sharecode, steamuser)
+        log.debug(f'Fetched: {first_sharecode} -> {sharecodes}')
         log.debug('Resolving sharecodes (fetching match data)')
         matches = self.resolve_sharecodes(sharecodes)
         log.debug('Resolving Steam IDs')
@@ -88,8 +89,9 @@ class API:
                 )
                 for sharecode, pmatch in zip(sharecodes, matches)
             ]
+        log.debug(f'Fetched {len(matches)} match(es)')
         matches = [pmatch for pmatch in matches if not _is_wingman_match(pmatch)]
-        log.debug('All matches fetched')
+        log.debug(f'All matches fetched ({len(matches)})')
         return matches
 
     def resolve_sharecodes(self, sharecodes):
@@ -149,12 +151,17 @@ class SteamAPI:
             url = f'https://api.steampowered.com/ICSGOPlayers_730/GetNextMatchSharingCode/v1?key={STEAM_API_KEY}&steamid={steamuser.steamid}&steamidkey={steamuser.steamid_key}&knowncode={sharecode}'
             log.debug(f'-> {url}')
             try:
+
+                # HTTP response code will be 202 if the last sharecodes is reached:
+                # https://developer.valvesoftware.com/wiki/Counter-Strike:_Global_Offensive_Access_Match_History
                 response = self.http.request(url, accept=(200, 202))
                 log.debug(f'-> {response.status_code}')
                 if response.status_code == 200:
+                    log.debug(f'Response: {response.json()}')
                     sharecode = response.json()['result']['nextcode']
                 else:
                     sharecode = None
+
             except ratelimit.RequestError as ex:
                 # see: https://developer.valvesoftware.com/wiki/Counter-Strike:_Global_Offensive_Access_Match_History#Error_Handling
                 if ex.status_code == 412 and sharecode == first_sharecode:
