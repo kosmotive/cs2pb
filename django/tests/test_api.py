@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 from memory_profiler import memory_usage
 
@@ -48,3 +49,14 @@ class fetch_match_details(unittest.TestCase):
         self.assertEqual(round(pmatch['adr']['76561198309743637'], 1), 84.5)
         self.assertEqual(round(pmatch['adr']['76561198140806020'], 1), 98.9)
         self.assertEqual(round(pmatch['adr']['76561198064174518'], 1), 63.6)
+
+
+class api_csgo(unittest.TestCase):
+
+    @patch('django.conf.settings.CSGO_API_ENABLED', True)
+    def test(self):
+        api.api.csgo.get().request_full_match_info(0, 0, 0)
+        response = api.api.csgo.get().wait_event('full_match_info', 10)
+        self.assertIsInstance(response, tuple)
+        self.assertEqual(len(response), 1)
+        self.assertEqual(type(response[0]).__name__, 'CMsgGCCStrike15_v2_MatchList')
