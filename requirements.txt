@@ -3,7 +3,7 @@ aiosignal==1.3.1
 asgiref==3.8.1
 async-timeout==4.0.3
 attrs==23.2.0
-awpy==2.0.0b2
+awpy==2.0.0b4
 cachetools==5.4.0
 certifi==2024.7.4
 charset-normalizer==2.1.1
