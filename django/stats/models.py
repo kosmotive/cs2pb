@@ -582,7 +582,7 @@ class MatchBadge(models.Model):
         MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace')
         MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill')
         MatchBadge.award_margin_badge(participation, 'carrier', order='-adr', margin=2, emoji='🍆')
-        MatchBadge.award_margin_badge(participation, 'peach', order='adr', margin=0.66, emoji='🍑')
+        MatchBadge.award_margin_badge(participation, 'peach', order='adr', margin=0.75, emoji='🍑')
 
     @staticmethod
     def award_surpass_yourself_badge(participation, old_participations):

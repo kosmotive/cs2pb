@@ -272,13 +272,13 @@ class MatchBadge__award(TestCase):
         mp5 = pmatch.get_participation('76561197962477966')
 
         # Test with ADR right below the threshold
-        mp5.adr = 0.67 * mp4.adr
+        mp5.adr = 0.76 * mp4.adr
         mp5.save()
         models.MatchBadge.award(mp5, list())
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = mp5)), 0)
 
         # Test with ADR right above the threshold
-        mp5.adr = 0.65 * mp4.adr
+        mp5.adr = 0.74 * mp4.adr
         mp5.save()
         models.MatchBadge.award(mp5, list())
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = mp5)), 1)
