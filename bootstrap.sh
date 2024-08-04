@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export REF="9af8c4fdfbd027508813bdca352e105229d3041b"
+export REF="19f1e6918c23592d6077aedef252383683251e5d"
 
 if [ -f .no-bootstrap ]; then
     echo "Bootstrap by accident? Bootstrap is blocked."
@@ -14,6 +14,7 @@ git -c advice.detachedHead=false checkout $REF
 cd ..
 cp -R cs2pb-bootstrap/django/* ./django/
 cp cs2pb-bootstrap/envvars.development ./
+cp cs2pb-bootstrap/envvars.production ./
 rm -rf cs2pb-bootstrap
 
 source envvars.development
