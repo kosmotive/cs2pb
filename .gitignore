@@ -20,3 +20,4 @@ __pycache__
 /node/resolve.json
 /.no-bootstrap
 /envvars.development
+/envvars.production
