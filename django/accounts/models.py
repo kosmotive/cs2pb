@@ -1,3 +1,7 @@
+import datetime
+import logging
+import uuid
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.base_user import BaseUserManager
@@ -7,11 +11,6 @@ from django.core.validators import RegexValidator
 from api import api
 from stats.updater import queue_update_task
 from url_forward import get_redirect_url_to
-
-from datetime import datetime
-
-import uuid
-import logging
 
 
 log = logging.getLogger(__name__)
@@ -156,7 +155,7 @@ class Account(AbstractUser):
 
     def update_matches(self, force=False):
         last_queued_update = self.last_queued_update
-        if last_queued_update is None or force or (datetime.now() - last_queued_update.scheduled).total_seconds() / 60 >= 5:
+        if last_queued_update is None or force or (datetime.datetime.now() - last_queued_update.scheduled).total_seconds() / 60 >= 5:
             return queue_update_task(self)
         else:
             return None

@@ -1,6 +1,7 @@
+import datetime
+import time
 from types import SimpleNamespace
 from unittest.mock import patch
-import time
 import uuid
 
 from django.http import HttpResponseNotFound
@@ -8,10 +9,12 @@ from django.test import TestCase, RequestFactory
 from django.urls import reverse
 
 from accounts.models import Account, Squad, SteamProfile
+import api
+from discordbot.models import ScheduledNotification
 from stats import models
 from stats import potw
 from stats import views
-from discordbot.models import ScheduledNotification
+from stats import updater
 from tests import testsuite
 from url_forward import get_redirect_url_to
 
@@ -693,3 +696,74 @@ class matches(TestCase):
         response = self.client.get(reverse('matches'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('login'))
+
+
+class run_pending_tasks(TestCase):
+
+    def test(self):
+        from accounts.tests import Account__update_matches
+        Account__update_matches__testcase = Account__update_matches()
+        try:
+            Account__update_matches__testcase.setUp()
+
+            # Schedule 3 update tasks, 1st already completed, 2nd started (but interrupted)
+            Account__update_matches__testcase.test()
+
+            # Let each task fail
+            with patch.object(models.UpdateTask, 'run', side_effect = ValueError) as mock_update_task_run:
+                with self.assertLogs(updater.log, level='CRITICAL') as cm:
+                    updater.run_pending_tasks()
+
+            # Verify that updater repeats the interrupted task, and keeps running even after a failing task
+            self.assertEqual(mock_update_task_run.call_count, 2)
+
+            # Verify the logs
+            self.assertEqual(len(cm.output), 2)
+            self.assertIn('Failed to update stats.', cm.output[0])
+            self.assertIn('Failed to update stats.', cm.output[1])
+
+        finally:
+            Account__update_matches__testcase.tearDown()
+
+
+class UpdateTask__run(TestCase):
+
+    @testsuite.fake_api('accounts.models')
+    def setUp(self):
+        self.player = models.SteamProfile.objects.create(steamid = '12345678900000001')
+        self.account = Account.objects.create(steam_profile = self.player, last_sharecode = 'xxx-sharecode-xxx')
+        self.task = models.UpdateTask(account = self.account, scheduled_timestamp = datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)))
+        self.assertFalse(self.task.completed)
+        self.assertTrue(self.account.enabled)
+
+    @patch('api.api.fetch_matches', side_effect = api.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'))
+    def test_invalid_sharecode_error(self, mock_api_fetch_matches):
+        self.task.run()
+
+        # Accounts with invalid `last_sharecode` should be disabled, because there is no point in retrying an update for an invalid sharecode
+        self.assertFalse(self.account.enabled)
+
+        # Verify that the task was completed (there is no point in repeating it)
+        self.assertTrue(self.task.completed)
+
+    @patch('api.api.fetch_matches', side_effect = ValueError)
+    def test_fetch_matches_error(self, mock_api_fetch_matches):
+        # Verify that the error is passed through (so it can be handled by `run_pending_tasks`, see the `run_pending_tasks` test)
+        self.assertRaises(ValueError, self.task.run)
+
+        # Verify that the task is not completed (can be repeated later, usually after a new task is scheduled)
+        self.assertFalse(self.task.completed)
+
+        # Verify that the account is still enabled
+        self.assertTrue(self.account.enabled)
+
+    @patch('api.api.fetch_matches', side_effect = ValueError)
+    def test_disabled_account(self, mock_api_fetch_matches):
+        self.account.enabled = False
+        self.account.save()
+
+        # Task should run without errors because account is disabled
+        self.task.run()
+
+        # Verify that the task was not actually processed
+        self.assertEqual(mock_api_fetch_matches.call_count, 0)
