@@ -1,9 +1,8 @@
-from django.db import transaction
-
-import threading
+import datetime
 import logging
+import threading
 
-from datetime import datetime
+from django.db import transaction
 
 
 log = logging.getLogger(__name__)
@@ -33,7 +32,7 @@ def run_pending_tasks():
 def queue_update_task(account):
     global update_thread
     from stats.models import UpdateTask
-    task = UpdateTask.objects.create(account=account, scheduled_timestamp=datetime.timestamp(datetime.now()))
+    task = UpdateTask.objects.create(account=account, scheduled_timestamp=datetime.datetime.timestamp(datetime.datetime.now()))
     if update_thread is None:
         update_thread = threading.Thread(target=run_update_loop, daemon=True)
         update_thread.start()
