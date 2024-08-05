@@ -646,7 +646,7 @@ class MatchBadge(models.Model):
 
 class UpdateTask(models.Model):
 
-    account  = models.ForeignKey(Account, related_name='update_tasks', on_delete=models.CASCADE)
+    account = models.ForeignKey(Account, related_name='update_tasks', on_delete=models.CASCADE)
     scheduled_timestamp = models.PositiveBigIntegerField(verbose_name='Scheduled')
     execution_timestamp = models.PositiveBigIntegerField(null=True, blank=True, verbose_name='Execution started') # when the execution started
     completed_timestamp = models.PositiveBigIntegerField(null=True, blank=True, verbose_name='Completed') # when the execution finished

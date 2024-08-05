@@ -47,8 +47,8 @@ class Account__update_matches(TestCase):
 
     @testsuite.fake_api('accounts.models')
     def setUp(self):
-        self.player = stats.models.SteamProfile.objects.create(steamid='12345678900000001')
-        self.account = accounts.models.Account.objects.create(steam_profile=self.player)
+        self.player = stats.models.SteamProfile.objects.create(steamid = '12345678900000001')
+        self.account = accounts.models.Account.objects.create(steam_profile = self.player)
 
     def test(self, mock_update_event_set):
         # [9:00] Schedule an update on 1.1.2024 at 9am
