@@ -11,6 +11,7 @@ from accounts.models import Account, Squad, SteamProfile
 from stats import models
 from stats import potw
 from stats import views
+from stats import updater
 from discordbot.models import ScheduledNotification
 from tests import testsuite
 from url_forward import get_redirect_url_to
@@ -693,3 +694,31 @@ class matches(TestCase):
         response = self.client.get(reverse('matches'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('login'))
+
+
+class run_pending_tasks(TestCase):
+
+    def test(self):
+        from accounts.tests import Account__update_matches
+        Account__update_matches__testcase = Account__update_matches()
+        try:
+            Account__update_matches__testcase.setUp()
+
+            # Schedule 3 update tasks, 1st already completed, 2nd started (but interrupted)
+            Account__update_matches__testcase.test()
+
+            # Let each task fail
+            with patch.object(models.UpdateTask, 'run', side_effect = ValueError) as mock_update_task_run:
+                with self.assertLogs(updater.log, level='CRITICAL') as cm:
+                    updater.run_pending_tasks()
+
+                # Verify that updater keeps running even after a failing task
+                self.assertEqual(mock_update_task_run.call_count, 2)
+
+                # Verify the logs
+                self.assertEqual(len(cm.output), 2)
+                self.assertIn('Failed to update stats.', cm.output[0])
+                self.assertIn('Failed to update stats.', cm.output[1])
+
+        finally:
+            Account__update_matches__testcase.tearDown()

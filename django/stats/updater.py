@@ -16,7 +16,7 @@ def run_update_loop():
         update_event.wait()
         update_event.clear()
         run_pending_tasks()
-    update_thread = None
+    update_thread = None  # FIXME: is this obsolete?
 
 
 def run_pending_tasks():
