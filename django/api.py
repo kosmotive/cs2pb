@@ -11,6 +11,7 @@ import gevent.exceptions
 import os
 import os.path
 import traceback
+import time
 
 from steam.steamid  import SteamID
 from steam.client   import SteamClient
@@ -40,6 +41,7 @@ def _get_player_stat(stat_df, stat, steam_id):
 
 def fetch_match_details(pmatch, max_retry_count=3):
     for retry_idx in range(max_retry_count):
+        time.sleep(retry_idx * 10)
         try:
             demo_url = pmatch['summary'].map
             demo = parse_demo(demo_url)

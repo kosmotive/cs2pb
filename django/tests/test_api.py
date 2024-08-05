@@ -77,19 +77,19 @@ class fetch_match_details(unittest.TestCase):
         # Test ultimate failure (after 3 attempts)
         mock_parse_demo.side_effect = raise_error_on_first_n_calls(3)
         self.assertRaises(api.InvalidDemoError, fetch_match_details)
-        self.assertEqual(mock_parse_demo.call_count, 3)
+        self.assertEqual(mock_parse_demo.call_count, 3) # 3 invocations raising the error
 
         # Test success after two failures
         mock_parse_demo.call_count = 0
         mock_parse_demo.side_effect = raise_error_on_first_n_calls(2)
         fetch_match_details()
-        self.assertEqual(mock_parse_demo.call_count, 3)
+        self.assertEqual(mock_parse_demo.call_count, 4) # 2 invocations raising the error + 1 invocation with remote URL + 1 invocation with downloaded file
 
         # Test success after one failure
         mock_parse_demo.call_count = 0
-        mock_parse_demo.side_effect = raise_error_on_first_n_calls(2)
+        mock_parse_demo.side_effect = raise_error_on_first_n_calls(1)
         fetch_match_details()
-        self.assertEqual(mock_parse_demo.call_count, 2)
+        self.assertEqual(mock_parse_demo.call_count, 3) # 1 invocations raising the error + 1 invocation with remote URL + 1 invocation with downloaded file
 
 
 class api_csgo(unittest.TestCase):
