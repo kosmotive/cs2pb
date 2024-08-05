@@ -10,6 +10,7 @@ import logging
 import gevent.exceptions
 import os
 import os.path
+import traceback
 
 from steam.steamid  import SteamID
 from steam.client   import SteamClient
@@ -37,10 +38,26 @@ def _get_player_stat(stat_df, stat, steam_id):
     return stat_value
 
 
-def fetch_match_details(pmatch):
-    demoparser = DemoParser()
-    demo_url = pmatch['summary'].map
-    demo = demoparser.parse(demo_url)
+def fetch_match_details(pmatch, max_retry_count=3):
+    for retry_idx in range(max_retry_count):
+        try:
+            demo_url = pmatch['summary'].map
+            demo = parse_demo(demo_url)
+
+            # No need to retry (fetch was successful)
+            break
+
+        except:
+            log.warning(traceback.format_exc())
+            log.warning(f'Failed to fetch match details (attempt: {retry_idx + 1} / {max_retry_count})')
+
+            if retry_idx + 1 == max_retry_count:
+                raise InvalidDemoError(
+                    sharecode = pmatch['sharecode'],
+                    demo_url = demo_url,
+                )
+
+    # Fetch info from parsed demo
     pmatch['map'] = demo.header['map_name']
     pmatch['kills'] = demo.kills
 
@@ -140,6 +157,15 @@ class InvalidSharecodeError(Exception):
         self.sharecode = sharecode
 
 
+class InvalidDemoError(Exception):
+    """Raised when a corrupted demo is faced.
+    """
+
+    def __init__(self, sharecode, demo_url):
+        self.sharecode = sharecode
+        self.demo_url  = demo_url
+
+
 class SteamAPI:
 
     def __init__(self):
@@ -185,33 +211,27 @@ class SteamAPI:
             raise
 
 
-class DemoParser:
-
-    def __init__(self, tickrate=64):
-        self.tickrate = tickrate
-
-    def parse(self, demofile):
-        if demofile.startswith('http://'):
-            log.info(f'Downloading demo: {demofile}')
-            response = requests.get(demofile)
-            with tempfile.NamedTemporaryFile() as temp:
-                temp.write(bz2.decompress(response.content))
-                temp.flush()
-                return self.parse(temp.name)
-        elif demofile.lower().endswith('.bz2'):
-            with tempfile.NamedTemporaryFile() as temp:
-                zipfile = bz2.BZ2File(demofile)
-                temp.write(zipfile.read())
-                temp.flush()
-                return self.parse(temp.name)
-        log.info(f'Parsing demo: {demofile}')
-        try:
-            assert os.path.isfile(demofile)
-            return awpy.Demo(path=demofile, ticks=False)  ## ticks=False is required to reduce memory consumption
-        except:
-            log.critical(f'Failed to parse demo: {demofile}')
-            raise
-        return parser.parse()
+def parse_demo(demofile):
+    if demofile.startswith('http://'):
+        log.info(f'Downloading demo: {demofile}')
+        response = requests.get(demofile)
+        with tempfile.NamedTemporaryFile() as temp:
+            temp.write(bz2.decompress(response.content))
+            temp.flush()
+            return parse_demo(temp.name)
+    elif demofile.lower().endswith('.bz2'):
+        with tempfile.NamedTemporaryFile() as temp:
+            zipfile = bz2.BZ2File(demofile)
+            temp.write(zipfile.read())
+            temp.flush()
+            return parse_demo(temp.name)
+    log.info(f'Parsing demo: {demofile}')
+    try:
+        assert os.path.isfile(demofile)
+        return awpy.Demo(path=demofile, ticks=False)  ## ticks=False is required to reduce memory consumption
+    except:
+        log.critical(f'Failed to parse demo: {demofile}')
+        raise
 
 
 # see:

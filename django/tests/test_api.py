@@ -10,28 +10,32 @@ from tests import testsuite
 
 class fetch_match_details(unittest.TestCase):
 
-    def test(self):
-        pmatch = {
-            'sharecode': 'CSGO-a622L-DjJDC-5zwn4-Gx2tf-YYmQD',
-            'timestamp': 1720469310,
-            'summary': SimpleNamespace(
-                map = testsuite.get_demo_path('003694683536926703955_1352610665'),
-                team_scores = (4, 13),
-            ),
-            'steam_ids': [
-                76561197967680028,
-                76561197961345487,
-                76561197961748270,
-                76561198067716219,
-                76561197962477966,
-                76561198298259382,
-                76561199034015511,
-                76561198309743637,
-                76561198140806020,
-                76561198064174518,
-            ],
-        }
+    def setUp(self):
+        self.pmatch_data = [
+            {
+                'sharecode': 'CSGO-a622L-DjJDC-5zwn4-Gx2tf-YYmQD',
+                'timestamp': 1720469310,
+                'summary': SimpleNamespace(
+                    map = testsuite.get_demo_path('003694683536926703955_1352610665'),
+                    team_scores = (4, 13),
+                ),
+                'steam_ids': [
+                    76561197967680028,
+                    76561197961345487,
+                    76561197961748270,
+                    76561198067716219,
+                    76561197962477966,
+                    76561198298259382,
+                    76561199034015511,
+                    76561198309743637,
+                    76561198140806020,
+                    76561198064174518,
+                ],
+            }
+        ]
 
+    def test(self):
+        pmatch = self.pmatch_data[0]
         fetch_match_details = lambda: api.fetch_match_details(pmatch)
         peak_mem_mb = max(memory_usage(proc = fetch_match_details))
 
@@ -49,6 +53,43 @@ class fetch_match_details(unittest.TestCase):
         self.assertEqual(round(pmatch['adr']['76561198309743637'], 1), 84.5)
         self.assertEqual(round(pmatch['adr']['76561198140806020'], 1), 98.9)
         self.assertEqual(round(pmatch['adr']['76561198064174518'], 1), 63.6)
+
+    @patch('api.parse_demo', wraps=api.parse_demo)
+    def test_corrupted_demo_file(self, mock_parse_demo):
+        pmatch = self.pmatch_data[0]
+        fetch_match_details = lambda: api.fetch_match_details(self.pmatch_data[0])
+
+        # Inject the error described in https://github.com/kosmotive/cs2pb/issues/23
+        def raise_error_on_first_n_calls(n):
+            def raise_error(*args):
+
+                # Remove the sideeffect if this is the last call
+                print('***', mock_parse_demo.call_count)
+                if mock_parse_demo.call_count == n:
+                    mock_parse_demo.side_effect = None
+
+                # Raise the error
+                if mock_parse_demo.call_count <= n:
+                    raise OSError()
+
+            return raise_error
+
+        # Test ultimate failure (after 3 attempts)
+        mock_parse_demo.side_effect = raise_error_on_first_n_calls(3)
+        self.assertRaises(api.InvalidDemoError, fetch_match_details)
+        self.assertEqual(mock_parse_demo.call_count, 3)
+
+        # Test success after two failures
+        mock_parse_demo.call_count = 0
+        mock_parse_demo.side_effect = raise_error_on_first_n_calls(2)
+        fetch_match_details()
+        self.assertEqual(mock_parse_demo.call_count, 3)
+
+        # Test success after one failure
+        mock_parse_demo.call_count = 0
+        mock_parse_demo.side_effect = raise_error_on_first_n_calls(2)
+        fetch_match_details()
+        self.assertEqual(mock_parse_demo.call_count, 2)
 
 
 class api_csgo(unittest.TestCase):
