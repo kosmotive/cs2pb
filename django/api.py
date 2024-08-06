@@ -39,7 +39,7 @@ def _get_player_stat(stat_df, stat, steam_id):
     return stat_value
 
 
-def fetch_match_details(pmatch, max_retry_count=3):
+def fetch_match_details(pmatch, max_retry_count=4):
     for retry_idx in range(max_retry_count):
         time.sleep(retry_idx * 10)
         try:
