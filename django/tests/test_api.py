@@ -74,10 +74,10 @@ class fetch_match_details(unittest.TestCase):
 
             return raise_error
 
-        # Test ultimate failure (after 3 attempts)
-        mock_parse_demo.side_effect = raise_error_on_first_n_calls(3)
+        # Test ultimate failure (after 4 attempts)
+        mock_parse_demo.side_effect = raise_error_on_first_n_calls(4)
         self.assertRaises(api.InvalidDemoError, fetch_match_details)
-        self.assertEqual(mock_parse_demo.call_count, 3) # 3 invocations raising the error
+        self.assertEqual(mock_parse_demo.call_count, 4) # 4 invocations raising the error
 
         # Test success after two failures
         mock_parse_demo.call_count = 0
