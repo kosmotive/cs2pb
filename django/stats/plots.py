@@ -74,7 +74,7 @@ def unroll_datachunks(features, *datachunks):
 
 def add_default_hints(r, oldest_match):
     text_period = f'{format_date(parse_timestamp(oldest_match.timestamp))}—{format_date(datetime.now())}'
-    text_percentages = '% values are with respect to the 84th percentile of the normal distribution (except for team contribution).'
+    text_percentages = '% values are with respect to the 84th percentile of the normal distribution (except for participation effect).'
     plt.text(0.02, 0.95, text_period, transform=r.fig.transFigure)
     plt.text(0.98, 0.02, text_percentages, transform=r.fig.transFigure, ha='right', color='#bbb', fontsize=8)
     plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.15)
