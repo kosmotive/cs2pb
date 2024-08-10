@@ -891,3 +891,28 @@ class GamingSession__close(TestCase):
             f'<12345678900000001> 📈 +{100 * (pv_today - pv_ref) / pv_ref :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
             text,
         )
+
+    def test_decreasing_kpi(self):
+        # Decrease the KPI
+        self.participation2.adr = 100
+        self.participation2.save()
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Get the scheduled Discord notifcation
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
+        notification = ScheduledNotification.objects.get()
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+
+        # Verify the notification text
+        text = notification.text
+        pv_previous = math.sqrt((20 / 15) * 120.5 / 100)
+        pv_today    = math.sqrt((20 / 15) * 100 / 100)
+        pv_ref      = (pv_previous + pv_today) / 2
+        self.assertIn(
+            f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
+            f'<12345678900000001> 📉 {100 * (pv_today - pv_ref) / pv_ref :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
+            text,
+        )
