@@ -64,7 +64,6 @@ class fetch_match_details(unittest.TestCase):
             def raise_error(*args):
 
                 # Remove the sideeffect if this is the last call
-                print('***', mock_parse_demo.call_count)
                 if mock_parse_demo.call_count == n:
                     mock_parse_demo.side_effect = None
 
