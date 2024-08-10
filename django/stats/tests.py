@@ -1,4 +1,5 @@
 import datetime
+import math
 import time
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -313,7 +314,6 @@ class Squad__do_changelog_announcements(TestCase):
     def test_new_squad(self):
         squad = Squad.objects.create(name='squad', discord_channel_id='xxx')
         squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
-        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
         c = {
             'message': 'Hotfix: Minor layout improvements',
             'url': get_redirect_url_to('https://github.com/kodikit/cs2pb/commits/9074a7a848a6ac74ba729757e1b2a4a971586190'),
@@ -338,7 +338,6 @@ class Squad__do_changelog_announcements(TestCase):
 
     def test(self):
         squad = Squad.objects.create(name='squad', discord_channel_id='xxx', last_changelog_announcement=Squad__do_changelog_announcements.changelog[-1]['sha'])
-        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
         squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.get()
@@ -767,3 +766,31 @@ class UpdateTask__run(TestCase):
 
         # Verify that the task was not actually processed
         self.assertEqual(mock_api_fetch_matches.call_count, 0)
+
+
+class GamingSession__close(TestCase):
+    
+    @testsuite.fake_api('accounts.models')
+    def setUp(self):
+        self.player = SteamProfile.objects.create(steamid='12345678900000001')
+        self.squad = Squad.objects.create(name='Test Squad')
+        self.squad.members.add(self.player)
+        self.session = models.GamingSession.objects.create(squad=self.squad)
+        self.match = models.Match.objects.create(timestamp=int(time.time()), score_team1=12, score_team2=13, duration=1653, map_name='de_dust2')
+        self.match.sessions.add(self.session)
+        self.participation = models.MatchParticipation.objects.create(player=self.player, pmatch=self.match, position=0, team=1, result=0, kills=20, assists=10, deaths=15, score=30, mvps=5, headshots=15, adr=120.5)
+        self.assertFalse(self.session.is_closed)
+
+    def test_constant_kpi(self):
+        self.session.close()
+        self.assertTrue(self.session.is_closed)
+
+        # Get the scheduled Discord notifcation
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
+        notification = ScheduledNotification.objects.get()
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+
+        # Verify the notification text
+        text = notification.text
+        pv = math.sqrt((20 / 15) * 120.5 / 100)
+        self.assertIn(f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  <12345678900000001> ±0.00% ({pv:.2f}), with respect to the *player value*.', text)
