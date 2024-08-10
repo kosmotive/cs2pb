@@ -653,7 +653,7 @@ class matches(TestCase):
         self.session = models.GamingSession.objects.create(squad=self.squad)
         self.match = models.Match.objects.create(timestamp=int(time.time()), score_team1=12, score_team2=13, duration=1653, map_name='de_dust2')
         self.match.sessions.add(self.session)
-        self.participation = models.MatchParticipation.objects.create(player=self.player, pmatch=self.match, position=0, team=1, result=0, kills=20, assists=10, deaths=15, score=30, mvps=5, headshots=15, adr=120.5)
+        self.participation = models.MatchParticipation.objects.create(player=self.player, pmatch=self.match, position=0, team=1, result='l', kills=20, assists=10, deaths=15, score=30, mvps=5, headshots=15, adr=120.5)
 
     def test_matches_with_squad(self):
         response = self.client.get(reverse('matches', kwargs={'squad': self.squad.uuid}))
