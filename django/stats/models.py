@@ -273,7 +273,7 @@ class Match(models.Model):
                 for squad in account.steam_profile.squads.all():
                     squad_ids.add(squad.pk)
             for squad_id in squad_ids:
-                squad = Squad.objects.get(squad_id)
+                squad = Squad.objects.get(uuid = squad_id)
                 squad.handle_new_match(m)
 
             return m
