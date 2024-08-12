@@ -772,9 +772,11 @@ class GamingSession__close(TestCase):
     
     @testsuite.fake_api('accounts.models')
     def setUp(self):
-        self.player = SteamProfile.objects.create(steamid = '12345678900000001')
+        self.player1 = SteamProfile.objects.create(steamid = '12345678900000001')
+        self.player2 = SteamProfile.objects.create(steamid = '12345678900000002')
         self.squad = Squad.objects.create(name = 'Test Squad')
-        self.squad.members.add(self.player)
+        self.squad.members.add(self.player1)
+        self.squad.members.add(self.player2)
 
         # Create a previously played session
         self.session1 = models.GamingSession.objects.create(squad = self.squad, is_closed = True)
@@ -786,7 +788,7 @@ class GamingSession__close(TestCase):
         )
         self.match1.sessions.add(self.session1)
         self.participation1 = models.MatchParticipation.objects.create(
-            player = self.player,
+            player = self.player1,
             pmatch = self.match1,
             position = 0,
             team = 1,
@@ -810,7 +812,7 @@ class GamingSession__close(TestCase):
         )
         self.match2.sessions.add(self.session2)
         self.participation2 = models.MatchParticipation.objects.create(
-            player = self.player,
+            player = self.player1,
             pmatch = self.match2,
             position = 0,
             team = 1,
@@ -906,6 +908,22 @@ class GamingSession__close(TestCase):
         )
 
     def test_multiple_matches(self):
+        # Add a second participant to the current session (teammate)
+        self.participation3 = models.MatchParticipation.objects.create(
+            player = self.player2,
+            pmatch = self.match2,
+            position = 1,
+            team = self.participation2.team,
+            result = self.participation2.result,
+            kills = 10,
+            assists = 5,
+            deaths = 10,
+            score = 15,
+            mvps = 3,
+            headshots = 10,
+            adr = 90,
+        )
+
         # Create a second match in current session (won)
         match3 = models.Match.objects.create(
             timestamp = int(time.time()) - 2000,
@@ -915,7 +933,7 @@ class GamingSession__close(TestCase):
         )
         match3.sessions.add(self.session2)
         models.MatchParticipation.objects.create(
-            player = self.player,
+            player = self.player1,
             pmatch = match3,
             position = 0,
             team = 1,
@@ -938,7 +956,7 @@ class GamingSession__close(TestCase):
         )
         match4.sessions.add(self.session2)
         models.MatchParticipation.objects.create(
-            player = self.player,
+            player = self.player1,
             pmatch = match4,
             position = 0,
             team = 1,
@@ -961,9 +979,9 @@ class GamingSession__close(TestCase):
         notification = ScheduledNotification.objects.all()[1]
         self.assertEqual(notification.squad.pk, self.squad.pk)
         self.assertEqual(
+            notification.text,
             'Matches played in this session:\n'
             '- *de_anubis*, **12:12** ended in a draw 🥵\n'
             '- *de_inferno*, **13:12** won 🤘\n'
             '- *de_dust2*, **12:13** lost 💩',
-            notification.text,
         )
