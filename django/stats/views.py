@@ -135,7 +135,7 @@ def squads(request, squad=None, expanded_stats=False):
     else:
         return redirect('login')
 
-    features = [Features.pv, Features.pe, Features.acc]
+    features = [Features.pv, Features.pe, Features.hsr]
     if expanded_stats:
         features += [Features.adr, Features.kd]
 
