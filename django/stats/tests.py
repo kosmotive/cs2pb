@@ -981,7 +981,7 @@ class GamingSession__close(TestCase):
         self.assertEqual(
             notification.text,
             'Matches played in this session:\n'
-            '- *de_anubis*, **12:12** ended in a draw 🥵\n'
+            '- *de_anubis*, **12:12**\n'
             '- *de_inferno*, **13:12** won 🤘\n'
             '- *de_dust2*, **12:13** lost 💩',
         )
