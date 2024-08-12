@@ -76,7 +76,7 @@ class GamingSession(models.Model):
         ).distinct().order_by('timestamp').annotate(
             result = F('matchparticipation__result')
         ):
-            text += f'\n- *{pmatch.map_name}*, **{pmatch.score_team1}:{pmatch.score_team2}** '
+            text += f'\n- *{pmatch.map_name}*, **{pmatch.score_team1}:{pmatch.score_team2}**, '
             text += dict(
                 w = 'won 🤘',
                 l = 'lost 💩',
