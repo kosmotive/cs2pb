@@ -71,7 +71,11 @@ class GamingSession(models.Model):
 
         # Create a summary of the matches
         text = 'Matches played in this session:'
-        for pmatch in self.matches.order_by('timestamp').annotate(result = F('matchparticipation__result')):
+        for pmatch in self.matches.filter(
+            matchparticipation__player__in = self.squad.members.all()
+        ).distinct().order_by('timestamp').annotate(
+            result = F('matchparticipation__result')
+        ):
             text += f'\n- *{pmatch.map_name}*, **{pmatch.score_team1}:{pmatch.score_team2}** '
             text += dict(
                 w = 'won 🤘',
