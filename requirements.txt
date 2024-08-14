@@ -11,7 +11,7 @@ click==8.1.7
 contourpy==1.2.1
 csgo @ git+https://github.com/SyberiaK/csgo@4a60581
 cycler==0.12.1
-demoparser2==0.27.0
+demoparser2==0.31.0
 discord.py==2.0.1
 Django==4.1.13
 fonttools==4.53.1
