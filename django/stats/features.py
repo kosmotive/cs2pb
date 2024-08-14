@@ -149,10 +149,10 @@ class Features:
     pe  = ParticipationEffect()
     adr = ExpressionFeature(F_float('adr'), 'Damage per round', 'The damage per round, averaged over all matches.', format='{:.1f}')
     pv  = ExpressionFeature(Sqrt((F_float('kills') / F_float('deaths')) * (F_float('adr') / Value(100))), 'Player value', 'Geometric mean of kills per death ration and the average damage per round (divided by 100).')
-    acc = ExpressionFeature(F_float('headshots') / F_float('kills'), 'Accuracy', 'Headshots per kill.', format='{:.2f}')
+    hsr = ExpressionFeature(F_float('headshots') / F_float('kills'), 'Headshot rate', 'Headshots per kill.', format='{:.2f}')
 
     ALL  = [] # will be filled automatically
-    MANY = [pv, pe, acc, adr, kd]
+    MANY = [pv, pe, hsr, adr, kd]
 
 
 for attr_name in dir(Features):

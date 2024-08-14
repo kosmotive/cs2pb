@@ -42,6 +42,7 @@ class GamingSession(models.Model):
         self.save()
         if was_already_closed: return
 
+        # Compute the performance of the players
         participated_steamids = self.participated_steamids
         comments = list()
         top_player, top_player_trend_rel = None, 0
@@ -67,6 +68,23 @@ class GamingSession(models.Model):
             text += ' Here is your current performance compared to your 30-days average: ' + ', '.join(comments)
             text += ', with respect to the *player value*.'
         ScheduledNotification.objects.create(squad = self.squad, text = text)
+
+        # Create a summary of the matches
+        text = 'Matches played in this session:'
+        for pmatch in self.matches.filter(
+            matchparticipation__player__in = self.squad.members.all()
+        ).distinct().order_by('timestamp').annotate(
+            result = F('matchparticipation__result')
+        ):
+            text += f'\n- *{pmatch.map_name}*, **{pmatch.score_team1}:{pmatch.score_team2}**'
+            if pmatch.result in 'wl':
+                text += ' ' + dict(
+                    w = 'won 🤘',
+                    l = 'lost 💩',
+                )[pmatch.result]
+        ScheduledNotification.objects.create(squad = self.squad, text = text)
+
+        # Determine the rising star
         if participated_squad_members > 1 and top_player is not None and top_player_trend_rel > 0.01:
             from .plots import trends as plot_trends
             notification = ScheduledNotification.objects.create(squad = self.squad, text = f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!')
@@ -259,6 +277,7 @@ class Match(models.Model):
                 for squad in account.steam_profile.squads.all():
                     squad_ids.add(squad.pk)
             for squad_id in squad_ids:
+                squad = Squad.objects.get(uuid = squad_id)
                 squad.handle_new_match(m)
 
             return m
@@ -330,6 +349,17 @@ class MatchParticipation(models.Model):
             ),
         ]
         ordering = ['-adr'] # in CSGO, this was `position` (corresponding to the score), but in CS2 the ordering is determiend by the ADR
+
+    def clean(self, *args, **kwargs):
+        if self.team not in (1, 2):
+            raise ValueError('Team must be 1 or 2')
+        if self.result not in ('w', 'l', 't'):
+            raise ValueError('Result must be "w", "l", or "t"')
+        super().clean(*args, **kwargs)
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     @property
     def kd(self):
@@ -646,7 +676,7 @@ class MatchBadge(models.Model):
 
 class UpdateTask(models.Model):
 
-    account  = models.ForeignKey(Account, related_name='update_tasks', on_delete=models.CASCADE)
+    account = models.ForeignKey(Account, related_name='update_tasks', on_delete=models.CASCADE)
     scheduled_timestamp = models.PositiveBigIntegerField(verbose_name='Scheduled')
     execution_timestamp = models.PositiveBigIntegerField(null=True, blank=True, verbose_name='Execution started') # when the execution started
     completed_timestamp = models.PositiveBigIntegerField(null=True, blank=True, verbose_name='Completed') # when the execution finished

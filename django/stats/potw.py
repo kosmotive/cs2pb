@@ -88,7 +88,7 @@ class StreakChallenge(Mode):
             return None
 
 
-class AccuracyChallenge(Mode):
+class HeadshotChallenge(Mode):
 
     fields = ['headshots', 'rounds']
     labels = ['headshots', 'rounds']
@@ -119,9 +119,9 @@ mode_cycle = [
         name = 'ADR Challenge',
         description = 'Max out your average damage per round!',
     ),
-    AccuracyChallenge(
+    HeadshotChallenge(
         id = 'accuracy',
-        name = 'Accuracy Challenge',
+        name = 'Headshot Challenge',
         description = 'Aim for the head!',
     ),
 ]

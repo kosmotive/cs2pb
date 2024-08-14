@@ -1,6 +1,8 @@
+import datetime
+import math
+import time
 from types import SimpleNamespace
 from unittest.mock import patch
-import time
 import uuid
 
 from django.http import HttpResponseNotFound
@@ -8,10 +10,12 @@ from django.test import TestCase, RequestFactory
 from django.urls import reverse
 
 from accounts.models import Account, Squad, SteamProfile
+import api
+from discordbot.models import ScheduledNotification
 from stats import models
 from stats import potw
 from stats import views
-from discordbot.models import ScheduledNotification
+from stats import updater
 from tests import testsuite
 from url_forward import get_redirect_url_to
 
@@ -310,7 +314,6 @@ class Squad__do_changelog_announcements(TestCase):
     def test_new_squad(self):
         squad = Squad.objects.create(name='squad', discord_channel_id='xxx')
         squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
-        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
         c = {
             'message': 'Hotfix: Minor layout improvements',
             'url': get_redirect_url_to('https://github.com/kodikit/cs2pb/commits/9074a7a848a6ac74ba729757e1b2a4a971586190'),
@@ -335,7 +338,6 @@ class Squad__do_changelog_announcements(TestCase):
 
     def test(self):
         squad = Squad.objects.create(name='squad', discord_channel_id='xxx', last_changelog_announcement=Squad__do_changelog_announcements.changelog[-1]['sha'])
-        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
         squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.get()
@@ -651,7 +653,7 @@ class matches(TestCase):
         self.session = models.GamingSession.objects.create(squad=self.squad)
         self.match = models.Match.objects.create(timestamp=int(time.time()), score_team1=12, score_team2=13, duration=1653, map_name='de_dust2')
         self.match.sessions.add(self.session)
-        self.participation = models.MatchParticipation.objects.create(player=self.player, pmatch=self.match, position=0, team=1, result=0, kills=20, assists=10, deaths=15, score=30, mvps=5, headshots=15, adr=120.5)
+        self.participation = models.MatchParticipation.objects.create(player=self.player, pmatch=self.match, position=0, team=1, result='l', kills=20, assists=10, deaths=15, score=30, mvps=5, headshots=15, adr=120.5)
 
     def test_matches_with_squad(self):
         response = self.client.get(reverse('matches', kwargs={'squad': self.squad.uuid}))
@@ -693,3 +695,293 @@ class matches(TestCase):
         response = self.client.get(reverse('matches'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('login'))
+
+
+class run_pending_tasks(TestCase):
+
+    def test(self):
+        from accounts.tests import Account__update_matches
+        Account__update_matches__testcase = Account__update_matches()
+        try:
+            Account__update_matches__testcase.setUp()
+
+            # Schedule 3 update tasks, 1st already completed, 2nd started (but interrupted)
+            Account__update_matches__testcase.test()
+
+            # Let each task fail
+            with patch.object(models.UpdateTask, 'run', side_effect = ValueError) as mock_update_task_run:
+                with self.assertLogs(updater.log, level='CRITICAL') as cm:
+                    updater.run_pending_tasks()
+
+            # Verify that updater repeats the interrupted task, and keeps running even after a failing task
+            self.assertEqual(mock_update_task_run.call_count, 2)
+
+            # Verify the logs
+            self.assertEqual(len(cm.output), 2)
+            self.assertIn('Failed to update stats.', cm.output[0])
+            self.assertIn('Failed to update stats.', cm.output[1])
+
+        finally:
+            Account__update_matches__testcase.tearDown()
+
+
+class UpdateTask__run(TestCase):
+
+    @testsuite.fake_api('accounts.models')
+    def setUp(self):
+        self.player = models.SteamProfile.objects.create(steamid = '12345678900000001')
+        self.account = Account.objects.create(steam_profile = self.player, last_sharecode = 'xxx-sharecode-xxx')
+        self.task = models.UpdateTask(account = self.account, scheduled_timestamp = datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)))
+        self.assertFalse(self.task.completed)
+        self.assertTrue(self.account.enabled)
+
+    @patch('api.api.fetch_matches', side_effect = api.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'))
+    def test_invalid_sharecode_error(self, mock_api_fetch_matches):
+        self.task.run()
+
+        # Accounts with invalid `last_sharecode` should be disabled, because there is no point in retrying an update for an invalid sharecode
+        self.assertFalse(self.account.enabled)
+
+        # Verify that the task was completed (there is no point in repeating it)
+        self.assertTrue(self.task.completed)
+
+    @patch('api.api.fetch_matches', side_effect = ValueError)
+    def test_fetch_matches_error(self, mock_api_fetch_matches):
+        # Verify that the error is passed through (so it can be handled by `run_pending_tasks`, see the `run_pending_tasks` test)
+        self.assertRaises(ValueError, self.task.run)
+
+        # Verify that the task is not completed (can be repeated later, usually after a new task is scheduled)
+        self.assertFalse(self.task.completed)
+
+        # Verify that the account is still enabled
+        self.assertTrue(self.account.enabled)
+
+    @patch('api.api.fetch_matches', side_effect = ValueError)
+    def test_disabled_account(self, mock_api_fetch_matches):
+        self.account.enabled = False
+        self.account.save()
+
+        # Task should run without errors because account is disabled
+        self.task.run()
+
+        # Verify that the task was not actually processed
+        self.assertEqual(mock_api_fetch_matches.call_count, 0)
+
+
+class GamingSession__close(TestCase):
+    
+    @testsuite.fake_api('accounts.models')
+    def setUp(self):
+        self.player1 = SteamProfile.objects.create(steamid = '12345678900000001')
+        self.player2 = SteamProfile.objects.create(steamid = '12345678900000002')
+        self.squad = Squad.objects.create(name = 'Test Squad')
+        self.squad.members.add(self.player1)
+        self.squad.members.add(self.player2)
+
+        # Create a previously played session
+        self.session1 = models.GamingSession.objects.create(squad = self.squad, is_closed = True)
+        self.match1 = models.Match.objects.create(
+            timestamp = int(time.time()) - 60 * 60 * 24 * 14,  # two weeks ago
+            score_team1 = 12, score_team2 = 13,
+            duration = 1653,
+            map_name = 'de_dust2',
+        )
+        self.match1.sessions.add(self.session1)
+        self.participation1 = models.MatchParticipation.objects.create(
+            player = self.player1,
+            pmatch = self.match1,
+            position = 0,
+            team = 1,
+            result = 'l',
+            kills = 20,
+            assists = 10,
+            deaths = 15,
+            score = 30,
+            mvps = 5,
+            headshots = 15,
+            adr = 120.5,
+        )
+
+        # Create a currently played session
+        self.session2 = models.GamingSession.objects.create(squad = self.squad)
+        self.match2 = models.Match.objects.create(
+            timestamp = int(time.time()),
+            score_team1 = 12, score_team2 = 13,
+            duration = 1653,
+            map_name = 'de_dust2',
+        )
+        self.match2.sessions.add(self.session2)
+        self.participation2 = models.MatchParticipation.objects.create(
+            player = self.player1,
+            pmatch = self.match2,
+            position = 0,
+            team = 1,
+            result = 'l',
+            kills = 20,
+            assists = 10,
+            deaths = 15,
+            score = 30,
+            mvps = 5,
+            headshots = 15,
+            adr = 120.5,
+        )
+
+    def test_first_session(self):
+        # Remove the previously played session
+        self.session1.delete()
+        self.match1.delete()
+        self.participation1.delete()
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the scheduled Discord notifcation for player performance
+        self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
+        notification = ScheduledNotification.objects.all()[0]
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+        pv = math.sqrt((20 / 15) * 120.5 / 100)
+        self.assertEqual(
+            f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
+            f'<12345678900000001> ±0.00% ({pv :.2f}), with respect to the *player value*.',
+            notification.text,
+        )
+
+    def test_constant_kpi(self):
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the scheduled Discord notifcation for player performance
+        self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
+        notification = ScheduledNotification.objects.all()[0]
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+        pv = math.sqrt((20 / 15) * 120.5 / 100)
+        self.assertEqual(
+            f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
+            f'<12345678900000001> ±0.00% ({pv :.2f}), with respect to the *player value*.',
+            notification.text,
+        )
+
+    def test_increasing_kpi(self):
+        # Increase the KPI
+        self.participation2.adr = 140
+        self.participation2.save()
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the scheduled Discord notifcation for player performance
+        self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
+        notification = ScheduledNotification.objects.all()[0]
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+        pv_previous = math.sqrt((20 / 15) * 120.5 / 100)
+        pv_today    = math.sqrt((20 / 15) * 140 / 100)
+        pv_ref      = (pv_previous + pv_today) / 2
+        self.assertEqual(
+            f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
+            f'<12345678900000001> 📈 +{100 * (pv_today - pv_ref) / pv_ref :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
+            notification.text,
+        )
+
+    def test_decreasing_kpi(self):
+        # Decrease the KPI
+        self.participation2.adr = 100
+        self.participation2.save()
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the scheduled Discord notifcation for player performance
+        self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
+        notification = ScheduledNotification.objects.all()[0]
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+        pv_previous = math.sqrt((20 / 15) * 120.5 / 100)
+        pv_today    = math.sqrt((20 / 15) * 100 / 100)
+        pv_ref      = (pv_previous + pv_today) / 2
+        self.assertEqual(
+            f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
+            f'<12345678900000001> 📉 {100 * (pv_today - pv_ref) / pv_ref :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
+            notification.text,
+        )
+
+    def test_multiple_matches(self):
+        # Add a second participant to the current session (teammate)
+        self.participation3 = models.MatchParticipation.objects.create(
+            player = self.player2,
+            pmatch = self.match2,
+            position = 1,
+            team = self.participation2.team,
+            result = self.participation2.result,
+            kills = 10,
+            assists = 5,
+            deaths = 10,
+            score = 15,
+            mvps = 3,
+            headshots = 10,
+            adr = 90,
+        )
+
+        # Create a second match in current session (won)
+        match3 = models.Match.objects.create(
+            timestamp = int(time.time()) - 2000,
+            score_team1 = 13, score_team2 = 12,
+            duration = 1653,
+            map_name = 'de_inferno',
+        )
+        match3.sessions.add(self.session2)
+        models.MatchParticipation.objects.create(
+            player = self.player1,
+            pmatch = match3,
+            position = 0,
+            team = 1,
+            result = 'w',
+            kills = 20,
+            assists = 10,
+            deaths = 15,
+            score = 30,
+            mvps = 5,
+            headshots = 15,
+            adr = 120,
+        )
+
+        # Create a third match in current session (tie)
+        match4 = models.Match.objects.create(
+            timestamp = int(time.time()) - 4000,
+            score_team1 = 12, score_team2 = 12,
+            duration = 1653,
+            map_name = 'de_anubis',
+        )
+        match4.sessions.add(self.session2)
+        models.MatchParticipation.objects.create(
+            player = self.player1,
+            pmatch = match4,
+            position = 0,
+            team = 1,
+            result = 't',
+            kills = 20,
+            assists = 10,
+            deaths = 15,
+            score = 30,
+            mvps = 5,
+            headshots = 15,
+            adr = 120,
+        )
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the scheduled Discord notification for summary of played matches
+        self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 2)
+        notification = ScheduledNotification.objects.all()[1]
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+        self.assertEqual(
+            notification.text,
+            'Matches played in this session:\n'
+            '- *de_anubis*, **12:12**\n'
+            '- *de_inferno*, **13:12** won 🤘\n'
+            '- *de_dust2*, **12:13** lost 💩',
+        )
