@@ -47,7 +47,7 @@ tqdm==4.66.4
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==1.26.12
-usd-core==24.5
+usd-core==24.8
 vdf==3.4
 yarl==1.9.4
 zipp==3.19.2
