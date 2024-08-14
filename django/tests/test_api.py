@@ -85,7 +85,7 @@ class fetch_match_details(unittest.TestCase):
             )
 
         # If parsing succeeds, perform some checks to make sure that the data is correct
-        self.assertEqual(pmatch['map'], 'unknown')
+        self.assertEqual(pmatch['map'], 'de_vertigo')
 
     @patch('api.parse_demo', wraps=api.parse_demo)
     def test_corrupted_demo_file(self, mock_parse_demo):
