@@ -54,6 +54,39 @@ class fetch_match_details(unittest.TestCase):
         self.assertEqual(round(pmatch['adr']['76561198140806020'], 1), 98.9)
         self.assertEqual(round(pmatch['adr']['76561198064174518'], 1), 63.6)
 
+    def test_awpy_003698946311295336822_1609103086(self):
+        # This test fails with awpy older than 2.0.0.b4 and should pass with newer versions
+        pmatch = {
+            'sharecode': 'CSGO-aKe8R-YPeR3-vjBdp-oBGxh-Z5O3A',
+            'timestamp': 1722455585,
+            'summary': SimpleNamespace(
+                map = testsuite.get_demo_path('003698946311295336822_1609103086'),
+                team_scores = (9, 0),
+            ),
+            'steam_ids': [
+                76561198192222793,
+                76561198195506142,
+                0, 0, 0,
+                76561197963929445,
+                76561197962477966,
+                0, 0, 0,
+            ],
+        }
+
+        # Parse the demo file
+        try:
+            api.fetch_match_details(pmatch)
+
+        except api.InvalidDemoError as err:
+            self.fail(
+                f'Parsing demo file has failed with error {str(err)}. '
+                'This indicates that an old version of awpy is being used, '
+                'the minimum required version is 2.0.0.b4.'
+            )
+
+        # If parsing succeeds, perform some checks to make sure that the data is correct
+        self.assertEqual(pmatch['map'], 'de_vertigo')
+
     @patch('api.parse_demo', wraps=api.parse_demo)
     def test_corrupted_demo_file(self, mock_parse_demo):
         pmatch = self.pmatch_data[0]
