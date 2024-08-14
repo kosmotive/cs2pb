@@ -55,41 +55,37 @@ class fetch_match_details(unittest.TestCase):
         self.assertEqual(round(pmatch['adr']['76561198064174518'], 1), 63.6)
 
     def test_awpy_003698946311295336822_1609103086(self):
-        # This test failed with awpy older than 2.0.0.b4 and should pass with newer versions
-        #
-        # TODO: Recover which sharecode corresponds to the demo 003698946311295336822_1609103086.dem.bz2, candidates:
-        # - CSGO-LG9nE-5xkoA-usHfT-oo9Bv-rfdZH
-        # - CSGO-ciZx5-h7tmh-NtRkN-jzWcb-B6LHA
-        # - CSGO-aKe8R-YPeR3-vjBdp-oBGxh-Z5O3A
-        # - CSGO-4P4Gk-u4nGA-XDf7Y-PyKop-mNcqA
-        # - CSGO-8QGsi-sqQH5-MhbXW-xopM2-KquaL
-        #
-        # TODO: Update the data below so that it corresponds to the correct sharecode (and team_scores, and steam_ids).
-        #
+        # This test fails with awpy older than 2.0.0.b4 and should pass with newer versions
         pmatch = {
-            'sharecode': 'CSGO-a622L-DjJDC-5zwn4-Gx2tf-YYmQD',
-            'timestamp': 1720469310,
+            'sharecode': 'CSGO-aKe8R-YPeR3-vjBdp-oBGxh-Z5O3A',
+            'timestamp': 1722455585,
             'summary': SimpleNamespace(
                 map = testsuite.get_demo_path('003698946311295336822_1609103086'),
-                team_scores = (4, 13),
+                team_scores = (9, 0),
             ),
             'steam_ids': [
-                76561197967680028,
-                76561197961345487,
-                76561197961748270,
-                76561198067716219,
+                76561198192222793,
+                76561198195506142,
+                0, 0, 0,
+                76561197963929445,
                 76561197962477966,
-                76561198298259382,
-                76561199034015511,
-                76561198309743637,
-                76561198140806020,
-                76561198064174518,
+                0, 0, 0,
             ],
         }
 
-        details = api.fetch_match_details(pmatch)
+        # Parse the demo file
+        try:
+            api.fetch_match_details(pmatch)
 
-        # TODO: add some checks
+        except api.InvalidDemoError as err:
+            self.fail(
+                f'Parsing demo file has failed with error {str(err)}. '
+                'This indicates that an old version of awpy is being used, '
+                'the minimum required version is 2.0.0.b4.'
+            )
+
+        # If parsing succeeds, perform some checks to make sure that the data is correct
+        self.assertEqual(pmatch['map'], 'unknown')
 
     @patch('api.parse_demo', wraps=api.parse_demo)
     def test_corrupted_demo_file(self, mock_parse_demo):
