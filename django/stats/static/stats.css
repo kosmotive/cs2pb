@@ -669,3 +669,12 @@ div.load-more {
 div.load-more:hover {
     background-color: #ccc;
 }
+
+div.squad .squad-members div.squad-member-details {
+    display: inline-block;
+    position: absolute;
+    left: 8cm;
+    right: 0;
+    top: 5mm;
+    bottom: 10mm;
+}

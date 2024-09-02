@@ -78,8 +78,8 @@ function autoscale() {
 
         {% if request.user.steam_profile or squad %}
 
-            <a href="{% if request.user.steam_profile %}{% url 'squads' %}{% else %}{% url 'squads' squad=squad %}{% endif %}"><li class="nav nav-{% block nav_squads %}{% endblock %}">Squads</li></a>
-            <a href="{% if request.user.steam_profile %}{% url 'matches' %}{% else %}{% url 'matches' squad=squad %}{% endif %}"><li class="nav nav-{% block nav_matches %}{% endblock %}">Matches</li></a>
+            <a href="{% if request.user.steam_profile %}{% url 'squads' %}{% else %}{% url 'squads' squad=squad.uuid %}{% endif %}"><li class="nav nav-{% block nav_squads %}{% endblock %}">Squads</li></a>
+            <a href="{% if request.user.steam_profile %}{% url 'matches' %}{% else %}{% url 'matches' squad=squad.uuid %}{% endif %}"><li class="nav nav-{% block nav_matches %}{% endblock %}">Matches</li></a>
 
             {% if request.user.steam_profile %}
 

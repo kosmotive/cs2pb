@@ -10,7 +10,7 @@
 
 <script language="javascript">
 function request(last_timestamp, handler) {
-    const url = "{% if request.user.steam_profile %}{% url 'matches' %}{% else %}{% url 'matches' squad=squad %}{% endif %}/" + last_timestamp;
+    const url = "{% if request.user.steam_profile %}{% url 'matches' %}{% else %}{% url 'matches' squad=squad.uuid %}{% endif %}/" + last_timestamp;
     xmlhttp = new XMLHttpRequest();
     xmlhttp.open('GET', url, true);
     xmlhttp.onreadystatechange = function() {

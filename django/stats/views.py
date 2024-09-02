@@ -125,7 +125,7 @@ def squads(request, squad=None, expanded_stats=False):
     if squad is not None:
         try:
             squad_list = [Squad.objects.get(uuid=squad)]
-            context['squad'] = squad
+            context['squad'] = squad_list[0]
         except Squad.DoesNotExist:
             return HttpResponseNotFound('No such squad')
 
@@ -161,6 +161,7 @@ def squads(request, squad=None, expanded_stats=False):
             upcoming_potw_mode = None
         squad_data = {
             'name': squad.name,
+            'uuid': squad.uuid,
             'share_link': squad.absolute_url(request),
             'expand_url': None if expanded_stats else reverse('squad_expanded_stats', kwargs=dict(squad = squad.uuid)),
             'card_rows': rows,
@@ -198,6 +199,7 @@ def matches(request, squad=None, last_timestamp=None):
             return redirect('login')
     else:
         members = SteamProfile.objects.filter(squads = squad)
+        squad = Squad.objects.get(uuid = squad)
         context['squad'] = squad
 
     for m in members:
@@ -228,4 +230,18 @@ def add_globals_to_context(context):
         msg = 'There is a temporary malfunction of the Steam Client API.'
         context['error'] = f'{msg} Come back later.'
         send_mail('Steam API malfunction', msg, ADMIN_MAIL_ADDRESS, [ADMIN_MAIL_ADDRESS], fail_silently=True)
+
+
+def player(request, squad, steamid):
+    squad = Squad.objects.get(uuid = squad)
+    player = SteamProfile.objects.get(pk = steamid)
+    features = [Features.pv, Features.pe, Features.hsr, Features.adr, Features.kd]
+    card = compute_card(player, squad, features, [2, 3, np.inf])
+    context = dict(
+        squad = squad,
+        request = request,
+        player = card,
+    )
+    add_globals_to_context(context)
+    return render(request, 'stats/player.html', context)
 

@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load stats_extras %}
+
+{% block title %}Player{% endblock %}
+{% block nav_squads %}active{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'stats.css' %}?{% now "U" %}">
+
+<div class="squad">
+
+    <div class="squad-background"></div>
+
+    <div class="squad-name"> {{ squad.name }} </div>
+
+    <div class="autoscale squad-members-rows fixed-margin-top">
+
+        <div class="squad-members">
+
+            {% include 'stats/profile-card.html' with player=player request=request %}
+
+        <div class="squad-member-details" style="background-color: red;">
+
+            &nbsp;
+
+        </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

@@ -30,7 +30,7 @@
 
             <div class="squad-members">{% for member in row %}
     
-                {% include 'stats/profile-card.html' with player=member request=request expand_url=squad.expand_url %}
+                {% include 'stats/profile-card.html' with squad=squad player=member request=request expand_url=squad.expand_url %}
     
             {% endfor %}</div>
 
@@ -84,83 +84,6 @@
                 </div>
 
         </div>
-
-        <div class="squad-members-appendix"><div class="autoscale">
-
-            {% if squad.top_ct_hold_maps %}
-            <div class="squad-members-appendix-header">Best hold positions as CT</div><br>
-
-                {% for map_name in squad.top_ct_hold_maps %}
-                <div class="profile-card-appendix-row">
-
-                    {% for area in squad.top_ct_hold_areas|get_value:map_name %}
-
-                        <div class="profile-card-appendix">
-
-                            {% if area and area.kd_rel != None %}
-                        
-                                <div class="profile-card-appendix-primary"><b>{{ area.area_name }}</b></div>
-                                <div class="profile-card-appendix-secondary">
-                                    K/D {{ area.kd_rel|multiply:100|stringformat:"+.0f" }}%
-                                </div>
-
-                            {% else %}
-
-                                <div class="profile-card-appendix-primary">&ndash;</div>
-
-                            {% endif %}
-
-                        </div>
-    
-                    {% endfor %}
-
-                    <div class="profile-card-appendix-category">{{ map_name }}</div>
-
-                </div><br>
-                {% endfor %}
-
-            {% endif %}
-
-        </div></div>
-
-
-        <div class="squad-members-appendix"><div class="autoscale">
-
-            {% if squad.top_t_push_maps %}
-            <div class="squad-members-appendix-header">Best push options as T</div><br>
-
-                {% for map_name in squad.top_t_push_maps %}
-                <div class="profile-card-appendix-row">
-
-                    {% for area in squad.top_t_push_areas|get_value:map_name %}
-
-                        <div class="profile-card-appendix">
-
-                            {% if area and area.kd_rel != None %}
-                        
-                                <div class="profile-card-appendix-primary"><b>{{ area.area_name }}</b></div>
-                                <div class="profile-card-appendix-secondary">
-                                    K/D {{ area.kd_rel|multiply:100|stringformat:"+.0f" }}%
-                                </div>
-
-                            {% else %}
-
-                                <div class="profile-card-appendix-primary">&ndash;</div>
-
-                            {% endif %}
-
-                        </div>
-    
-                    {% endfor %}
-
-                    <div class="profile-card-appendix-category">{{ map_name }}</div>
-
-                </div><br>
-                {% endfor %}
-
-            {% endif %}
-
-        </div></div>
 
         {% if squad.upcoming_player_of_the_week %}
         <div class="squad-members-appendix"><div class="autoscale">
