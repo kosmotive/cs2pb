@@ -192,12 +192,12 @@ class Account(AbstractUser):
             return None
 
     def handle_finished_update(self):
-        for squad in self.steam_profile.squads.all():
-            last_session = squad.last_session
+        for membership in self.steam_profile.squads.all():
+            last_session = membership.squad.last_session
             if last_session is None or last_session.is_closed:
                 continue
             session_ended = True
-            for account in squad.accounts:
+            for account in membership.squad.accounts:
                 if not account.had_break_after_last_match:
                     session_ended = False
                     break
@@ -211,10 +211,6 @@ class Squad(models.Model):
         primary_key = True,
         default = uuid.uuid4,
         editable = False,
-    )
-    members = models.ManyToManyField(
-        SteamProfile,
-        related_name = 'squads',
     )
     name = models.CharField(
         blank = False,
@@ -238,14 +234,14 @@ class Squad(models.Model):
     def matches(self, **kwargs):
         from stats.models import Match
         return Match.objects.filter(
-            matchparticipation__player__in = self.members.values_list('pk', flat=True),
+            matchparticipation__player__in = self.members.values_list('player__pk', flat = True),
             **kwargs,
         )
 
     def match_participations(self, **kwargs):
         from stats.models import MatchParticipation
         return MatchParticipation.objects.filter(
-            player__in = self.members.values_list('pk', flat=True),
+            player__in = self.members.values_list('player__pk', flat = True),
             **kwargs,
         )
 
@@ -283,7 +279,7 @@ class Squad(models.Model):
     @property
     def accounts(self):
         for m in self.members.all():
-            account = getattr(m, 'account', None)
+            account = getattr(m.player, 'account', None)
             if account is not None:
                 yield account
 
@@ -317,6 +313,24 @@ class Squad(models.Model):
 
         self.last_changelog_announcement = changelog[0]['sha']
         self.save()
+
+
+class SquadMembership(models.Model):
+
+    squad = models.ForeignKey(
+        Squad,
+        related_name = 'members',  # FIXME: Should be 'memberships'?
+        on_delete = models.CASCADE,
+    )
+    player = models.ForeignKey(
+        SteamProfile,
+        related_name = 'squads',  # FIXME: Should be 'squad_memberships'?
+        on_delete = models.CASCADE,
+    )
+    position = models.PositiveSmallIntegerField(
+        null = True,
+        default = None,
+    )
 
 
 class Invitation(models.Model):

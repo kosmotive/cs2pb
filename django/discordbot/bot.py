@@ -139,7 +139,7 @@ def plot_squad_stats(squad, features, days = None, **filters):
     features = get_features(features, [f.slug for f in Features.MANY])
     contexts, labels = [], []
     for m in squad.members.all():
-        contexts.append(FeatureContext.create_default(m, squad, days, **filters))
+        contexts.append(FeatureContext.create_default(m.player, squad, days, **filters))
         labels  .append(m.clean_name)
     return plots.bars(*contexts, features = features, labels = labels)
 
@@ -251,7 +251,7 @@ async def stats(ctx, squad:str=None, player1:str=None, player2:str=None, days:in
             else:
                 result = await plot_stats(squad, name0, **kwargs)
         except UnrecognizedNameError as ex:
-            members = ', '.join([m.name for m in squad.members_list])
+            members = ', '.join([m.player.name for m in squad.members_list])
             await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord IDs, or Steam profile names, for example: {members}')
             return
         except UnrecognizedFeatureError as ex:
@@ -282,7 +282,7 @@ async def trends(ctx, squad:str=None, player:str=None, days:int=None, features:s
         try:
             result = await plot_trends(squad, name, days, **kwargs)
         except UnrecognizedNameError as ex:
-            members = ', '.join([m.name for m in squad.members_list])
+            members = ', '.join([m.player.name for m in squad.members_list])
             await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord IDs, or Steam profile names, for example: {members}')
             return
         except UnrecognizedFeatureError as ex:

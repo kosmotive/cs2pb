@@ -42,7 +42,7 @@ import subprocess, sys
 subprocess.run(['python', 'manage.py', 'shell', '-c', f'''
 
 from stats.models import Squad
-from accounts.models import SteamProfile
+from accounts.models import SteamProfile, SquadMembership
 
 from django.contrib.auth import get_user_model
 Account = get_user_model()
@@ -56,7 +56,7 @@ for steamid in {extra_steamid_list}:
 
 squad = Squad.objects.create(name='{squadname}', discord_channel_id='{discord_channel}')
 for member in users:
-    squad.members.add(member)
+    SquadMembership.objects.create(squad=squad, member=member)
 squad.save()
 
 '''], stdout=sys.stdout, stderr=sys.stderr)

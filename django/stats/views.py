@@ -88,14 +88,6 @@ def sorted_cards(cards, kpi='Player value'):
     return sorted(cards, key=get_kpi, reverse=True)
 
 
-def get_maps_played_by_squad(squad):
-    maps = list()
-    for m in squad.members.all():
-        for mp in MatchParticipation.objects.filter(player = m).all():
-            maps.append(mp.pmatch.map_name)
-    return sorted(frozenset(maps))
-
-
 def squad_expanded_stats(request, squad):
     return squads(request, squad, expanded_stats=True)
 
@@ -144,10 +136,7 @@ def squads(request, squad=None, expanded_stats=False):
         for account in Account.objects.filter(steam_profile__in = squad.members.all()):
             account.update_matches()
         PlayerOfTheWeek.create_missing_badges(squad)
-        played_maps = get_maps_played_by_squad(squad)
         cards = sorted_cards([compute_card(m, squad, features, [2,3,np.inf]) for m in squad.members.all()])
-        kd_by_member = {m.steamid: Features.kd(FeatureContext.create_default(m, squad))['value'] for m in squad.members.all()}
-        kd_list = [kd_by_member[card['profile'].steamid] for card in cards]
 
         # Split the cards into rows
         rows = split_into_chunks_ex(cards, n_min = 4, n_max = 7)
@@ -194,7 +183,9 @@ def matches(request, squad=None, last_timestamp=None):
 
     if squad is None:
         if getattr(request.user, 'steam_profile', None) is not None:
-            members = SteamProfile.objects.filter(squads__in = request.user.steam_profile.squads.all())
+            members = SteamProfile.objects.filter(
+                squads__squad__in = request.user.steam_profile.squads.values_list('squad__pk', flat = True),
+            )
         else:
             return redirect('login')
     else:

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 from django.test import TestCase
 
-from accounts.models import Account, Squad, SteamProfile
+from accounts.models import Account, Squad, SteamProfile, SquadMembership
 from discordbot import bot as botimpl
 from discordbot.models import ScheduledNotification
 from tests import testsuite
@@ -62,7 +62,7 @@ class bot(TestCase):
         ]
         self.squad = Squad.objects.create(name='squad', discord_channel_id='1234')
         for user in self.users:
-            self.squad.members.add(user)
+            SquadMembership.objects.create(squad = self.squad, member = user)
 
     def test_tick(self):
         ScheduledNotification.objects.create(squad = self.squad, text = \

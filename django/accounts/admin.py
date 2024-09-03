@@ -90,7 +90,7 @@ class SteamProfileAdmin(admin.ModelAdmin):
 
     @admin.display(description='Squads')
     def squad_list(self, steam_profile):
-        squads = steam_profile.squads.all()
+        squads = [membership.squad for membership in steam_profile.squads.all()]
         number = len(squads)
         get_url  = lambda squad: reverse('admin:accounts_squad_change', args=(squad.pk,))
         get_html = lambda squad: f'<a href="{get_url(squad)}">{squad.name}</a>'

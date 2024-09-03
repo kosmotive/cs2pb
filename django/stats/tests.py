@@ -9,7 +9,7 @@ from django.http import HttpResponseNotFound
 from django.test import TestCase, RequestFactory
 from django.urls import reverse
 
-from accounts.models import Account, Squad, SteamProfile
+from accounts.models import Account, Squad, SteamProfile, SquadMembership
 import api
 from discordbot.models import ScheduledNotification
 from stats import models
@@ -375,7 +375,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
         # Add players to squad
         for player in self.players:
-            self.squad.members.add(player)
+            SquadMembership.objects.create(squad = self.squad, member = player)
 
         # Create an initial match
         self.pmatch = self._create_match(0)
@@ -565,7 +565,7 @@ class squads(TestCase):
         self.factory = RequestFactory()
         self.player = SteamProfile.objects.create(steamid='12345678900000001')
         self.squad = Squad.objects.create(name='Test Squad')
-        self.squad.members.add(self.player)
+        SquadMembership.objects.create(squad = self.squad, member = self.player)
         self.account = Account.objects.create(steam_profile=self.player)
 
     def test_squads_with_valid_squad(self):
@@ -648,7 +648,7 @@ class matches(TestCase):
         self.factory = RequestFactory()
         self.player = SteamProfile.objects.create(steamid='12345678900000001')
         self.squad = Squad.objects.create(name='Test Squad')
-        self.squad.members.add(self.player)
+        SquadMembership.objects.create(squad = self.squad, member = self.player)
         self.account = Account.objects.create(steam_profile=self.player)
         self.session = models.GamingSession.objects.create(squad=self.squad)
         self.match = models.Match.objects.create(timestamp=int(time.time()), score_team1=12, score_team2=13, duration=1653, map_name='de_dust2')
@@ -775,8 +775,8 @@ class GamingSession__close(TestCase):
         self.player1 = SteamProfile.objects.create(steamid = '12345678900000001')
         self.player2 = SteamProfile.objects.create(steamid = '12345678900000002')
         self.squad = Squad.objects.create(name = 'Test Squad')
-        self.squad.members.add(self.player1)
-        self.squad.members.add(self.player2)
+        SquadMembership.objects.create(squad = self.squad, member = self.player1)
+        SquadMembership.objects.create(squad = self.squad, member = self.player2)
 
         # Create a previously played session
         self.session1 = models.GamingSession.objects.create(squad = self.squad, is_closed = True)
