@@ -2,16 +2,15 @@ import datetime
 import logging
 import uuid
 
-from django.db import models
-from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.base_user import BaseUserManager
-from django.urls import reverse
-from django.core.validators import RegexValidator
-
 from api import api
 from stats.updater import queue_update_task
 from url_forward import get_redirect_url_to
 
+from django.contrib.auth.base_user import BaseUserManager
+from django.contrib.auth.models import AbstractUser
+from django.core.validators import RegexValidator
+from django.db import models
+from django.urls import reverse
 
 log = logging.getLogger(__name__)
 
