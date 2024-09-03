@@ -672,9 +672,11 @@ div.load-more:hover {
 
 div.squad .squad-members div.squad-member-details {
     display: inline-block;
-    position: absolute;
-    left: 8cm;
-    right: 0;
-    top: 5mm;
-    bottom: 10mm;
+    vertical-align: top;
+    margin-left: 10mm;
+    background-color: white;
+    padding-top: 5mm;
+    padding-left: 1cm;
+    padding-bottom: 1cm;
+    width: 900px;
 }

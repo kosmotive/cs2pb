@@ -237,10 +237,12 @@ def player(request, squad, steamid):
     player = SteamProfile.objects.get(pk = steamid)
     features = [Features.pv, Features.pe, Features.hsr, Features.adr, Features.kd]
     card = compute_card(player, squad, features, [2, 3, np.inf])
+    participations = MatchParticipation.objects.filter(player = player).order_by('pmatch__timestamp')
     context = dict(
         squad = squad,
         request = request,
         player = card,
+        participations = participations,
     )
     add_globals_to_context(context)
     return render(request, 'stats/player.html', context)
