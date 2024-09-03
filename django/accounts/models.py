@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 
 CLEAN_NAME_VALIDATOR = RegexValidator(r'^[0-9a-zA-Z.-_][0-9a-zA-Z.-_ ]+[0-9a-zA-Z.-_]+$')
 
-MIN_BREAK_TIME = 60 * 60 * 2 # 2 hour
+MIN_BREAK_TIME = 60 * 60 * 2  # 2 hours
 
 
 class SteamProfile(models.Model):
@@ -78,7 +78,6 @@ class SteamProfile(models.Model):
 
 class AccountManager(BaseUserManager):
 
-    
     def create_user(self, steamid, password, **extra_fields):
         assert steamid
         steam_profile = SteamProfile.objects.create(steamid=steamid)
@@ -86,7 +85,7 @@ class AccountManager(BaseUserManager):
         account.set_password(password)
         account.save()
         return account
-    
+
     def create_superuser(self, steamid, password, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
@@ -100,15 +99,42 @@ class Account(AbstractUser):
 
     username = None
 
-    steam_profile  = models.OneToOneField(SteamProfile, on_delete=models.PROTECT, related_name='account', primary_key=True)
-    steam_auth     = models.CharField(blank=False, max_length=30, verbose_name='Match History Authentication Code')
-    email_address  = models.EmailField(max_length=200, blank=False, unique=True)
-    discord_name   = models.CharField(blank=True, max_length=30)
-    last_sharecode = models.CharField(blank=True, max_length=50)
-    clean_name     = models.CharField(blank=True, max_length=30, validators=[CLEAN_NAME_VALIDATOR])
-    enabled        = models.BooleanField(default=True, help_text='Designates whether updates for this user are fetched from the Steam API (turned off if the API refuses a sharecode).')
+    steam_profile  = models.OneToOneField(
+        SteamProfile,
+        on_delete = models.PROTECT,
+        related_name = 'account',
+        primary_key = True,
+    )
+    steam_auth = models.CharField(
+        blank = False,
+        max_length = 30,
+        verbose_name = 'Match History Authentication Code',
+    )
+    email_address = models.EmailField(
+        max_length = 200,
+        blank = False,
+        unique = True,
+    )
+    discord_name = models.CharField(
+        blank = True,
+        max_length = 30,
+    )
+    last_sharecode = models.CharField(
+        blank = True,
+        max_length = 50,
+    )
+    clean_name = models.CharField(
+        blank = True,
+        max_length = 30,
+        validators = [CLEAN_NAME_VALIDATOR],
+    )
+    enabled = models.BooleanField(
+        default = True,
+        help_text = 'Designates whether updates for this user are fetched from the Steam API '
+                    '(turned off if the API refuses a sharecode).',
+    )
 
-    USERNAME_FIELD ='steam_profile'
+    USERNAME_FIELD = 'steam_profile'
     REQUIRED_FIELDS = ['steam_auth']
 
     objects = AccountManager()
@@ -132,7 +158,8 @@ class Account(AbstractUser):
 
     @property
     def sharecode(self):
-        # FIXME: `find_oldest_sharecode` should be the sharecode of a match, where this user participated, and not just any
+        # FIXME: `find_oldest_sharecode` should be the sharecode of a match,
+        # where this user participated, and not just any
         return self.steam_profile.find_oldest_sharecode() if len(self.last_sharecode) == 0 else self.last_sharecode
 
     @property
@@ -150,12 +177,17 @@ class Account(AbstractUser):
 
     @property
     def had_break_after_last_match(self):
-        if self.last_completed_update is None or self.last_match is None: return False
-        return self.last_completed_update.completed_timestamp - (self.last_match.timestamp + self.last_match.duration) >= MIN_BREAK_TIME
+        if self.last_completed_update is None or self.last_match is None:
+            return False
+        return self.last_completed_update.completed_timestamp - (
+            self.last_match.timestamp + self.last_match.duration
+        ) >= MIN_BREAK_TIME
 
     def update_matches(self, force=False):
         last_queued_update = self.last_queued_update
-        if last_queued_update is None or force or (datetime.datetime.now() - last_queued_update.scheduled).total_seconds() / 60 >= 5:
+        if last_queued_update is None or force or (
+            datetime.datetime.now() - last_queued_update.scheduled
+        ).total_seconds() / 60 >= 5:
             return queue_update_task(self)
         else:
             return None
@@ -163,7 +195,8 @@ class Account(AbstractUser):
     def handle_finished_update(self):
         for squad in self.steam_profile.squads.all():
             last_session = squad.last_session
-            if last_session is None or last_session.is_closed: continue
+            if last_session is None or last_session.is_closed:
+                continue
             session_ended = True
             for account in squad.accounts:
                 if not account.had_break_after_last_match:
@@ -175,26 +208,51 @@ class Account(AbstractUser):
 
 class Squad(models.Model):
 
-    uuid    = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    members = models.ManyToManyField(SteamProfile, related_name='squads')
-    name    = models.CharField(blank=False, max_length=100)
-    discord_channel_id = models.CharField(blank=True, max_length=50, verbose_name='Discord Channel ID', unique=True) # FIXME: should be nullable, so that there can be more than one squad without a Discord channel?
-    last_changelog_announcement = models.CharField(blank=True, max_length=40, default='')
+    uuid = models.UUIDField(
+        primary_key = True,
+        default = uuid.uuid4,
+        editable = False,
+    )
+    members = models.ManyToManyField(
+        SteamProfile,
+        related_name = 'squads',
+    )
+    name = models.CharField(
+        blank = False,
+        max_length = 100,
+    )
+    discord_channel_id = models.CharField(
+        blank = True,
+        max_length = 50,
+        verbose_name = 'Discord Channel ID',
+        unique = True,  # FIXME: Should be nullable, so that there can be more than one squad without a Discord channel?
+    )
+    last_changelog_announcement = models.CharField(
+        blank = True,
+        max_length = 40,
+        default = '',
+    )
 
     def __str__(self):
         return self.name
 
     def matches(self, **kwargs):
         from stats.models import Match
-        return Match.objects.filter(matchparticipation__player__in = self.members.values_list('pk', flat=True), **kwargs)
+        return Match.objects.filter(
+            matchparticipation__player__in = self.members.values_list('pk', flat=True),
+            **kwargs,
+        )
 
     def match_participations(self, **kwargs):
         from stats.models import MatchParticipation
-        return MatchParticipation.objects.filter(player__in = self.members.values_list('pk', flat=True), **kwargs)
+        return MatchParticipation.objects.filter(
+            player__in = self.members.values_list('pk', flat=True),
+            **kwargs,
+        )
 
     @property
     def url(self):
-        return reverse('squads', kwargs=dict(squad = self.uuid))
+        return reverse('squads', kwargs = dict(squad = self.uuid))
 
     def absolute_url(self, request):
         return request.build_absolute_uri(self.url)
@@ -203,14 +261,16 @@ class Squad(models.Model):
     def last_session(self):
         from stats.models import GamingSession
         sessions = GamingSession.objects.filter(squad = self)
-        if len(sessions) == 0: return None
+        if len(sessions) == 0:
+            return None
         return sessions.latest('matches__timestamp')
 
     def handle_new_match(self, pmatch):
         from stats.models import GamingSession
         last_session = self.last_session
         if last_session is None or last_session.is_closed or pmatch.timestamp - last_session.ended > MIN_BREAK_TIME:
-            if last_session is not None: last_session.close()
+            if last_session is not None:
+                last_session.close()
             log.info(f'Assigning match {pmatch.pk} to new gaming session')
             last_session = GamingSession.objects.create(squad = self)
         else:
@@ -244,8 +304,13 @@ class Squad(models.Model):
                     announcements.append(entry)
 
             if len(announcements) > 0:
-                obscure_url = lambda url: base_url + get_redirect_url_to(url)
-                fmt = lambda entry: f'\n\n🚀 **{entry["date"]}:** {entry["message"]} [More info]({obscure_url(entry["url"])})'
+
+                def obscure_url(url):
+                    return base_url + get_redirect_url_to(url)
+
+                def fmt(entry):
+                    return f'\n\n🚀 **{entry["date"]}:** {entry["message"]} [More info]({obscure_url(entry["url"])})'
+
                 text = 'I have just received some updates:' + ''.join(fmt(entry) for entry in announcements)
 
                 from discordbot.models import ScheduledNotification
@@ -275,4 +340,3 @@ class Invitation(models.Model):
 
     def absolute_url(self, request):
         return request.build_absolute_uri(self.url)
-
