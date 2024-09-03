@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load stats_extras %}
+
+{% block title %}Player{% endblock %}
+{% block nav_squads %}active{% endblock %}
+
+{% block content %}
+
+<link rel="stylesheet" type="text/css" href="{% static 'stats.css' %}?{% now "U" %}">
+
+<script src="{% static 'plotly-2.35.0.min.js' %}" charset="utf-8"></script>
+<script language="javascript">
+
+/* Define Gaussian filter kernel.
+ */
+function gaussianKernel( sigma )
+{
+    const n = Math.round(4 * sigma);
+    const N = 2 * n + 1;
+    const kernel = new Array( N );
+    const factor = 1;//1 / ( sigma * Math.sqrt( 2 * Math.PI ) );
+    for( var i = 0; i <= n; ++i )
+    {
+        const val = factor * Math.exp
+        (
+            -Math.pow( n - i, 2 ) / ( 2 * Math.pow( sigma, 2 ) )
+        );
+        kernel[i] = val;
+        kernel[N - i - 1] = val;
+    }
+    return kernel;
+}
+
+/* Define convolution.
+ */
+function convolve( data, kernel )
+{
+    const result = new Array( data.length );
+    const n = Math.floor( kernel.length / 2 );
+    for( var i = 0; i < data.length; ++i )
+    {
+        var value = 0;
+        var weights = 0;
+        for( var j = -n; j < +n; ++j )
+        {
+            const k = i + j;
+            if( k >= 0 && k < data.length )
+            {
+                const kernelValue = kernel[ j + n ];
+                value += kernelValue * data[ k ];
+                weights += kernelValue;
+            }
+        }
+        result[ i ] = value / weights;
+    }
+    return result;
+}
+
+/* Generate the input data.
+ */
+const matchNumList = [ {% for mp in participations %}{{ forloop.counter }}{% if not forloop.last %},{% endif %}{% endfor %} ];
+const pv = [ {% for mp in participations %}
+Math.sqrt(100 * ({{ mp.kills }} / {{ mp.deaths }}) * {{ mp.adr }}){% if not forloop.last %},{% endif %}
+{% endfor %} ];
+
+</script>
+
+<div class="squad">
+
+    <div class="squad-background"></div>
+
+    <div class="squad-name"> {{ squad.name }} </div>
+
+    <div class="autoscale squad-members-rows fixed-margin-top">
+
+        <div class="squad-members">
+
+            {% include 'stats/profile-card.html' with player=player request=request %}
+
+        <div class="squad-member-details">
+
+            <div class="pv-plot-controls">
+
+                Smoothing:
+                <input type="number" id="pv-plot-smooth" step="0.1" value="2.0" min="0.0" />
+                <input type="checkbox" id="pv-plot-rescale" checked />
+                <label for="pv-plot-rescale">Rescale</label>
+
+            </div>
+
+            <div id="pv-plot" style="width:600px; height: 250px;"></div>
+
+        </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script language="javascript">
+
+const pvPlot = document.getElementById('pv-plot');
+Plotly.newPlot( pvPlot, [] );
+
+function updatePlot( sigma )
+{
+    const rescale = document.getElementById( 'pv-plot-rescale' );
+    const kernel = gaussianKernel( sigma );
+    const pv_smooth = kernel.length > 1 ? convolve( pv, kernel ) : pv;
+    const config_yaxis = {
+        title: { text: 'Player value' }
+    };
+    if( rescale.checked )
+    {
+        config_yaxis[ 'range' ] = [ Math.min(...pv) * 0.9, Math.max(...pv) * 1.1 ];
+    }
+
+    /* Compose traces.
+     */
+    traces = [
+        {
+            x: matchNumList,
+            y: pv_smooth,
+            name: 'Average'
+        },
+        {
+            x: matchNumList,
+            y: pv,
+            mode: 'markers',
+            name: 'Matches'
+        }
+    ];
+
+    /* Compute uncertainties.
+     */
+    if( kernel.length > 1 )
+    {
+        const differences2 = new Array( pv.length );
+        for( var i = 0; i < pv.length; ++i )
+        {
+            differences2[ i ] = Math.pow( pv[ i ] - pv_smooth[ i ], 2 );
+        }
+        const meanDifferences = convolve( differences2, kernel );
+        const uncertainties    = new Array( pv.length );
+        const uncertainties_lb = new Array( pv.length );
+        const uncertainties_ub = new Array( pv.length );
+        for( var i = 0; i < pv.length; ++i )
+        {
+            const uncertainty = Math.sqrt( meanDifferences[ i ] );
+            uncertainties   [ i ] = 2 * uncertainty;
+            uncertainties_lb[ i ] = pv_smooth[ i ] - uncertainty;
+        }
+        traces.push(
+            {
+                x: matchNumList,
+                y: uncertainties_lb,
+                fillcolor: '#00000000',
+                type: 'scatter',
+                mode: 'none',
+                stackgroup: 'uncertainties',
+                hoverinfo: 'skip'
+            }
+        );
+        traces.push(
+            {
+                x: matchNumList,
+                y: uncertainties,
+                fillcolor: '#3682be22',
+                type: 'scatter',
+                mode: 'none',
+                stackgroup: 'uncertainties',
+                hoverinfo: 'skip'
+            }
+        );
+    }
+
+    Plotly.react( pvPlot, traces,
+        {
+            xaxis: { title: { text: 'Match count' } },
+            yaxis: config_yaxis,
+            margin: { t: 20, l: 50, b: 50, r: 10 },
+            showlegend: false,
+            width: 800
+        },
+        {
+            displaylogo: false
+        }
+    );
+}
+
+const smoothing = document.getElementById('pv-plot-smooth');
+smoothing.addEventListener('input',
+    function( ev )
+    {
+        updatePlot( this.value );
+    }
+);
+
+const smoothing_rescale = document.getElementById('pv-plot-rescale');
+smoothing_rescale.addEventListener('input',
+    function( ev )
+    {
+        if( this.checked )
+        {
+            updatePlot( smoothing.value );
+        }
+    }
+);
+
+updatePlot( smoothing.value );
+autoscale();
+</script>
+
+{% endblock %}

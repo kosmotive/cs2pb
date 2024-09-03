@@ -2,7 +2,7 @@
 
 <div class="profile-card">
 
-    <img src="{{ player.profile.avatar_l }}" class="avatar-l avatar">
+    <a href="{% url 'player' squad.uuid player.profile.steamid %}"><img src="{{ player.profile.avatar_l }}" class="avatar-l avatar"></a>
 
     <div class="profile-name">{{ player.profile.name }}</div>
 

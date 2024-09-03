@@ -571,7 +571,7 @@ class squads(TestCase):
     def test_squads_with_valid_squad(self):
         response = self.client.get(reverse('squads', kwargs={'squad': self.squad.uuid}))
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['squad'], self.squad.uuid)
+        self.assertEqual(response.context['squad'], self.squad)
 
     def test_squads_with_invalid_squad(self):
         invalid_uuid = str(uuid.uuid4())
@@ -659,7 +659,7 @@ class matches(TestCase):
         response = self.client.get(reverse('matches', kwargs={'squad': self.squad.uuid}))
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'stats/sessions.html')
-        self.assertEqual(response.context['squad'], self.squad.uuid)
+        self.assertEqual(response.context['squad'], self.squad)
         self.assertEqual(response.context['sessions'].count(), 1)
         self.assertEqual(response.context['sessions'][0], self.session)
 
