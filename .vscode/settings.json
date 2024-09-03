@@ -1,0 +1,9 @@
+{
+    "[git-commit]": {
+        "editor.rulers": [50]
+    },
+
+    "[python]": {
+        "editor.rulers": [119]
+    }
+}
