@@ -114,22 +114,69 @@ function updatePlot( sigma )
     };
     if( rescale.checked )
     {
-        config_yaxis[ 'range' ] = [ Math.min(...pv_smooth), Math.max(...pv_smooth) ];
+        config_yaxis[ 'range' ] = [ Math.min(...pv) * 0.9, Math.max(...pv) * 1.1 ];
     }
-    Plotly.react( pvPlot,
-        [
+
+    /* Compose traces.
+     */
+    traces = [
+        {
+            x: matchNumList,
+            y: pv_smooth,
+            name: 'Average'
+        },
+        {
+            x: matchNumList,
+            y: pv,
+            mode: 'markers',
+            name: 'Matches'
+        }
+    ];
+
+    /* Compute uncertainties.
+     */
+    if( kernel.length > 1 )
+    {
+        const differences2 = new Array( pv.length );
+        for( var i = 0; i < pv.length; ++i )
+        {
+            differences2[ i ] = Math.pow( pv[ i ] - pv_smooth[ i ], 2 );
+        }
+        const meanDifferences = convolve( differences2, kernel );
+        const uncertainties    = new Array( pv.length );
+        const uncertainties_lb = new Array( pv.length );
+        const uncertainties_ub = new Array( pv.length );
+        for( var i = 0; i < pv.length; ++i )
+        {
+            const uncertainty = Math.sqrt( meanDifferences[ i ] );
+            uncertainties   [ i ] = 2 * uncertainty;
+            uncertainties_lb[ i ] = pv_smooth[ i ] - uncertainty;
+        }
+        traces.push(
             {
                 x: matchNumList,
-                y: pv_smooth,
-                name: 'Average'
-            },
-            {
-                x: matchNumList,
-                y: pv,
-                mode: 'markers',
-                name: 'Matches'
+                y: uncertainties_lb,
+                fillcolor: '#00000000',
+                type: 'scatter',
+                mode: 'none',
+                stackgroup: 'uncertainties',
+                hoverinfo: 'skip'
             }
-        ],
+        );
+        traces.push(
+            {
+                x: matchNumList,
+                y: uncertainties,
+                fillcolor: '#3682be22',
+                type: 'scatter',
+                mode: 'none',
+                stackgroup: 'uncertainties',
+                hoverinfo: 'skip'
+            }
+        );
+    }
+
+    Plotly.react( pvPlot, traces,
         {
             xaxis: { title: { text: 'Match count' } },
             yaxis: config_yaxis,
@@ -148,6 +195,17 @@ smoothing.addEventListener('input',
     function( ev )
     {
         updatePlot( this.value );
+    }
+);
+
+const smoothing_rescale = document.getElementById('pv-plot-rescale');
+smoothing_rescale.addEventListener('input',
+    function( ev )
+    {
+        if( this.checked )
+        {
+            updatePlot( smoothing.value );
+        }
     }
 );
 
