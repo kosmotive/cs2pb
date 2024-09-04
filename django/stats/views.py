@@ -28,7 +28,6 @@ from . import potw
 from .features import (
     FeatureContext,
     Features,
-    escape_none,
 )
 from .models import (
     GamingSession,
