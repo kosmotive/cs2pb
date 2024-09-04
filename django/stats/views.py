@@ -133,10 +133,10 @@ def squads(request, squad=None, expanded_stats=False):
 
     context['squads'] = list()
     for squad in squad_list:
-        for account in Account.objects.filter(steam_profile__in = squad.members.all()):
+        for account in Account.objects.filter(steam_profile__in = squad.memberships.all()):
             account.update_matches()
         PlayerOfTheWeek.create_missing_badges(squad)
-        cards = sorted_cards([compute_card(m, squad, features, [2,3,np.inf]) for m in squad.members.all()])
+        cards = sorted_cards([compute_card(m.player, squad, features, [2,3,np.inf]) for m in squad.memberships.all()])
 
         # Split the cards into rows
         rows = split_into_chunks_ex(cards, n_min = 4, n_max = 7)
@@ -184,7 +184,7 @@ def matches(request, squad=None, last_timestamp=None):
     if squad is None:
         if getattr(request.user, 'steam_profile', None) is not None:
             members = SteamProfile.objects.filter(
-                squads__squad__in = request.user.steam_profile.squads.values_list('squad__pk', flat = True),
+                squads__squad__in = request.user.steam_profile.squad_memberships.values_list('squad__pk', flat = True),
             )
         else:
             return redirect('login')

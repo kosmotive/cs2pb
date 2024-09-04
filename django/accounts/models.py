@@ -234,14 +234,14 @@ class Squad(models.Model):
     def matches(self, **kwargs):
         from stats.models import Match
         return Match.objects.filter(
-            matchparticipation__player__in = self.members.values_list('player__pk', flat = True),
+            matchparticipation__player__in = self.memberships.values_list('player__pk', flat = True),
             **kwargs,
         )
 
     def match_participations(self, **kwargs):
         from stats.models import MatchParticipation
         return MatchParticipation.objects.filter(
-            player__in = self.members.values_list('player__pk', flat = True),
+            player__in = self.memberships.values_list('player__pk', flat = True),
             **kwargs,
         )
 
@@ -278,7 +278,7 @@ class Squad(models.Model):
 
     @property
     def accounts(self):
-        for m in self.members.all():
+        for m in self.memberships.all():
             account = getattr(m.player, 'account', None)
             if account is not None:
                 yield account
@@ -319,12 +319,12 @@ class SquadMembership(models.Model):
 
     squad = models.ForeignKey(
         Squad,
-        related_name = 'members',  # FIXME: Should be 'memberships'?
+        related_name = 'memberships',
         on_delete = models.CASCADE,
     )
     player = models.ForeignKey(
         SteamProfile,
-        related_name = 'squads',  # FIXME: Should be 'squad_memberships'?
+        related_name = 'squads',
         on_delete = models.CASCADE,
     )
     position = models.PositiveSmallIntegerField(
