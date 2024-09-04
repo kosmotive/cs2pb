@@ -325,24 +325,35 @@ class Squad(models.Model):
         old_positions = {m: m.position for m in self.memberships.all()}
 
         # Update the positions according to the KPI
-        kpis = {m: Features.pv(FeatureContext.create_default(m.player, self)) for m in self.memberships.all()}
+        kpis = {m: Features.pv(FeatureContext.create_default(m.player, self))['value'] for m in self.memberships.all()}
         memberships = sorted(kpis.keys(), key = lambda m: kpis[m], reverse = True)
         for position, m in enumerate(memberships):
             m.position = position
             m.save()
 
         # Check if the leaderboard has changed
-        changes = {m: m.position - old_positions[m] for m in self.memberships.all()}
-        if any(change != 0 for change in changes.values()) or len(old_positions) != len(memberships):
-            text = 'We have changes in the leaderboard!\n'
+        changes = {m: m.position - old_positions[m] for m in self.memberships.all() if old_positions[m] is not None}
+        if len([m for m in old_positions.keys() if old_positions[m] is not None]) > 0 and (
+            any(change != 0 for change in changes.values()) or (
+                {
+                    m.player.steamid for m in old_positions.keys() if old_positions[m] is not None
+                } != {
+                    m.player.steamid for m in memberships
+                }
+            )
+        ):
+            text = 'We have changes in the 30-days leaderboard! 🎆\n'
 
             # Check if the positions have changed
-            for mnum, m in enumerate(self.memberships.all.sorted_by('position'), start = 1):
-                text += f'\n{mnum}. {m.player.clean_name}'
-                if changes[m] > 0:
-                    text += f' ⬇️'
-                if changes[m] < 0:
-                    text += f' ⬆️'
+            for mnum, m in enumerate(self.memberships.order_by('position'), start = 1):
+                text += f'\n{mnum}. <{m.player.steamid}>'
+                if m not in changes:
+                    text += f' 🆕'
+                else:
+                    if changes[m] > 0:
+                        text += f' ⬇️'
+                    if changes[m] < 0:
+                        text += f' ⬆️'
 
             # Check if players have been removed from the leaderboard (e.g., due to inactivity)
             missed_memberships = [
@@ -351,18 +362,17 @@ class Squad(models.Model):
             if any(missed_memberships):
                 text += '\n'
                 for m in missed_memberships:
-                    f'{m.player.clean_name} is no longer present in the leaderboard!'
+                    f'<{m.player.steamid}> is no longer present 👋'
 
             # Schedule a notification on Discord
             self.notify_on_discord(text)
 
-    def notify_on_discord(self, text: str) -> bool:
+    def notify_on_discord(self, text: str):
         if self.discord_channel_id:
             from discordbot.models import ScheduledNotification
-            ScheduledNotification.objects.create(squad = self, text = text)
-            return True
+            return ScheduledNotification.objects.create(squad = self, text = text)
         else:
-            return False
+            return None
 
 
 class SquadMembership(models.Model):
