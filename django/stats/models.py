@@ -320,8 +320,8 @@ class Match(models.Model):
                 account = getattr(player, 'account', None)
                 if account is None:
                     continue
-                for m in account.steam_profile.squad_memberships.all():
-                    squad_ids.add(m.squad.pk)
+                for membership in account.steam_profile.squad_memberships.all():
+                    squad_ids.add(membership.squad.pk)
             for squad_id in squad_ids:
                 squad = Squad.objects.get(uuid = squad_id)
                 squad.handle_new_match(m)
