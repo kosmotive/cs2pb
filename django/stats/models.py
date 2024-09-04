@@ -162,9 +162,9 @@ class GamingSession(models.Model):
             'name',
             *[f'avatar_{c}' for c in 'sml'],
         ).annotate(
-            avg_position = Avg('matchparticipation__position'),
+            avg_adr = Avg('matchparticipation__adr'),
         ).order_by(
-            'avg_position',
+            '-avg_adr',
         )
 
     @property
