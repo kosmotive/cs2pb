@@ -111,15 +111,6 @@ def compute_card(player, squad, features, orders = [np.inf]):
     return card_data
 
 
-def sorted_cards(cards, kpi='Player value'):
-    cards = [card for card in cards if not all(stat['value'] is None for stat in card['stats'])]
-
-    def get_kpi(p):
-        return escape_none({stat['name']: stat['value'] for stat in p['stats']}[kpi], 0)
-
-    return sorted(cards, key=get_kpi, reverse=True)
-
-
 def squad_expanded_stats(request, squad):
     return squads(request, squad, expanded_stats=True)
 
@@ -171,7 +162,19 @@ def squads(request, squad = None, expanded_stats = False):
         ):
             account.update_matches()
         PlayerOfTheWeek.create_missing_badges(squad)
-        cards = sorted_cards([compute_card(m.player, squad, features, [2, 3, np.inf]) for m in squad.memberships.all()])
+        cards = [
+            compute_card(
+                m.player,
+                squad,
+                features,
+                [2, 3, np.inf],
+            )
+            for m in squad.memberships.exclude(
+                position__isnull = True,
+            ).order_by(
+                'position',
+            )
+        ]
 
         # Split the cards into rows
         rows = split_into_chunks_ex(cards, n_min = 4, n_max = 7)
