@@ -151,8 +151,11 @@ class GamingSession(models.Model):
 
     @property
     def participated_squad_members(self):
+        participated_squad_members_steamids = self.squad.memberships.filter(
+            player__steamid__in = self.participated_steamids
+        ).values_list('player__steamid', flat = True)
         return SteamProfile.objects.filter(
-            steamid__in = self.participated_steamids,
+            steamid__in = participated_squad_members_steamids,
             matchparticipation__pmatch__in = self.matches.values_list('pk', flat = True),
         ).values(
             'steamid',
