@@ -1,23 +1,41 @@
-from datetime import datetime
-from dateutil import tz
-
-from django.db import models, transaction
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from django.db.models.signals import m2m_changed
-from django.db.models import Avg, Count, F
-
-from accounts.models import SteamProfile, Account, Squad
-from api import NAV_SUPPORTED_MAPS, api, fetch_match_details, SteamAPIUser, InvalidSharecodeError
-from discordbot.models import ScheduledNotification
-from .features import Features, FeatureContext
-from . import potw
-
-import awpy.data
-import numpy as np
 import logging
+from datetime import (
+    datetime,
+    timedelta,
+)
 
-from datetime import datetime, timedelta
+import numpy as np
+from accounts.models import (
+    Account,
+    Squad,
+    SteamProfile,
+)
+from api import (
+    InvalidSharecodeError,
+    SteamAPIUser,
+    api,
+    fetch_match_details,
+)
 
+from django.core.exceptions import (
+    MultipleObjectsReturned,
+    ObjectDoesNotExist,
+)
+from django.db import (
+    models,
+    transaction,
+)
+from django.db.models import (
+    Avg,
+    F,
+)
+from django.db.models.signals import m2m_changed
+
+from . import potw
+from .features import (
+    FeatureContext,
+    Features,
+)
 
 log = logging.getLogger(__name__)
 
@@ -77,7 +95,7 @@ class GamingSession(models.Model):
         if len(comments) > 0:
             text += ' Here is your current performance compared to your 30-days average: ' + ', '.join(comments)
             text += ', with respect to the *player value*.'
-        ScheduledNotification.objects.create(squad = self.squad, text = text)
+        self.squad.notify_on_discord(text)
 
         # Create a summary of the matches
         text = 'Matches played in this session:'
@@ -92,17 +110,18 @@ class GamingSession(models.Model):
                     w = 'won 🤘',
                     l = 'lost 💩',
                 )[pmatch.result]
-        ScheduledNotification.objects.create(squad = self.squad, text = text)
+        self.squad.notify_on_discord(text)
 
         # Determine the rising star
         if participated_squad_members > 1 and top_player is not None and top_player_trend_rel > 0.01:
             from .plots import trends as plot_trends
-            notification = ScheduledNotification.objects.create(
+            notification = self.squad.notify_on_discord(
                 squad = self.squad,
                 text = f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!',
             )
-            plot = plot_trends(self.squad, top_player, Features.MANY)
-            notification.attach(plot)
+            if notification is not None:
+                plot = plot_trends(self.squad, top_player, Features.MANY)
+                notification.attach(plot)
             self.rising_star = top_player
             self.save()
 
@@ -588,7 +607,7 @@ class PlayerOfTheWeek(models.Model):
         if badge.player2 is not None:
             if badge.player3 is None: text = f'{text} Second place goes to 🥈 <{badge.player2.steamid}>.'
             else: text = f'{text} Second and third places go to 🥈 <{badge.player2.steamid}> and 🥉 <{badge.player3.steamid}>, respectively.'
-        ScheduledNotification.objects.create(squad=badge_data['squad'], text=text)
+        badge_data['squad'].notify_on_discord(text)
         return badge
 
     @staticmethod
@@ -651,7 +670,7 @@ class MatchBadge(models.Model):
             MatchBadge.objects.create(badge_type=badge_type, participation=participation)
             text = f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in recognition of their far-above average performance on *{participation.pmatch.map_name}* recently!'
             for m in participation.player.squad_memberships.all():
-                ScheduledNotification.objects.create(squad = m.squad, text = text)
+                m.squad.notify_on_discord(text)
 
     @staticmethod
     def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug):
@@ -664,7 +683,7 @@ class MatchBadge(models.Model):
             frequency = '' if number == 1 else f' {number} times'
             text = f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on *{participation.pmatch.map_name}* recently!'
             for m in participation.player.squad_memberships.all():
-                ScheduledNotification.objects.create(squad = m.squad, text = text)
+                m.squad.notify_on_discord(text)
 
     @staticmethod
     def award_margin_badge(participation, badge_type_slug, order, margin, emoji):
@@ -685,7 +704,7 @@ class MatchBadge(models.Model):
             MatchBadge.objects.create(badge_type = badge_type, participation = participation)
             text = f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** on *{participation.pmatch.map_name}*!'
             for m in participation.player.squad_memberships.all():
-                ScheduledNotification.objects.create(squad = m.squad, text = text)
+                m.squad.notify_on_discord(text)
 
     class Meta:
         verbose_name        = 'Match-based badge'

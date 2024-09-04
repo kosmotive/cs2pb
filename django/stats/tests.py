@@ -361,7 +361,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
     @testsuite.fake_api('accounts.models')
     def setUp(self):
-        self.squad = Squad.objects.create(name='squad')
+        self.squad = Squad.objects.create(name = 'squad', discord_channel_id = '1234')
         self.team1 = [
             SteamProfile.objects.create(steamid = '12345678900000001'),
             SteamProfile.objects.create(steamid = '12345678900000002'),
@@ -769,12 +769,12 @@ class UpdateTask__run(TestCase):
 
 
 class GamingSession__close(TestCase):
-    
+
     @testsuite.fake_api('accounts.models')
     def setUp(self):
         self.player1 = SteamProfile.objects.create(steamid = '12345678900000001')
         self.player2 = SteamProfile.objects.create(steamid = '12345678900000002')
-        self.squad = Squad.objects.create(name = 'Test Squad')
+        self.squad = Squad.objects.create(name = 'Test Squad', discord_channel_id = '1234')
         SquadMembership.objects.create(squad = self.squad, player = self.player1)
         SquadMembership.objects.create(squad = self.squad, player = self.player2)
 
