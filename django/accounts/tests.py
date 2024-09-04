@@ -1,12 +1,14 @@
 import datetime
 from unittest.mock import patch
-import threading
+
+import accounts.forms
+import accounts.models
+import stats.features
+import stats.models
+from discordbot.models import ScheduledNotification
+from tests import testsuite
 
 from django.test import TestCase
-
-import accounts.forms, accounts.models
-import stats.models
-from tests import testsuite
 
 
 class verify_discord_name(TestCase):
@@ -42,12 +44,12 @@ def _mark_task_as_completed(task, duration = datetime.timedelta(minutes = 2)):
     task.save()
 
 
-@patch('stats.updater.update_event.set', return_value=None) 
+@patch('stats.updater.update_event.set', return_value = None)
 class Account__update_matches(TestCase):
 
     @testsuite.fake_api('accounts.models')
     def setUp(self):
-        self.player = stats.models.SteamProfile.objects.create(steamid = '12345678900000001')
+        self.player  = accounts.models.SteamProfile.objects.create(steamid = '12345678900000001')
         self.account = accounts.models.Account.objects.create(steam_profile = self.player)
 
     def test(self, mock_update_event_set):
@@ -86,7 +88,8 @@ class Account__update_matches(TestCase):
         # [9:06] Mark the task as started
         _mark_task_as_started(task2)
 
-        # [9:12] Try to schedule an update six minutes after the second one (should be accepted, even though previous is still running)
+        # [9:12] Try to schedule an update six minutes after the second one
+        # (should be accepted, even though previous is still running)
         update3_datetime = update2_datetime + datetime.timedelta(minutes = 6)
         with patch('datetime.datetime') as mock_datetime:
             mock_datetime.now.return_value = update3_datetime
@@ -95,3 +98,144 @@ class Account__update_matches(TestCase):
         self.assertEqual(len(stats.models.UpdateTask.objects.filter(account = self.account)), 3)
         task3 = stats.models.UpdateTask.objects.filter(account = self.account).latest('scheduled_timestamp')
         self.assertEqual(task3.scheduled, update3_datetime)
+
+
+@patch.object(stats.features.FeatureContext, 'create_default')
+class Squad__update_positions(TestCase):
+
+    @testsuite.fake_api('accounts.models')
+    def setUp(self):
+        self.players = [
+            accounts.models.SteamProfile.objects.create(steamid = f'1234567890000000{pidx + 1}') for pidx in range(4)
+        ]
+        self.squad = accounts.models.Squad.objects.create(name = 'squad', discord_channel_id = '1234')
+        for player in self.players:
+            accounts.models.SquadMembership.objects.create(squad = self.squad, player = player)
+        self.pv_dict = dict()
+
+    def update_position(self, player, position):
+        m = self.squad.memberships.get(player = player)
+        m.position = position
+        m.save()
+
+    def test_all_newcomers(self, mock__create_default):
+        self.pv_dict[self.players[0].steamid] = dict(value = 0.9)
+        self.pv_dict[self.players[1].steamid] = dict(value = 1.1)
+        self.pv_dict[self.players[2].steamid] = dict(value = 0.8)
+        self.pv_dict[self.players[3].steamid] = dict(value = 0.7)
+
+        mock__create_default.side_effect = lambda player, squad: player.steamid
+        with patch.object(stats.features.Features, 'pv') as mock_pv:
+            mock_pv.side_effect = self.pv_dict.get
+            self.squad.update_positions()
+
+        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
+
+        memberships = self.squad.memberships.all()
+        self.assertEqual(memberships.get(player = self.players[0]).position, 1)
+        self.assertEqual(memberships.get(player = self.players[1]).position, 0)
+        self.assertEqual(memberships.get(player = self.players[2]).position, 2)
+        self.assertEqual(memberships.get(player = self.players[3]).position, 3)
+
+    def test_one_newcomer(self, mock__create_default):
+        self.update_position(self.players[0], 1)
+        self.update_position(self.players[1], 0)
+        self.update_position(self.players[3], 2)
+
+        self.pv_dict[self.players[0].steamid] = dict(value = 0.9)
+        self.pv_dict[self.players[1].steamid] = dict(value = 1.1)
+        self.pv_dict[self.players[2].steamid] = dict(value = 0.8)
+        self.pv_dict[self.players[3].steamid] = dict(value = 0.7)
+
+        mock__create_default.side_effect = lambda player, squad: player.steamid
+        with patch.object(stats.features.Features, 'pv') as mock_pv:
+            mock_pv.side_effect = self.pv_dict.get
+            self.squad.update_positions()
+
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
+        notification_text = ScheduledNotification.objects.get().text
+        self.assertEqual(
+            notification_text,
+            'We have changes in the 30-days leaderboard! 🎆' '\n'
+            '\n'
+            '1. <12345678900000002>' '\n'
+            '2. <12345678900000001>' '\n'
+            '3. <12345678900000003> 🆕' '\n'
+            '4. <12345678900000004> ⬇️'
+        )
+
+        memberships = self.squad.memberships.all()
+        self.assertEqual(memberships.get(player = self.players[0]).position, 1)
+        self.assertEqual(memberships.get(player = self.players[1]).position, 0)
+        self.assertEqual(memberships.get(player = self.players[2]).position, 2)
+        self.assertEqual(memberships.get(player = self.players[3]).position, 3)
+
+    def test_swap(self, mock__create_default):
+        self.update_position(self.players[0], 0)
+        self.update_position(self.players[1], 1)
+        self.update_position(self.players[2], 2)
+        self.update_position(self.players[3], 3)
+
+        self.pv_dict[self.players[0].steamid] = dict(value = 0.9)
+        self.pv_dict[self.players[1].steamid] = dict(value = 1.1)
+        self.pv_dict[self.players[2].steamid] = dict(value = 0.8)
+        self.pv_dict[self.players[3].steamid] = dict(value = 0.7)
+
+        mock__create_default.side_effect = lambda player, squad: player.steamid
+        with patch.object(stats.features.Features, 'pv') as mock_pv:
+            mock_pv.side_effect = self.pv_dict.get
+            self.squad.update_positions()
+
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
+        notification_text = ScheduledNotification.objects.get().text
+        self.assertEqual(
+            notification_text,
+            'We have changes in the 30-days leaderboard! 🎆' '\n'
+            '\n'
+            '1. <12345678900000002> ⬆️' '\n'
+            '2. <12345678900000001> ⬇️' '\n'
+            '3. <12345678900000003>' '\n'
+            '4. <12345678900000004>'
+        )
+
+        memberships = self.squad.memberships.all()
+        self.assertEqual(memberships.get(player = self.players[0]).position, 1)
+        self.assertEqual(memberships.get(player = self.players[1]).position, 0)
+        self.assertEqual(memberships.get(player = self.players[2]).position, 2)
+        self.assertEqual(memberships.get(player = self.players[3]).position, 3)
+
+    def test_one_missing(self, mock__create_default):
+        self.update_position(self.players[0], 0)
+        self.update_position(self.players[1], 1)
+        self.update_position(self.players[2], 2)
+
+        self.pv_dict[self.players[0].steamid] = dict(value = 1.1)
+        self.pv_dict[self.players[1].steamid] = dict(value = None)
+        self.pv_dict[self.players[2].steamid] = dict(value = 0.8)
+        self.pv_dict[self.players[3].steamid] = dict(value = None)
+
+        mock__create_default.side_effect = lambda player, squad: player.steamid
+        with patch.object(stats.features.Features, 'pv') as mock_pv:
+            mock_pv.side_effect = self.pv_dict.get
+            self.squad.update_positions()
+
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
+        notification_text = ScheduledNotification.objects.get().text
+        print('-' * 80)
+        print(notification_text)
+        print('-' * 80)
+        self.assertEqual(
+            notification_text,
+            'We have changes in the 30-days leaderboard! 🎆' '\n'
+            '\n'
+            '1. <12345678900000001>' '\n'
+            '2. <12345678900000003> ⬆️' '\n'
+            '\n'
+            '<12345678900000002> is no longer present 👋'
+        )
+
+        memberships = self.squad.memberships.all()
+        self.assertEqual (memberships.get(player = self.players[0]).position, 0)
+        self.assertIsNone(memberships.get(player = self.players[1]).position)
+        self.assertEqual (memberships.get(player = self.players[2]).position, 1)
+        self.assertIsNone(memberships.get(player = self.players[3]).position)

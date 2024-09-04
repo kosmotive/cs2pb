@@ -1,0 +1,7 @@
+[flake8]
+
+max-line-length = 120
+
+extend-ignore = E221,E211,E222,E202,F541,E201,E203,E125,E251
+
+exclude = django/csgo_app/*.py

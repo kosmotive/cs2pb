@@ -90,7 +90,7 @@ class SteamProfileAdmin(admin.ModelAdmin):
 
     @admin.display(description='Squads')
     def squad_list(self, steam_profile):
-        squads = steam_profile.squads.all()
+        squads = [m.squad for m in steam_profile.squad_memberships.all()]
         number = len(squads)
         get_url  = lambda squad: reverse('admin:accounts_squad_change', args=(squad.pk,))
         get_html = lambda squad: f'<a href="{get_url(squad)}">{squad.name}</a>'
@@ -139,7 +139,7 @@ class SquadAdmin(admin.ModelAdmin):
 
     @admin.display(description='Members')
     def members_count(self, squad):
-        return str(len(squad.members.all()))
+        return str(len(squad.memberships.all()))
 
 
 @admin.register(Invitation)

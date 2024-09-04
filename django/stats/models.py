@@ -1,23 +1,41 @@
-from datetime import datetime
-from dateutil import tz
-
-from django.db import models, transaction
-from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
-from django.db.models.signals import m2m_changed
-from django.db.models import Avg, Count, F
-
-from accounts.models import SteamProfile, Account, Squad
-from api import NAV_SUPPORTED_MAPS, api, fetch_match_details, SteamAPIUser, InvalidSharecodeError
-from discordbot.models import ScheduledNotification
-from .features import Features, FeatureContext
-from . import potw
-
-import awpy.data
-import numpy as np
 import logging
+from datetime import (
+    datetime,
+    timedelta,
+)
 
-from datetime import datetime, timedelta
+import numpy as np
+from accounts.models import (
+    Account,
+    Squad,
+    SteamProfile,
+)
+from api import (
+    InvalidSharecodeError,
+    SteamAPIUser,
+    api,
+    fetch_match_details,
+)
 
+from django.core.exceptions import (
+    MultipleObjectsReturned,
+    ObjectDoesNotExist,
+)
+from django.db import (
+    models,
+    transaction,
+)
+from django.db.models import (
+    Avg,
+    F,
+)
+from django.db.models.signals import m2m_changed
+
+from . import potw
+from .features import (
+    FeatureContext,
+    Features,
+)
 
 log = logging.getLogger(__name__)
 
@@ -40,39 +58,49 @@ class GamingSession(models.Model):
         was_already_closed = self.is_closed
         self.is_closed = True
         self.save()
-        if was_already_closed: return
+        if was_already_closed:
+            return
 
         # Compute the performance of the players
         participated_steamids = self.participated_steamids
         comments = list()
         top_player, top_player_trend_rel = None, 0
         participated_squad_members = 0
-        for player in self.squad.members.all():
-            if player.steamid not in participated_steamids: continue
+        for m in self.squad.memberships.all():
+            if m.player.steamid not in participated_steamids:
+                continue
             participated_squad_members += 1
-            pv_today = Features.pv(FeatureContext.create_default(player, trend_shift = 0, days = 0.5))['value']
-            pv_ref   = Features.pv(FeatureContext.create_default(player, trend_shift = 0))['value']
-            if pv_today is None or pv_ref is None: continue
+            pv_today = Features.pv(FeatureContext.create_default(m.player, trend_shift = 0, days = 0.5))['value']
+            pv_ref   = Features.pv(FeatureContext.create_default(m.player, trend_shift = 0))['value']
+            if pv_today is None or pv_ref is None:
+                continue
             pv_trend = pv_today - pv_ref
-            kpi = dict(value = pv_today, trend_rel = 0 if pv_trend == 0 else (pv_trend / pv_ref if pv_ref > 0 else np.infty))
+            kpi = dict(
+                value = pv_today,
+                trend_rel = 0 if pv_trend == 0 else (pv_trend / pv_ref if pv_ref > 0 else np.infty),
+            )
             if top_player is None or kpi['trend_rel'] > top_player_trend_rel:
-                top_player = player
+                top_player = m.player
                 top_player_trend_rel = kpi['trend_rel']
             if abs(kpi['trend_rel']) > 0.0005:
                 icon = '📈' if kpi['trend_rel'] > 0 else '📉'
-                comments.append(f' <{player.steamid}> {icon} {100 * kpi["trend_rel"]:+.1f}% ({kpi["value"]:.2f})')
+                comments.append(
+                    f' <{m.player.steamid}> {icon} {100 * kpi["trend_rel"]:+.1f}% ({kpi["value"]:.2f})'
+                )
             else:
-                comments.append(f' <{player.steamid}> ±0.00% ({kpi["value"]:.2f})')
+                comments.append(
+                    f' <{m.player.steamid}> ±0.00% ({kpi["value"]:.2f})'
+                )
         text = 'Looks like your session has ended!'
         if len(comments) > 0:
             text += ' Here is your current performance compared to your 30-days average: ' + ', '.join(comments)
             text += ', with respect to the *player value*.'
-        ScheduledNotification.objects.create(squad = self.squad, text = text)
+        self.squad.notify_on_discord(text)
 
         # Create a summary of the matches
         text = 'Matches played in this session:'
         for pmatch in self.matches.filter(
-            matchparticipation__player__in = self.squad.members.all()
+            matchparticipation__player__in = self.squad.memberships.values_list('player__pk', flat = True)
         ).distinct().order_by('timestamp').annotate(
             result = F('matchparticipation__result')
         ):
@@ -82,14 +110,18 @@ class GamingSession(models.Model):
                     w = 'won 🤘',
                     l = 'lost 💩',
                 )[pmatch.result]
-        ScheduledNotification.objects.create(squad = self.squad, text = text)
+        self.squad.notify_on_discord(text)
 
         # Determine the rising star
         if participated_squad_members > 1 and top_player is not None and top_player_trend_rel > 0.01:
             from .plots import trends as plot_trends
-            notification = ScheduledNotification.objects.create(squad = self.squad, text = f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!')
-            plot = plot_trends(self.squad, top_player, Features.MANY)
-            notification.attach(plot)
+            notification = self.squad.notify_on_discord(
+                squad = self.squad,
+                text = f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!',
+            )
+            if notification is not None:
+                plot = plot_trends(self.squad, top_player, Features.MANY)
+                notification.attach(plot)
             self.rising_star = top_player
             self.save()
 
@@ -98,7 +130,8 @@ class GamingSession(models.Model):
         if action == 'pre_add':
             added_sessions = [GamingSession.objects.get(pk = session_pk) for session_pk in pk_set]
             for session in added_sessions:
-                if session.is_closed: continue
+                if session.is_closed:
+                    continue
                 if GamingSession.objects.filter(squad = session.squad, is_closed = True, matches__timestamp__gt = instance.timestamp_end).exists():
                     log.info(f'Setting session {session.pk} added to match {instance.pk} (str(instance)) to closed since a new closed session of the same squad exists')
                     session.is_closed = True
@@ -118,9 +151,18 @@ class GamingSession(models.Model):
 
     @property
     def participated_squad_members(self):
-        return self.squad.members.filter(steamid__in = self.participated_steamids, matchparticipation__pmatch__in = self.matches.values_list('pk', flat = True)) \
-            .values('steamid', 'name', *[f'avatar_{c}' for c in 'sml']).annotate(avg_position = Avg('matchparticipation__position')) \
-            .order_by('avg_position')
+        return SteamProfile.objects.filter(
+            steamid__in = self.participated_steamids,
+            matchparticipation__pmatch__in = self.matches.values_list('pk', flat = True),
+        ).values(
+            'steamid',
+            'name',
+            *[f'avatar_{c}' for c in 'sml'],
+        ).annotate(
+            avg_position = Avg('matchparticipation__position'),
+        ).order_by(
+            'avg_position',
+        )
 
     @property
     def first_match(self):
@@ -273,9 +315,10 @@ class Match(models.Model):
             squad_ids = set()
             for player in players:
                 account = getattr(player, 'account', None)
-                if account is None: continue
-                for squad in account.steam_profile.squads.all():
-                    squad_ids.add(squad.pk)
+                if account is None:
+                    continue
+                for m in account.steam_profile.squad_memberships.all():
+                    squad_ids.add(m.squad.pk)
             for squad_id in squad_ids:
                 squad = Squad.objects.get(uuid = squad_id)
                 squad.handle_new_match(m)
@@ -564,7 +607,7 @@ class PlayerOfTheWeek(models.Model):
         if badge.player2 is not None:
             if badge.player3 is None: text = f'{text} Second place goes to 🥈 <{badge.player2.steamid}>.'
             else: text = f'{text} Second and third places go to 🥈 <{badge.player2.steamid}> and 🥉 <{badge.player3.steamid}>, respectively.'
-        ScheduledNotification.objects.create(squad=badge_data['squad'], text=text)
+        badge_data['squad'].notify_on_discord(text)
         return badge
 
     @staticmethod
@@ -626,8 +669,8 @@ class MatchBadge(models.Model):
             log.info(f'Surpass-yourself badge awarded to {participation.player.name} for K/D {participation.kd} whre threshold was {threshold}')
             MatchBadge.objects.create(badge_type=badge_type, participation=participation)
             text = f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in recognition of their far-above average performance on *{participation.pmatch.map_name}* recently!'
-            for squad in participation.player.squads.all():
-                ScheduledNotification.objects.create(squad=squad, text=text)
+            for m in participation.player.squad_memberships.all():
+                m.squad.notify_on_discord(text)
 
     @staticmethod
     def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug):
@@ -639,8 +682,8 @@ class MatchBadge(models.Model):
             MatchBadge.objects.create(badge_type = badge_type, participation = participation, frequency = number)
             frequency = '' if number == 1 else f' {number} times'
             text = f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on *{participation.pmatch.map_name}* recently!'
-            for squad in participation.player.squads.all():
-                ScheduledNotification.objects.create(squad=squad, text=text)
+            for m in participation.player.squad_memberships.all():
+                m.squad.notify_on_discord(text)
 
     @staticmethod
     def award_margin_badge(participation, badge_type_slug, order, margin, emoji):
@@ -660,8 +703,8 @@ class MatchBadge(models.Model):
             log.info(f'{participation.player.name} received the {badge_type.name}')
             MatchBadge.objects.create(badge_type = badge_type, participation = participation)
             text = f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** on *{participation.pmatch.map_name}*!'
-            for squad in participation.player.squads.all():
-                ScheduledNotification.objects.create(squad=squad, text=text)
+            for m in participation.player.squad_memberships.all():
+                m.squad.notify_on_discord(text)
 
     class Meta:
         verbose_name        = 'Match-based badge'
