@@ -326,13 +326,23 @@ class Squad(models.Model):
 
         # Update the positions according to the KPI
         kpis = {m: Features.pv(FeatureContext.create_default(m.player, self))['value'] for m in self.memberships.all()}
-        memberships = sorted(kpis.keys(), key = lambda m: kpis[m], reverse = True)
+        memberships = sorted(
+            (m for m in kpis.keys() if kpis[m] is not None),
+            key = lambda m: kpis[m],
+            reverse = True,
+        )
         for position, m in enumerate(memberships):
             m.position = position
             m.save()
+        for m in self.memberships.exclude(pk__in = [m.pk for m in memberships]):
+            m.position = None
+            m.save()
 
         # Check if the leaderboard has changed
-        changes = {m: m.position - old_positions[m] for m in self.memberships.all() if old_positions[m] is not None}
+        changes = {
+            m: m.position - old_positions[m] for m in self.memberships.all()
+            if m.position is not None and old_positions[m] is not None
+        }
         if len([m for m in old_positions.keys() if old_positions[m] is not None]) > 0 and (
             any(change != 0 for change in changes.values()) or (
                 {
@@ -345,7 +355,7 @@ class Squad(models.Model):
             text = 'We have changes in the 30-days leaderboard! 🎆\n'
 
             # Check if the positions have changed
-            for mnum, m in enumerate(self.memberships.order_by('position'), start = 1):
+            for mnum, m in enumerate(self.memberships.filter(position__isnull = False).order_by('position'), start = 1):
                 text += f'\n{mnum}. <{m.player.steamid}>'
                 if m not in changes:
                     text += f' 🆕'
@@ -357,12 +367,15 @@ class Squad(models.Model):
 
             # Check if players have been removed from the leaderboard (e.g., due to inactivity)
             missed_memberships = [
-                m for m in old_positions.keys() if m.pk not in self.memberships.values_list('pk', flat = True)
+                m for m in old_positions.keys()
+                if old_positions[m] is not None and m.pk not in self.memberships.filter(
+                    position__isnull = False,
+                ).values_list('pk', flat = True)
             ]
-            if any(missed_memberships):
+            if len(missed_memberships) > 0:
                 text += '\n'
                 for m in missed_memberships:
-                    f'<{m.player.steamid}> is no longer present 👋'
+                    text += f'\n<{m.player.steamid}> is no longer present 👋'
 
             # Schedule a notification on Discord
             self.notify_on_discord(text)

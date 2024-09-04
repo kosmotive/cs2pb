@@ -203,3 +203,39 @@ class Squad__update_positions(TestCase):
         self.assertEqual(memberships.get(player = self.players[1]).position, 0)
         self.assertEqual(memberships.get(player = self.players[2]).position, 2)
         self.assertEqual(memberships.get(player = self.players[3]).position, 3)
+
+    def test_one_missing(self, mock__create_default):
+        self.update_position(self.players[0], 0)
+        self.update_position(self.players[1], 1)
+        self.update_position(self.players[2], 2)
+
+        self.pv_dict[self.players[0].steamid] = dict(value = 1.1)
+        self.pv_dict[self.players[1].steamid] = dict(value = None)
+        self.pv_dict[self.players[2].steamid] = dict(value = 0.8)
+        self.pv_dict[self.players[3].steamid] = dict(value = None)
+
+        mock__create_default.side_effect = lambda player, squad: player.steamid
+        with patch.object(stats.features.Features, 'pv') as mock_pv:
+            mock_pv.side_effect = self.pv_dict.get
+            self.squad.update_positions()
+
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
+        notification_text = ScheduledNotification.objects.get().text
+        print('-' * 80)
+        print(notification_text)
+        print('-' * 80)
+        self.assertEqual(
+            notification_text,
+            'We have changes in the 30-days leaderboard! 🎆' '\n'
+            '\n'
+            '1. <12345678900000001>' '\n'
+            '2. <12345678900000003> ⬆️' '\n'
+            '\n'
+            '<12345678900000002> is no longer present 👋'
+        )
+
+        memberships = self.squad.memberships.all()
+        self.assertEqual (memberships.get(player = self.players[0]).position, 0)
+        self.assertIsNone(memberships.get(player = self.players[1]).position)
+        self.assertEqual (memberships.get(player = self.players[2]).position, 1)
+        self.assertIsNone(memberships.get(player = self.players[3]).position)
