@@ -1,20 +1,42 @@
-from django.shortcuts import render, redirect
-from django.http import HttpResponse, HttpResponseNotFound
-from django.db.models import F, Max, Value
-from django.urls import reverse
-from django.core.mail import send_mail
-from django.db.models import Count
-
-from accounts.models import SteamProfile, Account, Squad
-from .models import Match, MatchParticipation, PlayerOfTheWeek, UpdateTask, GamingSession
-from .features import Features, FeatureContext, escape_none
-from . import potw
-import gitinfo
-
-import os
-import numpy as np
 import logging
+import os
 
+import gitinfo
+import numpy as np
+from accounts.models import (
+    Account,
+    Squad,
+    SteamProfile,
+)
+
+from django.core.mail import send_mail
+from django.db.models import (
+    Count,
+    F,
+    Max,
+)
+from django.http import (
+    HttpResponseNotFound,
+)
+from django.shortcuts import (
+    redirect,
+    render,
+)
+from django.urls import reverse
+
+from . import potw
+from .features import (
+    FeatureContext,
+    Features,
+    escape_none,
+)
+from .models import (
+    GamingSession,
+    Match,
+    MatchParticipation,
+    PlayerOfTheWeek,
+    UpdateTask,
+)
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +68,13 @@ def get_badges(squad, player):
     for place, count in enumerate(potw, start=1):
         if count > 0:
             badges.append(dict(slug=f'potw-{place}', count=count))
-    for badge in player.match_badges().all().values('badge_type').annotate(count = Count('badge_type')).order_by('badge_type'):
+    for badge in player.match_badges().all().values(
+        'badge_type'
+    ).annotate(
+        count = Count('badge_type'),
+    ).order_by(
+        'badge_type',
+    ):
         if badge['count'] > 0:
             badges.append(
                 dict(
@@ -55,14 +83,15 @@ def get_badges(squad, player):
                 )
             )
     rising_star_count = GamingSession.objects.filter(squad = squad, rising_star = player).count()
-    if rising_star_count > 0: badges.append(dict(slug='rising-star', count=rising_star_count))
+    if rising_star_count > 0:
+        badges.append(dict(slug = 'rising-star', count = rising_star_count))
     badges.sort(key = lambda badge: badge_order.index(badge['slug']))
     if len(badges) > 0:
         badges = badges[:5]
     return badges
 
 
-def compute_card(player, squad, features, orders=[np.inf]):
+def compute_card(player, squad, features, orders = [np.inf]):
     context = FeatureContext.create_default(player, squad)
     stats   = [feature(context) for feature in features]
     badges  = get_badges(squad, player)
@@ -73,9 +102,9 @@ def compute_card(player, squad, features, orders=[np.inf]):
         'badges': badges,
     }
     if getattr(player, 'account', None) is None and squad is not None:
-        card_data['invite_url'] = reverse('invite', kwargs=dict(steamid=player.steamid, squadid=squad.pk))
+        card_data['invite_url'] = reverse('invite', kwargs = dict(steamid = player.steamid, squadid = squad.pk))
     for stat_idx, stat in enumerate(card_data['stats']):
-        for order, idx_max in enumerate(orders, start=1):
+        for order, idx_max in enumerate(orders, start = 1):
             if stat_idx < idx_max:
                 stat['order'] = order
                 break
@@ -84,7 +113,10 @@ def compute_card(player, squad, features, orders=[np.inf]):
 
 def sorted_cards(cards, kpi='Player value'):
     cards = [card for card in cards if not all(stat['value'] is None for stat in card['stats'])]
-    get_kpi = lambda p: escape_none({stat['name']: stat['value'] for stat in p['stats']}[kpi], 0)
+
+    def get_kpi(p):
+        return escape_none({stat['name']: stat['value'] for stat in p['stats']}[kpi], 0)
+
     return sorted(cards, key=get_kpi, reverse=True)
 
 
@@ -111,12 +143,12 @@ def split_into_chunks_ex(data, n_min, n_max):
     return splits[max(tail_size_by_n, key = tail_size_by_n.get)]
 
 
-def squads(request, squad=None, expanded_stats=False):
+def squads(request, squad = None, expanded_stats = False):
     context = dict()
 
     if squad is not None:
         try:
-            squad_list = [Squad.objects.get(uuid=squad)]
+            squad_list = [Squad.objects.get(uuid = squad)]
             context['squad'] = squad_list[0]
         except Squad.DoesNotExist:
             return HttpResponseNotFound('No such squad')
@@ -133,10 +165,12 @@ def squads(request, squad=None, expanded_stats=False):
 
     context['squads'] = list()
     for squad in squad_list:
-        for account in Account.objects.filter(steam_profile__in = squad.memberships.values_list('player__pk', flat = True)):
+        for account in Account.objects.filter(
+            steam_profile__in = squad.memberships.values_list('player__pk', flat = True)
+        ):
             account.update_matches()
         PlayerOfTheWeek.create_missing_badges(squad)
-        cards = sorted_cards([compute_card(m.player, squad, features, [2,3,np.inf]) for m in squad.memberships.all()])
+        cards = sorted_cards([compute_card(m.player, squad, features, [2, 3, np.inf]) for m in squad.memberships.all()])
 
         # Split the cards into rows
         rows = split_into_chunks_ex(cards, n_min = 4, n_max = 7)
@@ -145,14 +179,20 @@ def squads(request, squad=None, expanded_stats=False):
             upcoming_potw = PlayerOfTheWeek.get_next_badge_data(squad)
             upcoming_potw_mode = potw.get_mode_by_id(upcoming_potw['mode'])
         except Match.DoesNotExist:
-            log.warning(f'Failed to fetch upcoming Player of the Week because no matches were added yet', exc_info=True)
+            log.warning(
+                f'Failed to fetch upcoming Player of the Week because no matches were added yet',
+                exc_info = True,
+            )
             upcoming_potw = None
             upcoming_potw_mode = None
         squad_data = {
             'name': squad.name,
             'uuid': squad.uuid,
             'share_link': squad.absolute_url(request),
-            'expand_url': None if expanded_stats else reverse('squad_expanded_stats', kwargs=dict(squad = squad.uuid)),
+            'expand_url': None if expanded_stats else reverse(
+                'squad_expanded_stats',
+                kwargs = dict(squad = squad.uuid),
+            ),
             'card_rows': rows,
             'upcoming_player_of_the_week': upcoming_potw,
             'upcoming_player_of_the_week_mode': upcoming_potw_mode,
@@ -200,12 +240,24 @@ def matches(request, squad=None, last_timestamp=None):
         if getattr(m, 'account', None) is not None:
             m.account.update_matches()
 
-    sessions = GamingSession.objects.filter(matches__matchparticipation__player__in = members).annotate(timestamp = Max('matches__timestamp')).order_by('-timestamp')
+    sessions = GamingSession.objects.filter(
+        matches__matchparticipation__player__in = members,
+    ).annotate(
+        timestamp = Max('matches__timestamp'),
+    ).order_by(
+        '-timestamp',
+    )
     if last_timestamp is not None:
         sessions = sessions.filter(timestamp__lt = last_timestamp)
     sessions = sessions[:3]
     for session in sessions:
-        session.matches_list = session.matches.filter(matchparticipation__player__in = members).distinct().order_by('-timestamp').annotate(result = F('matchparticipation__result'))
+        session.matches_list = session.matches.filter(
+            matchparticipation__player__in = members,
+        ).distinct().order_by(
+            '-timestamp',
+        ).annotate(
+            result = F('matchparticipation__result'),
+        )
     context['sessions'] = sessions
     context['last_timestamp'] = session.timestamp if sessions.exists() else None
 
@@ -240,4 +292,3 @@ def player(request, squad, steamid):
     )
     add_globals_to_context(context)
     return render(request, 'stats/player.html', context)
-
