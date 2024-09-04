@@ -16,6 +16,11 @@ from api import (
     api,
     fetch_match_details,
 )
+from cs2pb_typing import (
+    FrozenSet,
+    List,
+    Optional,
+)
 
 from django.core.exceptions import (
     MultipleObjectsReturned,
@@ -28,6 +33,7 @@ from django.db import (
 from django.db.models import (
     Avg,
     F,
+    QuerySet,
 )
 from django.db.models.signals import m2m_changed
 
@@ -40,64 +46,113 @@ from .features import (
 log = logging.getLogger(__name__)
 
 
-def csgo_timestamp(timestamp):
+def csgo_timestamp_to_datetime(timestamp) -> datetime:
+    """
+    Convert a CSGO timestamp to a `datetime` object.
+    """
     return datetime.fromtimestamp(timestamp)
 
 
-def csgo_timestamp_to_datetime(timestamp, fmt='%-d %b %Y %H:%M'):
-    return csgo_timestamp(timestamp).strftime(fmt)
+def csgo_timestamp_to_strftime(timestamp: int, fmt: str = r'%-d %b %Y %H:%M') -> str:
+    """
+    Convert a CSGO timestamp to a formatted string.
+    """
+    return csgo_timestamp_to_datetime(timestamp).strftime(fmt)
 
 
 class GamingSession(models.Model):
+    """
+    A gaming session is a period of time during which a squad plays matches.
 
-    squad       = models.ForeignKey(Squad, related_name='sessions', on_delete=models.CASCADE)
-    is_closed   = models.BooleanField(default=False)
-    rising_star = models.ForeignKey(SteamProfile, on_delete=models.CASCADE, null=True, blank=True)
+    The matches do not have to be played together. Possibly, each squad member plays separately.
+    """
 
-    def close(self):
+    squad: models.ForeignKey = models.ForeignKey(Squad, related_name = 'sessions', on_delete = models.CASCADE)
+    """
+    The squad that played the matches in this session.
+    """
+
+    is_closed: models.BooleanField = models.BooleanField(default = False)
+    """
+    Whether the session is closed. A closed session is one that has ended and for which the performance of the players
+    has been computed.
+    """
+
+    rising_star: models.ForeignKey = models.ForeignKey(
+        SteamProfile,
+        on_delete = models.CASCADE,
+        null = True,
+        blank = True,
+    )
+    """
+    The player who was the rising star of the session (if any).
+    """
+
+    def close(self) -> None:
+        """
+        Close the session.
+        """
         was_already_closed = self.is_closed
         self.is_closed = True
         self.save()
+
+        # Ensure that the session is not closed twice
         if was_already_closed:
             return
 
-        # Compute the performance of the players
+        # Process the participated squad members
         participated_steamids = self.participated_steamids
-        comments = list()
-        top_player, top_player_trend_rel = None, 0
-        participated_squad_members = 0
+        comments: List[str] = list()
+        top_player: Optional[SteamProfile] = None
+        top_player_trend_rel: float = 0
+        participated_squad_members: int = 0
         for m in self.squad.memberships.all():
+
             if m.player.steamid not in participated_steamids:
                 continue
             participated_squad_members += 1
+
+            # Compute the PV of the player today and the reference PV
             pv_today = Features.pv(FeatureContext.create_default(m.player, trend_shift = 0, days = 0.5))['value']
             pv_ref   = Features.pv(FeatureContext.create_default(m.player, trend_shift = 0))['value']
+
+            # Skip trend computation if the values are not available (e.g., because the player has insufficient matches)
             if pv_today is None or pv_ref is None:
                 continue
+
+            # Compute the relative trend
             pv_trend = pv_today - pv_ref
             kpi = dict(
                 value = pv_today,
                 trend_rel = 0 if pv_trend == 0 else (pv_trend / pv_ref if pv_ref > 0 else np.infty),
             )
+
+            # Update the top squad participant
             if top_player is None or kpi['trend_rel'] > top_player_trend_rel:
                 top_player = m.player
                 top_player_trend_rel = kpi['trend_rel']
+
+            # Proclaim the PV trend of the player, if their relative trend *rounded to 1 decimal* is larger than 0.1%
             if abs(kpi['trend_rel']) > 0.0005:
                 icon = '📈' if kpi['trend_rel'] > 0 else '📉'
                 comments.append(
                     f' <{m.player.steamid}> {icon} {100 * kpi["trend_rel"]:+.1f}% ({kpi["value"]:.2f})'
                 )
+
+            # Otherwise, just proclaim the PV of the player
             else:
                 comments.append(
                     f' <{m.player.steamid}> ±0.00% ({kpi["value"]:.2f})'
                 )
+
+        # Compose the notification text for Discord out of the comments generated above
         text = 'Looks like your session has ended!'
         if len(comments) > 0:
             text += ' Here is your current performance compared to your 30-days average: ' + ', '.join(comments)
             text += ', with respect to the *player value*.'
         self.squad.notify_on_discord(text)
 
-        # Create a summary of the matches
+        # Compose another notification for a summary of the matches
         text = 'Matches played in this session:'
         for pmatch in self.matches.filter(
             matchparticipation__player__in = self.squad.memberships.values_list('player__pk', flat = True)
@@ -112,7 +167,7 @@ class GamingSession(models.Model):
                 )[pmatch.result]
         self.squad.notify_on_discord(text)
 
-        # Determine the rising star
+        # Determine the rising star (if any)
         if participated_squad_members > 1 and top_player is not None and top_player_trend_rel > 0.01:
             from .plots import trends as plot_trends
             notification = self.squad.notify_on_discord(
@@ -132,30 +187,52 @@ class GamingSession(models.Model):
             for session in added_sessions:
                 if session.is_closed:
                     continue
-                if GamingSession.objects.filter(squad = session.squad, is_closed = True, matches__timestamp__gt = instance.timestamp_end).exists():
-                    log.info(f'Setting session {session.pk} added to match {instance.pk} (str(instance)) to closed since a new closed session of the same squad exists')
+                if GamingSession.objects.filter(
+                    squad = session.squad,
+                    is_closed = True,
+                    matches__timestamp__gt = instance.timestamp_end,
+                ).exists():
+                    log.info(
+                        f'Setting session {session.pk} added to match {instance.pk} (str(instance)) to closed '
+                        f'since a new closed session of the same squad exists'
+                    )
                     session.is_closed = True
-                    session.save() 
+                    session.save()
 
     @property
-    def participated_steamids(self):
+    def participated_steamids(self) -> FrozenSet[str]:
+        """
+        Get the Steam IDs of the players who participated in the session.
+        """
         steamids = set()
         for pmatch in self.matches.all():
             for mp in pmatch.matchparticipation_set.all():
                 steamids.add(mp.player.steamid)
-        return steamids
+        return frozenset(steamids)
 
     @property
-    def participants(self):
+    def participants(self) -> List[SteamProfile]:
+        """
+        Get the players who participated in the session.
+        """
         return [SteamProfile.objects.get(steamid = steamid) for steamid in self.participated_steamids]
 
     @property
-    def participated_squad_members(self):
-        participated_squad_members_steamids = self.squad.memberships.filter(
+    def participated_squad_members_steamids(self) -> QuerySet:
+        """
+        Get the Steam IDs of the squad members who participated in the session.
+        """
+        return self.squad.memberships.filter(
             player__steamid__in = self.participated_steamids
         ).values_list('player__steamid', flat = True)
+
+    @property
+    def participated_squad_members(self):
+        """
+        Get the squad members who participated in the session.
+        """
         return SteamProfile.objects.filter(
-            steamid__in = participated_squad_members_steamids,
+            steamid__in = self.participated_squad_members_steamids,
             matchparticipation__pmatch__in = self.matches.values_list('pk', flat = True),
         ).values(
             'steamid',
@@ -169,12 +246,14 @@ class GamingSession(models.Model):
 
     @property
     def first_match(self):
-        if not self.matches.exists(): return None
+        if not self.matches.exists():
+            return None
         return self.matches.earliest('timestamp')
 
     @property
     def last_match(self):
-        if not self.matches.exists(): return None
+        if not self.matches.exists():
+            return None
         return self.matches.latest('timestamp')
 
     @property
@@ -341,19 +420,19 @@ class Match(models.Model):
 
     @property
     def datetime(self):
-        return csgo_timestamp_to_datetime(self.timestamp)
+        return csgo_timestamp_to_strftime(self.timestamp)
 
     @property
     def datetime_end(self):
-        return csgo_timestamp_to_datetime(self.timestamp + self.duration)
+        return csgo_timestamp_to_strftime(self.timestamp + self.duration)
 
     @property
     def time(self):
-        return csgo_timestamp_to_datetime(self.timestamp, fmt='%H:%M')
+        return csgo_timestamp_to_strftime(self.timestamp, fmt='%H:%M')
 
     @property
     def time_end(self):
-        return csgo_timestamp_to_datetime(self.timestamp + self.duration, fmt='%H:%M')
+        return csgo_timestamp_to_strftime(self.timestamp + self.duration, fmt='%H:%M')
 
     def get_participation(self, player):
         if isinstance(player, str):
@@ -506,15 +585,15 @@ class PlayerOfTheWeek(models.Model):
 
     @property
     def competition_start(self):
-        return csgo_timestamp(self.competition_start_timestamp)
+        return csgo_timestamp_to_datetime(self.competition_start_timestamp)
 
     @property
     def competition_end(self):
-        return csgo_timestamp(self.competition_end_timestamp)
+        return csgo_timestamp_to_datetime(self.competition_end_timestamp)
 
     @property
     def competition_end_datetime(self):
-        return csgo_timestamp_to_datetime(self.competition_end_timestamp)
+        return csgo_timestamp_to_strftime(self.competition_end_timestamp)
 
     @property
     def week(self):
@@ -598,7 +677,7 @@ class PlayerOfTheWeek(models.Model):
 
     @staticmethod
     def create_badge(badge_data):
-        if datetime.timestamp(csgo_timestamp(badge_data['timestamp'])) > datetime.timestamp(datetime.now()): return None
+        if datetime.timestamp(csgo_timestamp_to_datetime(badge_data['timestamp'])) > datetime.timestamp(datetime.now()): return None
         badge = PlayerOfTheWeek(timestamp = badge_data['timestamp'], squad = badge_data['squad'], mode = badge_data['mode'])
         for player_data in badge_data['leaderboard']:
             if   player_data['place_candidate'] == 1: badge.player1 = player_data['player']
