@@ -192,12 +192,12 @@ class Account(AbstractUser):
             return None
 
     def handle_finished_update(self):
-        for membership in self.steam_profile.squads.all():
-            last_session = membership.squad.last_session
+        for m in self.steam_profile.squad_memberships.all():
+            last_session = m.squad.last_session
             if last_session is None or last_session.is_closed:
                 continue
             session_ended = True
-            for account in membership.squad.accounts:
+            for account in m.squad.accounts:
                 if not account.had_break_after_last_match:
                     session_ended = False
                     break
@@ -324,7 +324,7 @@ class SquadMembership(models.Model):
     )
     player = models.ForeignKey(
         SteamProfile,
-        related_name = 'squads',
+        related_name = 'squad_memberships',
         on_delete = models.CASCADE,
     )
     position = models.PositiveSmallIntegerField(

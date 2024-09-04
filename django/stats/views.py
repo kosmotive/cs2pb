@@ -122,7 +122,7 @@ def squads(request, squad=None, expanded_stats=False):
             return HttpResponseNotFound('No such squad')
 
     elif getattr(request.user, 'steam_profile', None) is not None:
-        squad_list = Squad.objects.filter(members = request.user.steam_profile).order_by('name')
+        squad_list = Squad.objects.filter(memberships__player = request.user.steam_profile).order_by('name')
 
     else:
         return redirect('login')
@@ -133,7 +133,7 @@ def squads(request, squad=None, expanded_stats=False):
 
     context['squads'] = list()
     for squad in squad_list:
-        for account in Account.objects.filter(steam_profile__in = squad.memberships.all()):
+        for account in Account.objects.filter(steam_profile__in = squad.memberships.values_list('player__pk', flat = True)):
             account.update_matches()
         PlayerOfTheWeek.create_missing_badges(squad)
         cards = sorted_cards([compute_card(m.player, squad, features, [2,3,np.inf]) for m in squad.memberships.all()])
@@ -184,12 +184,15 @@ def matches(request, squad=None, last_timestamp=None):
     if squad is None:
         if getattr(request.user, 'steam_profile', None) is not None:
             members = SteamProfile.objects.filter(
-                squads__squad__in = request.user.steam_profile.squad_memberships.values_list('squad__pk', flat = True),
+                squad_memberships__squad__in = request.user.steam_profile.squad_memberships.values_list(
+                    'squad__pk',
+                    flat = True,
+                ),
             )
         else:
             return redirect('login')
     else:
-        members = SteamProfile.objects.filter(squads = squad)
+        members = SteamProfile.objects.filter(squad_memberships__squad = squad)
         squad = Squad.objects.get(uuid = squad)
         context['squad'] = squad
 

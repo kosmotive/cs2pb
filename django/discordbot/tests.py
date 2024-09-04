@@ -62,7 +62,7 @@ class bot(TestCase):
         ]
         self.squad = Squad.objects.create(name='squad', discord_channel_id='1234')
         for user in self.users:
-            SquadMembership.objects.create(squad = self.squad, member = user)
+            SquadMembership.objects.create(squad = self.squad, player = user)
 
     def test_tick(self):
         ScheduledNotification.objects.create(squad = self.squad, text = \
