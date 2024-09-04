@@ -245,58 +245,95 @@ class GamingSession(models.Model):
         )
 
     @property
-    def first_match(self):
+    def first_match(self) -> Optional['Match']:
+        """
+        Get the first match of the session, or `None` if the session has no matches.
+        """
         if not self.matches.exists():
             return None
         return self.matches.earliest('timestamp')
 
     @property
-    def last_match(self):
+    def last_match(self) -> Optional['Match']:
+        """
+        Get the last match of the session, or `None` if the session has no matches.
+        """
         if not self.matches.exists():
             return None
         return self.matches.latest('timestamp')
 
     @property
-    def started(self):
+    def started(self) -> Optional[int]:
+        """
+        The CSGO timestamp of the first match of the session, or `None` if the session has no matches.
+        """
         return None if self.first_match is None else self.first_match.timestamp
 
     @property
-    def ended(self):
+    def ended(self) -> Optional[int]:
+        """
+        The CSGO timestamp of the last match of the session plus the duration of the match (in seconds), or `None` if
+        the session has no matches.
+        """
         return None if self.last_match is None else self.last_match.timestamp + self.last_match.duration
 
     @property
-    def started_datetime(self):
-        return '–' if self.started is None else datetime.fromtimestamp(self.started).strftime('%-d %b %Y %H:%M')
+    def started_datetime(self) -> str:
+        """
+        Get the human-readable date and time of the start of the session.
+        """
+        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%-d %b %Y %H:%M')
 
     @property
-    def started_date(self):
-        return '–' if self.started is None else datetime.fromtimestamp(self.started).strftime('%-d %b %Y')
+    def started_date(self) -> str:
+        """
+        Get the human-readable date of the start of the session.
+        """
+        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%-d %b %Y')
 
     @property
-    def started_time(self):
-        return '–' if self.started is None else datetime.fromtimestamp(self.started).strftime('%H:%M')
+    def started_time(self) -> str:
+        """
+        Get the human-readable time of the start of the session.
+        """
+        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%H:%M')
 
     @property
-    def ended_datetime(self):
-        return '–' if self.ended is None else datetime.fromtimestamp(self.ended).strftime('%-d %b %Y %H:%M')
+    def ended_datetime(self) -> str:
+        """
+        Get the human-readable date and time of the end of the session.
+        """
+        return '–' if self.ended is None else csgo_timestamp_to_strftime(self.ended, r'%-d %b %Y %H:%M')
 
     @property
-    def ended_time(self):
-        return '–' if self.ended is None else datetime.fromtimestamp(self.ended).strftime('%H:%M')
+    def ended_time(self) -> str:
+        """
+        Get the human-readable time of the end of the session.
+        """
+        return '–' if self.ended is None else csgo_timestamp_to_strftime(self.ended, r'%H:%M')
 
     @property
-    def started_weekday(self):
-        return '' if self.started is None else datetime.fromtimestamp(self.started).strftime('%A')
+    def started_weekday(self) -> str:
+        """
+        Get the human-readable weekday of the start of the session.
+        """
+        return '' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%A')
 
     @property
-    def started_weekday_short(self):
-        return '' if self.started is None else datetime.fromtimestamp(self.started).strftime('%a')
+    def started_weekday_short(self) -> str:
+        """
+        Get the human-readable abbreviation of the weekday of the start of the session.
+        """
+        return '' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%a')
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Get the string representation of the gaming session.
+        """
         try:
             if self.matches.all().exists():
                 return f'{self.started_datetime} — {self.ended_datetime} ({self.pk})'
-        except:
+        except:  # noqa: E722
             pass
         return f'Empty Gaming Session ({self.pk})'
 

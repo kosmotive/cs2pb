@@ -642,7 +642,7 @@ class split_into_chunks(TestCase):
 
 
 class matches(TestCase):
-    
+
     @testsuite.fake_api('accounts.models')
     def setUp(self):
         self.factory = RequestFactory()
@@ -766,6 +766,56 @@ class UpdateTask__run(TestCase):
 
         # Verify that the task was not actually processed
         self.assertEqual(mock_api_fetch_matches.call_count, 0)
+
+
+class GamingSession(TestCase):
+
+    def setUp(self):
+        self.squad = Squad.objects.create(name = 'Test Squad', discord_channel_id = '1234')
+        self.session = models.GamingSession.objects.create(squad = self.squad)
+        self.matches = [
+            models.Match.objects.create(
+                sharecode = f'xxx-{midx}',
+                timestamp = timestamp,
+                score_team1 = 12,
+                score_team2 = 12,
+                duration = 3000,
+                map_name = 'de_dust2',
+            )
+            for midx, timestamp in enumerate([10, 3600])
+        ]
+        for m in self.matches:
+            m.sessions.add(self.session)
+
+    def test__first_match(self):
+        self.assertEqual(self.session.first_match, self.matches[0])
+
+    def test__last_match(self):
+        self.assertEqual(self.session.last_match, self.matches[-1])
+
+    def test__started(self):
+        self.assertEqual(self.session.started, 10)
+
+    def test__ended(self):
+        self.assertEqual(self.session.ended, 6600)
+
+    def test__started_datetime(self):
+        self.assertEqual(self.session.started_datetime, '1 Jan 1970 01:00')
+
+    def test__ended_datetime(self):
+        self.assertEqual(self.session.ended_datetime, '1 Jan 1970 02:50')
+
+    def test__started_time(self):
+        self.assertEqual(self.session.started_time, '01:00')
+
+    def test__ended_time(self):
+        self.assertEqual(self.session.ended_time, '02:50')
+
+    def test__started_weekday(self):
+        self.assertEqual(self.session.started_weekday, 'Thursday')
+
+    def test__started_weekday_short(self):
+        self.assertEqual(self.session.started_weekday_short, 'Thu')
 
 
 class GamingSession__close(TestCase):
