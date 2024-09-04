@@ -3,6 +3,10 @@ import logging
 import uuid
 
 from api import api
+from stats.features import (
+    FeatureContext,
+    Features,
+)
 from stats.updater import queue_update_task
 from url_forward import get_redirect_url_to
 
@@ -307,12 +311,58 @@ class Squad(models.Model):
                     return f'\n\n🚀 **{entry["date"]}:** {entry["message"]} [More info]({obscure_url(entry["url"])})'
 
                 text = 'I have just received some updates:' + ''.join(fmt(entry) for entry in announcements)
-
-                from discordbot.models import ScheduledNotification
-                ScheduledNotification.objects.create(squad = self, text = text)
+                self.notify_on_discord(text)
 
         self.last_changelog_announcement = changelog[0]['sha']
         self.save()
+
+    def update_positions(self) -> None:
+        """
+        Update the leaderboard positions of the squad members.
+        """
+
+        # Store the current positions for later comparison
+        old_positions = {m: m.position for m in self.memberships.all()}
+
+        # Update the positions according to the KPI
+        kpis = {m: Features.pv(FeatureContext.create_default(m.player, self)) for m in self.memberships.all()}
+        memberships = sorted(kpis.keys(), key = lambda m: kpis[m], reverse = True)
+        for position, m in enumerate(memberships):
+            m.position = position
+            m.save()
+
+        # Check if the leaderboard has changed
+        changes = {m: m.position - old_positions[m] for m in self.memberships.all()}
+        if any(change != 0 for change in changes.values()) or len(old_positions) != len(memberships):
+            text = 'We have changes in the leaderboard!\n'
+
+            # Check if the positions have changed
+            for mnum, m in enumerate(self.memberships.all.sorted_by('position'), start = 1):
+                text += f'\n{mnum}. {m.player.clean_name}'
+                if changes[m] > 0:
+                    text += f' ⬇️'
+                if changes[m] < 0:
+                    text += f' ⬆️'
+
+            # Check if players have been removed from the leaderboard (e.g., due to inactivity)
+            missed_memberships = [
+                m for m in old_positions.keys() if m.pk not in self.memberships.values_list('pk', flat = True)
+            ]
+            if any(missed_memberships):
+                text += '\n'
+                for m in missed_memberships:
+                    f'{m.player.clean_name} is no longer present in the leaderboard!'
+
+            # Schedule a notification on Discord
+            self.notify_on_discord(text)
+
+    def notify_on_discord(self, text: str) -> bool:
+        if self.discord_channel_id:
+            from discordbot.models import ScheduledNotification
+            ScheduledNotification.objects.create(squad = self, text = text)
+            return True
+        else:
+            return False
 
 
 class SquadMembership(models.Model):
