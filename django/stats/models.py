@@ -19,7 +19,10 @@ from api import (
 from cs2pb_typing import (
     FrozenSet,
     List,
+    Literal,
     Optional,
+    Self,
+    Tuple,
 )
 
 from django.core.exceptions import (
@@ -67,18 +70,18 @@ class GamingSession(models.Model):
     The matches do not have to be played together. Possibly, each squad member plays separately.
     """
 
-    squad: models.ForeignKey = models.ForeignKey(Squad, related_name = 'sessions', on_delete = models.CASCADE)
+    squad = models.ForeignKey(Squad, related_name = 'sessions', on_delete = models.CASCADE)
     """
     The squad that played the matches in this session.
     """
 
-    is_closed: models.BooleanField = models.BooleanField(default = False)
+    is_closed = models.BooleanField(default = False)
     """
     Whether the session is closed. A closed session is one that has ended and for which the performance of the players
     has been computed.
     """
 
-    rising_star: models.ForeignKey = models.ForeignKey(
+    rising_star = models.ForeignKey(
         SteamProfile,
         on_delete = models.CASCADE,
         null = True,
@@ -338,37 +341,117 @@ class GamingSession(models.Model):
         return f'Empty Gaming Session ({self.pk})'
 
 
-def get_match_result(team_idx, team_scores):
+def get_match_result(team_idx: int, team_scores: Tuple[int, int]) -> Literal['w', 'l', 't']:
+    """
+    Get the result of a match for a given team.
+
+    Arguments:
+        team_idx: The index of the team for which to get the result (0 or 1).
+        team_scores: The scores of the two teams in the match.
+
+    Returns:
+        The result is either a win ('w'), a loss ('l'), or a tie ('t').
+    """
+    assert 0 <= team_idx < 2, f'Invalid team index: {team_idx}'
     own_team_score = team_scores[ team_idx]
     opp_team_score = team_scores[(team_idx + 1) % 2]
-    if own_team_score < opp_team_score: return 'l'
-    if own_team_score > opp_team_score: return 'w'
+    if own_team_score < opp_team_score:
+        return 'l'
+    if own_team_score > opp_team_score:
+        return 'w'
     return 't'
 
 
 class Match(models.Model):
+    """
+    A match that has been played and finished.
+    """
 
-    sharecode   = models.CharField(blank=False, max_length=50)
-    timestamp   = models.PositiveBigIntegerField()
+    sharecode = models.CharField(blank=False, max_length=50)
+    """
+    The share code of the match.
+    """
+
+    timestamp = models.PositiveBigIntegerField()
+    """
+    The CSGO timestamp of the match.
+    """
+
     score_team1 = models.PositiveSmallIntegerField()
+    """
+    The score of team 1 (first five players) in the match.
+    """
+
     score_team2 = models.PositiveSmallIntegerField()
-    duration    = models.PositiveSmallIntegerField()
-    map_name    = models.SlugField()
-    sessions    = models.ManyToManyField(GamingSession, related_name='matches', blank=True)
+    """
+    The score of team 2 (last five players) in the match.
+    """
+
+    duration = models.PositiveSmallIntegerField()
+    """
+    The duration of the match in seconds.
+    """
+
+    map_name = models.SlugField()
+    """
+    The name of the map on which the match was played.
+    """
+
+    sessions = models.ManyToManyField(GamingSession, related_name = 'matches', blank = True)
+    """
+    The gaming sessions in which the match was played.
+    """
 
     class Meta:
-        verbose_name_plural = "Matches"
+
+        verbose_name_plural = 'Matches'
+        """
+        The plural name of the model (this is how it appears in the admin console).
+        """
+
         constraints = [
             models.UniqueConstraint(
-                fields=['sharecode', 'timestamp'], name='unique_sharecode_timestamp'
+                fields = ['sharecode', 'timestamp'], name = 'unique_sharecode_timestamp',
             )
         ]
+        """
+        The combination of the share code and the timestamp must be unique.
+        """
 
     @staticmethod
-    def create_from_data(data):
-        existing_matches = Match.objects.filter(sharecode = data['sharecode'], timestamp = data['timestamp'])
-        if len(existing_matches) != 0: return existing_matches.get()
+    def create_from_data(data: dict) -> Self:
+        """
+        Get a :class:`Match` object corresponding to the given data.
 
+        The following data must be supplied via the `data` dictionary:
+
+        - `sharecode`: The share code of the match.
+        - `timestamp`: The CSGO timestamp of the match.
+        - `steam_ids`: List of the Steam IDs of the participated players. The first five players are in team 1, and the
+          last five players are in team 2.
+        - `summary`: The summary of the match, that is an object with the following attributes:
+            - `map`: The URL of the demo file of the match.
+            - `team_scores`: Tuple of the scores of the two teams.
+            - `match_duration`: The duration of the match in seconds.
+            - `enemy_kills`: List of the number of enemy kills for each player.
+            - `enemy_headshots`: List of the number of enemy headshots for each player.
+            - `assists`: List of the number of assists for each player.
+            - `deaths`: List of the number of deaths for each player.
+            - `scores`: List of the scores for each player.
+            - `mvps`: List of the number of MVPs for each player.
+
+        The values for `enemy_kills`, `enemy_headshots`, `assists`, `deaths`, `scores`, `mvps` must be given in the same
+        order as the `steam_ids`.
+
+        Returns:
+            If a match with the same share code and timestamp already exists, then the corresponding object is returned.
+            Otherwise, a new :class:`Match` object is created from the given data and returned.
+        """
+        existing_matches = Match.objects.filter(sharecode = data['sharecode'], timestamp = data['timestamp'])
+        if len(existing_matches) != 0:
+            return existing_matches.get()
+
+        # Fetch the match details (download and parse the demo file)
         fetch_match_details(data)
 
         with transaction.atomic():
