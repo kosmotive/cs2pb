@@ -46,6 +46,8 @@ from .features import (
     Features,
 )
 
+from django.conf import settings
+
 log = logging.getLogger(__name__)
 
 
@@ -962,7 +964,7 @@ class UpdateTask(models.Model):
         self.execution_timestamp = datetime.timestamp(datetime.now())
         self.save()
 
-        if self.account.enabled:
+        if self.account.enabled and settings.CSGO_API_ENABLED:
             try:
                 first_sharecode = self.account.sharecode
                 new_match_data  = api.fetch_matches(first_sharecode, SteamAPIUser(self.account.steamid, self.account.steam_auth))
