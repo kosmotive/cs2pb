@@ -731,23 +731,31 @@ class UpdateTask__run(TestCase):
     def setUp(self):
         self.player = models.SteamProfile.objects.create(steamid = '12345678900000001')
         self.account = Account.objects.create(steam_profile = self.player, last_sharecode = 'xxx-sharecode-xxx')
-        self.task = models.UpdateTask(account = self.account, scheduled_timestamp = datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)))
+        self.task = models.UpdateTask(
+            account = self.account,
+            scheduled_timestamp =
+            datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)),
+        )
         self.assertFalse(self.task.completed)
         self.assertTrue(self.account.enabled)
 
+    @patch.object(models.settings, 'CSGO_API_ENABLED', True)
     @patch('api.api.fetch_matches', side_effect = api.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'))
     def test_invalid_sharecode_error(self, mock_api_fetch_matches):
         self.task.run()
 
-        # Accounts with invalid `last_sharecode` should be disabled, because there is no point in retrying an update for an invalid sharecode
+        # Accounts with invalid `last_sharecode` should be disabled, because there is no point in retrying an update
+        # for an invalid sharecode
         self.assertFalse(self.account.enabled)
 
         # Verify that the task was completed (there is no point in repeating it)
         self.assertTrue(self.task.completed)
 
+    @patch.object(models.settings, 'CSGO_API_ENABLED', True)
     @patch('api.api.fetch_matches', side_effect = ValueError)
     def test_fetch_matches_error(self, mock_api_fetch_matches):
-        # Verify that the error is passed through (so it can be handled by `run_pending_tasks`, see the `run_pending_tasks` test)
+        # Verify that the error is passed through (so it can be handled by `run_pending_tasks`, see the
+        # `run_pending_tasks` test)
         self.assertRaises(ValueError, self.task.run)
 
         # Verify that the task is not completed (can be repeated later, usually after a new task is scheduled)
