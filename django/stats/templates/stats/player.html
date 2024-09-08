@@ -47,7 +47,7 @@ function convolve( data, kernel )
             const k = i + j;
             if( k >= 0 && k < data.length )
             {
-                const kernelValue = kernel[ j + n ];
+                const kernelValue = kernel[ n - j ];
                 value += kernelValue * data[ k ];
                 weights += kernelValue;
             }
