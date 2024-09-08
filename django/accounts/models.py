@@ -327,7 +327,7 @@ class Squad(models.Model):
         old_positions = {m: m.position for m in self.memberships.all()}
 
         # Update the positions according to the KPI
-        kpis = {m: Features.pv(FeatureContext.create_default(m.player, self))['value'] for m in self.memberships.all()}
+        kpis = {m: m.stats['player_value'] for m in self.memberships.all()}
         memberships = sorted(
             (m for m in kpis.keys() if kpis[m] is not None),
             key = lambda m: kpis[m],
@@ -414,17 +414,21 @@ class SquadMembership(models.Model):
     )
 
     def update_stats(self):
-        from stats.features2 import (
-            FeatureContext,
-            Features,
-        )
+        """
+        Update the stats and trends of the squad member based on their performance in the last 30 days.
+        """
 
         # Store the current stats for later comparison
         previous_stats = dict(self.stats)
 
+        # Determine the matches relevant for the stats computation
+        match_participations = self.squad.match_participations(
+            pmatch__timestamp__gte = datetime.timestamp(datetime.now()) - 30 * 24 * 60 * 60,  # 30 days ago
+            pmatch__sessions__is_closed = True,  # Exclude matches from sessions that did not end yet
+        )
+
         # Update the stats
-        start_timestamp = datetime.timestamp(datetime.now()) - 30 * 24 * 60 * 60  # 30 days ago
-        ctx = FeatureContext(self.squad.match_participations(pmatch__timestamp__gte = start_timestamp), self.player)
+        ctx = FeatureContext(match_participations, self.player)
         for feature in Features.all:
             self.stats[feature.name] = feature(ctx)
 

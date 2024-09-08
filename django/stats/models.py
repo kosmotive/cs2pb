@@ -111,6 +111,7 @@ class GamingSession(models.Model):
         top_player: Optional[SteamProfile] = None
         top_player_trend_rel: float = 0
         participated_squad_members: int = 0
+        feature_contexts = dict()
         for m in self.squad.memberships.all():
 
             if m.player.steamid not in participated_steamids:
@@ -118,11 +119,13 @@ class GamingSession(models.Model):
             participated_squad_members += 1
 
             # Compute the PV of the player in this session
-            pv_today = Features.pv(
-                FeatureContext(
-                    MatchParticipation.objects.filter(player = m.player, pmatch__sessions = self), m.player,
-                ),
+            feature_contexts[m.player.steamid] = (
+                ctx := FeatureContext(
+                    MatchParticipation.objects.filter(player = m.player, pmatch__sessions = self),
+                    m.player,
+                )
             )
+            pv_today = Features.player_value(ctx)
 
             # Skip further consideration if the trend is not available
             pv_ref = m.stats.get('player_value', None)
@@ -184,7 +187,18 @@ class GamingSession(models.Model):
                 text = f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!',
             )
             if notification is not None:
-                plot = plot_trends(self.squad, top_player, Features.MANY)
+                plot = plot_trends(
+                    self.squad,
+                    top_player,
+                    feature_contexts[top_player.steamid],  # The feature context for the session trends
+                    [
+                        Features.player_value,
+                        Features.participation_effect,
+                        Features.headshot_rate,
+                        Features.average_damage_per_round,
+                        Features.kill_per_death,
+                    ],
+                )
                 notification.attach(plot)
             self.rising_star = top_player
             self.save()
