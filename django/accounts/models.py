@@ -316,10 +316,12 @@ class Squad(models.Model):
         self.last_changelog_announcement = changelog[0]['sha']
         self.save()
 
-    def update_positions(self) -> None:
+    def update_positions(self) -> None:  # TODO: Rename to `update_stats`
         """
-        Update the leaderboard positions of the squad members.
+        Update the stats, trends, and leaderboard positions of the squad members.
         """
+        for m in self.memberships.all():
+            m.update_stats()
 
         # Store the current positions for later comparison
         old_positions = {m: m.position for m in self.memberships.all()}
@@ -407,18 +409,35 @@ class SquadMembership(models.Model):
     stats = models.JSONField(
         default = dict,
     )
+    trends = models.JSONField(
+        default = dict,
+    )
 
     def update_stats(self):
         from stats.features2 import (
             FeatureContext,
             Features,
         )
-        ctx = FeatureContext(self.squad.match_participations(), self.player)
+
+        # Store the current stats for later comparison
+        previous_stats = dict(self.stats)
+
+        # Update the stats
+        start_timestamp = datetime.timestamp(datetime.now()) - 30 * 24 * 60 * 60  # 30 days ago
+        ctx = FeatureContext(self.squad.match_participations(pmatch__timestamp__gte = start_timestamp), self.player)
         for feature in Features.all:
             self.stats[feature.name] = feature(ctx)
-        # FIXME: Reduce data to 30 days
-        # FIXME: Trends: difference of the new value, in comparison to the previous value?
-        #        Is this compatible with the trends when a session closes?
+
+        # Compute the trends
+        for feature in Features.all:
+            if feature.name in previous_stats.keys():
+                trend = self.stats[feature.name] - previous_stats[feature.name]
+
+                # Preserve the previous trend value if the player did not play since the last update
+                if trend != 0:
+                    self.trends[feature.name] = trend
+
+        # Save the updated data
         self.save()
 
 

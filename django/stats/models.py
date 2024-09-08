@@ -117,11 +117,15 @@ class GamingSession(models.Model):
                 continue
             participated_squad_members += 1
 
-            # Compute the PV of the player today and the reference PV
-            pv_today = Features.pv(FeatureContext.create_default(m.player, trend_shift = 0, days = 0.5))['value']
-            pv_ref   = Features.pv(FeatureContext.create_default(m.player, trend_shift = 0))['value']
+            # Compute the PV of the player in this session
+            pv_today = Features.pv(
+                FeatureContext(
+                    MatchParticipation.objects.filter(player = m.player, pmatch__sessions = self), m.player,
+                ),
+            )
 
-            # Skip trend computation if the values are not available (e.g., because the player has insufficient matches)
+            # Skip further consideration if the trend is not available
+            pv_ref = m.stats.get('player_value', None)
             if pv_today is None or pv_ref is None:
                 continue
 
