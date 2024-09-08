@@ -404,6 +404,22 @@ class SquadMembership(models.Model):
         null = True,
         default = None,
     )
+    stats = models.JSONField(
+        default = dict,
+    )
+
+    def update_stats(self):
+        from stats.features2 import (
+            FeatureContext,
+            Features,
+        )
+        ctx = FeatureContext(self.squad.match_participations(), self.player)
+        for feature in Features.all:
+            self.stats[feature.name] = feature(ctx)
+        # FIXME: Reduce data to 30 days
+        # FIXME: Trends: difference of the new value, in comparison to the previous value?
+        #        Is this compatible with the trends when a session closes?
+        self.save()
 
 
 class Invitation(models.Model):
