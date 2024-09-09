@@ -89,7 +89,7 @@ Math.sqrt(({{ mp.kills }} / {{ mp.deaths }}) * (0.01 * {{ mp.adr }})){% if not f
 
             </div>
 
-            <div id="pv-plot" style="width:600px; height: 250px;"></div>
+            <div id="pv-plot" style="width:600px; height: 280px;"></div>
 
         </div>
 
@@ -201,43 +201,54 @@ function updatePlot( sigma )
         {
             xaxis: { title: { text: 'Match count' } },
             yaxis: config_yaxis,
-            margin: { t: 20, l: 50, b: 50, r: 10 },
+            margin: { t: 45, l: 50, b: 50, r: 10 },
             showlegend: false,
             width: 800,
             shapes: [
                 {
-                    type: 'rect',
+                    type: 'line',
                     x0: {{ period_start }},
+                    x1: {{ period_start }},
+                    y0: 0,
+                    y1: 1.08,
+                    yref: 'paper',
+                    line: {
+                        width: 1,
+                        color: '#ff6699'
+                    }
+                },
+                {
+                    type: 'line',
+                    x0: {{ period_end }},
                     x1: {{ period_end }},
                     y0: 0,
-                    y1: 1,
+                    y1: 1.08,
                     yref: 'paper',
-                    fillcolor: '#ff6699',
-                    opacity: 0.1,
-                    layer: 'below',
                     line: {
-                        width: 0
+                        width: 1,
+                        color: '#ff6699'
                     }
                 },
                 {
                     type: 'rect',
                     x0: {{ period_start }},
                     x1: {{ period_end }},
-                    y0: 0,
-                    y1: 1,
+                    y0: 0.96,
+                    y1: 1.08,
                     yref: 'paper',
+                    fillcolor: '#ff6699',
+                    line: {
+                        width: 0
+                    },
                     label: {
-                        text: '30-days average',
-                        textposition: 'top right',
+                        text: '⇦ 30-days average ⇨',
+                        textposition: 'top center',
                         font: {
                             size: 12,
                             weight: 'bold',
-                            color: '#ff6699'
+                            color: 'white'
                         },
                     },
-                    line: {
-                        width: 0
-                    }
                 }
             ]
         },
