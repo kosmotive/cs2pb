@@ -175,6 +175,20 @@ div.profile-card .profile-stat-bar-trend-down {
     left: 1mm;
 }
 
+div.profile-card .profile-stat-bar-trend-label {
+    font-size: 70%;
+    vertical-align: middle;
+    position: absolute;
+}
+
+div.profile-card .profile-stat-bar-trend-up .profile-stat-bar-trend-label {
+    right: 5mm;
+}
+
+div.profile-card .profile-stat-bar-trend-down .profile-stat-bar-trend-label {
+    left: 5mm;
+}
+
 div.profile-card .profile-hint-container {
     position: relative;
     white-space: normal;

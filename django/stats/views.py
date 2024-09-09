@@ -130,15 +130,22 @@ def compute_card(
         # Check logics: `max_value` can only be None if `value` is None
         assert value is None or (value is not None and max_value is not None), (feature.slug, value, max_value)
 
+        # Format the trend string
+        trend = squad_membership.trends.get(feature.slug)
+        trend_str = feature.format.format(trend) if trend is not None else ''
+        if len(trend_str) > 0 and float(trend_str) == 0:
+            trend_str = ''
+            trend = 0  # pretend that the trend is zero if it is too small
+
         # Compose and return the full feature information for the squad member
-        print('***', squad_membership.player.name, feature.name, squad_membership.trends.get(feature.slug))
         return {
             'name': feature.name,
             'value': value,
             'load': None if value is None else 100 * min((1, value / max_value)),
             'load_raw': None if value is None else value / max_value,
             'max_value': max_value,
-            'trend': squad_membership.trends.get(feature.slug),
+            'trend': trend,
+            'trend_str': trend_str,
             'label': feature.format.format(value) if value is not None else '',
         }
 
