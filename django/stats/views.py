@@ -1,4 +1,5 @@
 import logging
+import numbers
 import os
 
 import gitinfo
@@ -6,7 +7,12 @@ import numpy as np
 from accounts.models import (
     Account,
     Squad,
+    SquadMembership,
     SteamProfile,
+)
+from cs2pb_typing import (
+    List,
+    Optional,
 )
 
 from django.core.mail import send_mail
@@ -15,9 +21,7 @@ from django.db.models import (
     F,
     Max,
 )
-from django.http import (
-    HttpResponseNotFound,
-)
+from django.http import HttpResponseNotFound
 from django.shortcuts import (
     redirect,
     render,
@@ -25,7 +29,10 @@ from django.shortcuts import (
 from django.urls import reverse
 
 from . import potw
-from .features import Features
+from .features import (
+    Feature,
+    Features,
+)
 from .models import (
     GamingSession,
     Match,
@@ -51,6 +58,19 @@ badge_order = [
     'peach',
     'ace',
     'quad-kill',
+]
+
+
+all_features_collapsed = [
+    Features.player_value,
+    Features.participation_effect,
+    Features.headshot_rate,
+]
+
+
+all_features_expanded = all_features_collapsed + [
+    Features.damage_per_round,
+    Features.kills_per_death,
 ]
 
 
@@ -87,7 +107,11 @@ def get_badges(squad, player):
     return badges
 
 
-def compute_card(squad_membership, features, orders = [np.inf]):
+def compute_card(
+        squad_membership: SquadMembership,
+        features: List[Feature],
+        orders: List[numbers.Real] = [2, 3, np.inf],
+    ):
 
     def stat(feature):
         value = squad_membership.stats.get(feature.slug, None)
@@ -180,10 +204,6 @@ def squads(request, squad = None, expanded_stats = False):
     else:
         return redirect('login')
 
-    features = [Features.player_value, Features.participation_effect, Features.headshot_rate]
-    if expanded_stats:
-        features += [Features.damage_per_round, Features.kills_per_death]
-
     context['squads'] = list()
     for squad in squad_list:
         squad.update_positions()
@@ -195,8 +215,7 @@ def squads(request, squad = None, expanded_stats = False):
         cards = [
             compute_card(
                 squad_membership,
-                features,
-                [2, 3, np.inf],
+                all_features_expanded if expanded_stats else all_features_collapsed,
             )
             for squad_membership in squad.memberships.exclude(
                 position__isnull = True,
@@ -314,20 +333,35 @@ def add_globals_to_context(context):
 def player(request, squad, steamid):
     squad = Squad.objects.get(uuid = squad)
     player = SteamProfile.objects.get(pk = steamid)
-    features = [
-        Features.player_value,
-        Features.participation_effect,
-        Features.headshot_rate,
-        Features.damage_per_round,
-        Features.kills_per_death,
-    ]
-    card = compute_card(squad.memberships.filter(player = player).first(), features, [2, 3, np.inf])
+    squad_membership = squad.memberships.filter(player = player).first()
+
+    # Compute the player card
+    card = compute_card(squad_membership, all_features_expanded)
+
+    # Fetch the player's match participations
     participations = MatchParticipation.objects.filter(player = player).order_by('pmatch__timestamp')
+
+    # Determine the start and end of the period for accounted period
+    accounted_participations = squad_membership.accounted_match_participations
+    accounted_period_start: Optional[int] = None
+    accounted_period_end: Optional[int] = None
+    for pidx, participation in enumerate(participations):
+        if participation.pk in accounted_participations.values_list('pk', flat = True):
+            if accounted_period_start is None:
+                accounted_period_start = pidx
+            accounted_period_end = pidx + 1
+
+    # Compose the context for the player page
     context = dict(
         squad = squad,
         request = request,
         player = card,
         participations = participations,
+        period_start = accounted_period_start,
+        period_end = accounted_period_end,
+        period_average = squad_membership.stats.get('player_value'),
     )
+
+    # Add the global context and render the player page
     add_globals_to_context(context)
     return render(request, 'stats/player.html', context)

@@ -123,17 +123,32 @@ function updatePlot( sigma )
         {
             x: matchNumList,
             y: pv_smooth,
-            name: 'Average'
+            name: 'Form',
+            line: {
+                shape: 'spline'
+            }
         },
         {
             x: matchNumList,
             y: pv,
             mode: 'markers',
             name: 'Matches'
+        },
+        {
+            x: [{{ period_start }}, {{ period_end }}],
+            y: [{{ period_average }}, {{ period_average }}],
+            mode: 'lines',
+            name: '30-days-average',
+            hoverinfo: 'skip',
+            line: {
+                width: 2,
+                dash: 'dot',
+                color: '#ff6699'
+            }
         }
     ];
 
-    /* Compute uncertainties.
+    /* Compute confidences.
      */
     if( kernel.length > 1 )
     {
@@ -143,35 +158,41 @@ function updatePlot( sigma )
             differences2[ i ] = Math.pow( pv[ i ] - pv_smooth[ i ], 2 );
         }
         const meanDifferences = convolve( differences2, kernel );
-        const uncertainties    = new Array( pv.length );
-        const uncertainties_lb = new Array( pv.length );
-        const uncertainties_ub = new Array( pv.length );
+        const confidences    = new Array( pv.length );
+        const confidences_lb = new Array( pv.length );
+        const confidences_ub = new Array( pv.length );
         for( var i = 0; i < pv.length; ++i )
         {
             const uncertainty = Math.sqrt( meanDifferences[ i ] );
-            uncertainties   [ i ] = 2 * uncertainty;
-            uncertainties_lb[ i ] = pv_smooth[ i ] - uncertainty;
+            confidences   [ i ] = 2 * uncertainty;
+            confidences_lb[ i ] = pv_smooth[ i ] - uncertainty;
         }
         traces.push(
             {
                 x: matchNumList,
-                y: uncertainties_lb,
+                y: confidences_lb,
                 fillcolor: '#00000000',
                 type: 'scatter',
                 mode: 'none',
-                stackgroup: 'uncertainties',
-                hoverinfo: 'skip'
+                stackgroup: 'confidences',
+                hoverinfo: 'skip',
+                line: {
+                    shape: 'spline'
+                }
             }
         );
         traces.push(
             {
                 x: matchNumList,
-                y: uncertainties,
+                y: confidences,
                 fillcolor: '#3682be22',
                 type: 'scatter',
                 mode: 'none',
-                stackgroup: 'uncertainties',
-                hoverinfo: 'skip'
+                stackgroup: 'confidences',
+                hoverinfo: 'skip',
+                line: {
+                    shape: 'spline'
+                }
             }
         );
     }
@@ -182,7 +203,43 @@ function updatePlot( sigma )
             yaxis: config_yaxis,
             margin: { t: 20, l: 50, b: 50, r: 10 },
             showlegend: false,
-            width: 800
+            width: 800,
+            shapes: [
+                {
+                    type: 'rect',
+                    x0: {{ period_start }},
+                    x1: {{ period_end }},
+                    y0: 0,
+                    y1: 1,
+                    yref: 'paper',
+                    fillcolor: '#ff6699',
+                    opacity: 0.1,
+                    layer: 'below',
+                    line: {
+                        width: 0
+                    }
+                },
+                {
+                    type: 'rect',
+                    x0: {{ period_start }},
+                    x1: {{ period_end }},
+                    y0: 0,
+                    y1: 1,
+                    yref: 'paper',
+                    label: {
+                        text: '30-days-average',
+                        textposition: 'top right',
+                        font: {
+                            size: 12,
+                            weight: 'bold',
+                            color: '#ff6699'
+                        },
+                    },
+                    line: {
+                        width: 0
+                    }
+                }
+            ]
         },
         {
             displaylogo: false

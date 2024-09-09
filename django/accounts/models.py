@@ -413,6 +413,16 @@ class SquadMembership(models.Model):
         default = dict,
     )
 
+    @property
+    def accounted_match_participations(self):
+        """
+        Return the match participations of the squad member that are relevant for the stats computation
+        """
+        return self.squad.match_participations(
+            pmatch__timestamp__gte = datetime.timestamp(datetime.now()) - 30 * 24 * 60 * 60,  # 30 days ago
+            pmatch__sessions__is_closed = True,  # Exclude matches from sessions that did not end yet
+        )
+
     def update_stats(self):
         """
         Update the stats and trends of the squad member based on their performance in the last 30 days.
@@ -421,14 +431,8 @@ class SquadMembership(models.Model):
         # Store the current stats for later comparison
         previous_stats = dict(self.stats)
 
-        # Determine the matches relevant for the stats computation
-        match_participations = self.squad.match_participations(
-            pmatch__timestamp__gte = datetime.timestamp(datetime.now()) - 30 * 24 * 60 * 60,  # 30 days ago
-            pmatch__sessions__is_closed = True,  # Exclude matches from sessions that did not end yet
-        )
-
         # Update the stats
-        ctx = FeatureContext(match_participations, self.player)
+        ctx = FeatureContext(self.accounted_match_participations, self.player)
         self.stats.clear()
         for feature in Features.all:
             self.stats[feature.slug] = feature(ctx)
