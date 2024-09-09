@@ -1,6 +1,6 @@
+import datetime
 import logging
 import uuid
-from datetime import datetime
 
 from api import api
 from stats.features import (
@@ -189,7 +189,7 @@ class Account(AbstractUser):
     def update_matches(self, force=False):
         last_queued_update = self.last_queued_update
         if last_queued_update is None or force or (
-            datetime.now() - last_queued_update.scheduled
+            datetime.datetime.now() - last_queued_update.scheduled
         ).total_seconds() / 60 >= 5:
             return queue_update_task(self)
         else:
@@ -419,7 +419,9 @@ class SquadMembership(models.Model):
         Return the match participations of the squad member that are relevant for the stats computation
         """
         return self.squad.match_participations(
-            pmatch__timestamp__gte = datetime.timestamp(datetime.now()) - 30 * 24 * 60 * 60,  # 30 days ago
+            pmatch__timestamp__gte = datetime.datetime.timestamp(
+                datetime.datetime.now()
+            ) - 30 * 24 * 60 * 60,  # 30 days ago
             pmatch__sessions__is_closed = True,  # Exclude matches from sessions that did not end yet
         )
 

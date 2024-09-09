@@ -889,6 +889,7 @@ class GamingSession__close(TestCase):
         self.session1.delete()
         self.match1.delete()
         self.participation1.delete()
+        self.squad.update_positions()
 
         # Close the currently played session
         self.session2.close()
@@ -898,14 +899,14 @@ class GamingSession__close(TestCase):
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.all()[0]
         self.assertEqual(notification.squad.pk, self.squad.pk)
-        pv = math.sqrt((20 / 15) * 120.5 / 100)
         self.assertEqual(
-            f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
-            f'<12345678900000001> ±0.00% ({pv :.2f}), with respect to the *player value*.',
+            f'Looks like your session has ended!',
             notification.text,
         )
 
     def test_constant_kpi(self):
+        self.squad.update_positions()
+
         # Close the currently played session
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
@@ -922,6 +923,8 @@ class GamingSession__close(TestCase):
         )
 
     def test_increasing_kpi(self):
+        self.squad.update_positions()
+
         # Increase the KPI
         self.participation2.adr = 140
         self.participation2.save()
@@ -934,16 +937,18 @@ class GamingSession__close(TestCase):
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.all()[0]
         self.assertEqual(notification.squad.pk, self.squad.pk)
-        pv_previous = math.sqrt((20 / 15) * 120.5 / 100)
-        pv_today    = math.sqrt((20 / 15) * 140 / 100)
-        pv_ref      = (pv_previous + pv_today) / 2
+        pv_previous  = math.sqrt((20 / 15) * 120.5 / 100)
+        pv_today     = math.sqrt((20 / 15) * 140 / 100)
+        pv_trend_rel = (pv_today - pv_previous) / pv_previous
         self.assertEqual(
             f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
-            f'<12345678900000001> 📈 +{100 * (pv_today - pv_ref) / pv_ref :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
+            f'<12345678900000001> 📈 +{100 * pv_trend_rel :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
             notification.text,
         )
 
     def test_decreasing_kpi(self):
+        self.squad.update_positions()
+
         # Decrease the KPI
         self.participation2.adr = 100
         self.participation2.save()
@@ -958,14 +963,16 @@ class GamingSession__close(TestCase):
         self.assertEqual(notification.squad.pk, self.squad.pk)
         pv_previous = math.sqrt((20 / 15) * 120.5 / 100)
         pv_today    = math.sqrt((20 / 15) * 100 / 100)
-        pv_ref      = (pv_previous + pv_today) / 2
+        pv_trend_rel = (pv_today - pv_previous) / pv_previous
         self.assertEqual(
             f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
-            f'<12345678900000001> 📉 {100 * (pv_today - pv_ref) / pv_ref :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
+            f'<12345678900000001> 📉 {100 * pv_trend_rel :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
             notification.text,
         )
 
     def test_multiple_matches(self):
+        self.squad.update_positions()
+
         # Add a second participant to the current session (teammate)
         self.participation3 = models.MatchParticipation.objects.create(
             player = self.player2,

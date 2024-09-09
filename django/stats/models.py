@@ -127,7 +127,7 @@ class GamingSession(models.Model):
             )
             pv_today = Features.player_value(ctx)
 
-            # Skip further consideration if the trend is not available
+            # Skip further consideration if today's PV or the reference PV is not available
             pv_ref = m.stats.get('player_value', None)
             if pv_today is None or pv_ref is None:
                 continue
