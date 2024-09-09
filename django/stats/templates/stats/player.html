@@ -258,16 +258,21 @@ function updatePlot( sigma )
     );
 }
 
-const smoothing = document.getElementById('pv-plot-smooth');
-smoothing.addEventListener('input',
+const smoothing = document.getElementById( 'pv-plot-smooth' );
+smoothing.value = Math.round( 0.5 * pv.length ) / 10;
+smoothing.addEventListener
+(
+    'input',
     function( ev )
     {
         updatePlot( this.value );
     }
 );
 
-const smoothing_rescale = document.getElementById('pv-plot-rescale');
-smoothing_rescale.addEventListener('input',
+const smoothing_rescale = document.getElementById( 'pv-plot-rescale' );
+smoothing_rescale.addEventListener
+(
+    'input',
     function( ev )
     {
         if( this.checked )
