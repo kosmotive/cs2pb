@@ -61,7 +61,7 @@ function convolve( data, kernel )
  */
 const matchNumList = [ {% for mp in participations %}{{ forloop.counter }}{% if not forloop.last %},{% endif %}{% endfor %} ];
 const pv = [ {% for mp in participations %}
-Math.sqrt(100 * ({{ mp.kills }} / {{ mp.deaths }}) * {{ mp.adr }}){% if not forloop.last %},{% endif %}
+Math.sqrt(({{ mp.kills }} / {{ mp.deaths }}) * (0.01 * {{ mp.adr }})){% if not forloop.last %},{% endif %}
 {% endfor %} ];
 
 </script>
