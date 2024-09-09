@@ -183,8 +183,7 @@ class GamingSession(models.Model):
         if participated_squad_members > 1 and top_player is not None and top_player_trend_rel > 0.01:
             from .plots import trends as plot_trends
             notification = self.squad.notify_on_discord(
-                squad = self.squad,
-                text = f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!',
+                f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!',
             )
             if notification is not None:
                 plot = plot_trends(

@@ -895,6 +895,9 @@ class GamingSession__close(TestCase):
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
 
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
+
         # Verify the scheduled Discord notifcation for player performance
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.all()[0]
@@ -910,6 +913,9 @@ class GamingSession__close(TestCase):
         # Close the currently played session
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
 
         # Verify the scheduled Discord notifcation for player performance
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
@@ -932,6 +938,9 @@ class GamingSession__close(TestCase):
         # Close the currently played session
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
 
         # Verify the scheduled Discord notifcation for player performance
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
@@ -956,6 +965,9 @@ class GamingSession__close(TestCase):
         # Close the currently played session
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
 
         # Verify the scheduled Discord notifcation for player performance
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
@@ -1039,6 +1051,9 @@ class GamingSession__close(TestCase):
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
 
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
+
         # Verify the scheduled Discord notification for summary of played matches
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 2)
         notification = ScheduledNotification.objects.all()[1]
@@ -1050,3 +1065,50 @@ class GamingSession__close(TestCase):
             '- *de_inferno*, **13:12** won 🤘\n'
             '- *de_dust2*, **12:13** lost 💩',
         )
+
+    def test_rising_star(self):
+        self.squad.update_positions()
+
+        # Increase the KPI
+        self.participation2.adr = 140
+        self.participation2.save()
+
+        # Add a second participant to the current session (teammate)
+        self.participation3 = models.MatchParticipation.objects.create(
+            player = self.player2,
+            pmatch = self.match2,
+            position = 1,
+            team = self.participation2.team,
+            result = self.participation2.result,
+            kills = 10,
+            assists = 5,
+            deaths = 10,
+            score = 15,
+            mvps = 3,
+            headshots = 10,
+            adr = 90,
+        )
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star
+        self.assertEqual(self.session2.rising_star.pk, self.player1.pk)
+
+        # Verify the scheduled Discord notification for the rising star
+        self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 3)
+        notification = ScheduledNotification.objects.all()[2]
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+        self.assertEqual(
+            notification.text,
+            'And today\'s **rising star** was: 🌟 <12345678900000001>!',
+        )
+
+        # Verify the radar plot
+        import numpy as np
+        import matplotlib.image as mpimg
+        attachment = notification.get_attachment()
+        img_actual = mpimg.imread(attachment, format = 'png')
+        img_expected = mpimg.imread('tests/data/radarplot.png')
+        self.assertAlmostEqual(np.linalg.norm(img_actual - img_expected), 0, delta = 0.1)

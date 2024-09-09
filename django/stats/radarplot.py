@@ -32,19 +32,20 @@ def radar(
     angles += angles[:1]
 
     # Initialise the spider plot
-    ax = fig.add_subplot(111, polar=True)
+    ax = fig.add_subplot(111, polar = True)
 
-    # If you want the first axis to be on top:
+    # Let the first feature be to the top
     ax.set_theta_offset(np.pi / 2)
     ax.set_theta_direction(-1)
 
-    # Draw one axe per variable + add labels
-    plt.xticks(angles[:-1], features, weight='bold', fontsize=12)
+    # Draw one axis per variable + add labels
+    plt.xticks(angles[:-1], features, weight = 'bold', fontsize = 12)
+    plt.setp(ax.get_xticklabels(), bbox = dict(boxstyle = 'round', ec = '#ccc', fc = '#ccc', alpha = 0.5))
 
     # Draw ylabels
     ax.set_rlabel_position(0)
     yticks = np.arange(0, np.ceil(np.nanmax(values) / 0.25)) * 0.25
-    plt.yticks(yticks, [f'{yt * 100:.0f}%' for yt in yticks], color="grey", size=7)
+    plt.yticks(yticks, [f'{yt * 100:.0f}%' for yt in yticks], color = 'grey', size = 7)
     plt.ylim(0, yticks.max() + 0.25)
 
     for line_idx, line in enumerate(values):
@@ -61,4 +62,4 @@ def radar(
         ax.plot(angles, line, **_plot_kwargs)
         ax.fill(angles, line, **_fill_kwargs)
 
-    plt.legend(loc='lower left', bbox_to_anchor=(-0.3, -0.1))
+    plt.legend(loc = 'lower center', bbox_to_anchor = (0.5, -0.14), ncols = 2)

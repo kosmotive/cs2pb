@@ -5,10 +5,11 @@ from numbers import Real
 
 import matplotlib as mpl
 import numpy as np
-from accounts.models import SquadMembership
+from accounts.models import SquadMembership, SteamProfile
 from cs2pb_typing import (
     Dict,
     List,
+    Optional,
     Union,
 )
 
@@ -76,22 +77,30 @@ def unwrap_datachunks(features: List[Feature], *datachunks: DataChunkType) -> Li
 
         if isinstance(datachunk, FeatureContext):
             values.append([feature(datachunk) for feature in features])
+            continue
 
         if isinstance(datachunk, SquadMembership):
             values.append([datachunk.stats[feature.slug] for feature in features])
+            continue
 
-        else:
-            raise ValueError(f'Unknown datachunk at position {dc_idx}: {str(datachunk)}')
+        raise ValueError(f'Unknown datachunk at position {dc_idx}: {str(datachunk)}')
 
     return values
 
 
-def add_default_hints(r):
+def add_default_hints(r: Renderer, player: SteamProfile, max_player_name_length: int = 20) -> None:
+    # Add information about the player
+    if player is not None:
+        player_name = player.clean_name
+        if len(player_name) > max_player_name_length:
+            player_name = player_name[:max_player_name_length] + '...'
+        plt.text(0.98, 0.9, player_name, transform = r.fig.transFigure, ha = 'right', fontsize = 12)
+
+    # Add information about the features
     text_percentages = (
         'Damage per round is normalized by a factor of 0.01.'
     )
     plt.text(0.98, 0.02, text_percentages, transform = r.fig.transFigure, ha = 'right', color = '#bbb', fontsize = 8)
-    plt.subplots_adjust(left = 0.1, right = 0.9, top = 0.9, bottom = 0.15)
 
 
 def radar(
@@ -110,6 +119,7 @@ def radar(
         normalization: Dict[Feature, float] = {
             Features.damage_per_round: 0.01,
         },
+        player: Optional[SteamProfile] = None,
     ) -> BytesIO:
     """
     """
@@ -132,7 +142,8 @@ def radar(
     with Renderer() as r:
         values = [np.asarray(line).astype(float) for line in line_list]
         _radar(r.fig, feature_names, *values, labels = labels, plot_kwargs = plot_kwargs, fill_kwargs = fill_kwargs)
-        add_default_hints(r)
+        add_default_hints(r, player)
+        plt.subplots_adjust(left = 0.1, right = 0.9, top = 0.9, bottom = 0.15)
 
     # Return the compressed data
     return r.data
@@ -145,16 +156,17 @@ def trends(
     ) -> BytesIO:
     datachunks = [squad_membership, context]
     labels = [
-        f'{squad_membership.player.clean_name} 30 days average',
-        f'{squad_membership.player.clean_name} trend',
+        f'30-days average',
+        f'Current performance',
     ]
     return radar(
         *datachunks,
         features = features,
         labels = labels,
+        player = squad_membership.player,
         plot_kwargs = [
-            {'c': DEFAULT_COLORS[0]},
-            {'c': DEFAULT_COLORS[0], 'ls': '--'},
+            {'c': DEFAULT_COLORS[0], 'lw': 1},
+            {'c': DEFAULT_COLORS[0], 'lw': 2, 'ls': '--'},
         ],
         fill_kwargs = [
             {},
