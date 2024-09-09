@@ -846,8 +846,8 @@ class PlayerOfTheWeek(models.Model):
                 log.error(f'Failed to create missing badges.', exc_info=True)
 
     class Meta:
-        verbose_name        = 'Player-of-the-Week badge';
-        verbose_name_plural = 'Player-of-the-Week badges';
+        verbose_name        = 'Player-of-the-Week badge'
+        verbose_name_plural = 'Player-of-the-Week badges'
 
     def __str__(self):
         return f'{self.week}/{self.year}'
@@ -859,8 +859,8 @@ class MatchBadgeType(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
     class Meta:
-        verbose_name        = 'Match-based badge type';
-        verbose_name_plural = 'Match-based badge types';
+        verbose_name        = 'Match-based badge type'
+        verbose_name_plural = 'Match-based badge types'
 
 
 class MatchBadge(models.Model):
