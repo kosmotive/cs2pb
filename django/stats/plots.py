@@ -78,7 +78,7 @@ def unwrap_datachunks(features: List[Feature], *datachunks: DataChunkType) -> Li
             values.append([feature(datachunk) for feature in features])
 
         if isinstance(datachunk, SquadMembership):
-            values.append([datachunk.stats[feature.name] for feature in features])
+            values.append([datachunk.stats[feature.slug] for feature in features])
 
         else:
             raise ValueError(f'Unknown datachunk at position {dc_idx}: {str(datachunk)}')

@@ -1,4 +1,7 @@
-from cs2pb_typing import List
+from cs2pb_typing import (
+    List,
+    Optional,
+)
 
 from django.db.models import (
     Avg,
@@ -16,15 +19,39 @@ class FeatureContext:
 
     def __init__(self, match_participations, player):
         self.match_participations_universe = match_participations
-        self.match_participations_with_player = match_participations.filter(player = player)
+        self.match_participations_of_player = match_participations.filter(player = player)
 
 
 class Feature:
 
-    def __init__(self, name, description, format = '{:.2f}'):
+    name: str
+    """
+    The human-readable name of the feature.
+    """
+
+    description: str
+    """
+    Brief description of the feature.
+    """
+
+    format: str
+    """
+    The format string to format the feature value with.
+    """
+
+    slug: Optional[str]
+    """
+    A unique identifier of the feature (determined automatically, may change over time).
+    """
+
+    def __init__(self, name: str, description, format = '{:.2f}'):
         self.name = name
         self.description = description
         self.format = format
+        self.slug = None
+
+    def __call__(self, ctx: FeatureContext) -> Optional[float]:
+        ...
 
 
 class ExpressionFeature(Feature):
@@ -33,8 +60,8 @@ class ExpressionFeature(Feature):
         super().__init__(*args, format, **kwargs)
         self.expression = expression
 
-    def __call__(self, ctx: FeatureContext) -> float:
-        avg_value_qs = ctx.player_participations.annotate(value = self.expression).aggregate(Avg('value'))
+    def __call__(self, ctx: FeatureContext) -> Optional[float]:
+        avg_value_qs = ctx.match_participations_of_player.annotate(value = self.expression).aggregate(Avg('value'))
         avg_value = avg_value_qs['value__avg']
         return 0 if avg_value is not None and avg_value < 0 else avg_value
 
@@ -49,11 +76,11 @@ class ParticipationEffect(Feature):
         )
         self.min_datapoints = min_datapoints
 
-    def __call__(self, ctx: FeatureContext) -> float:
-        victories_with_participation = ctx.player_participations.filter(result = 'w').count()
-        matches_with_participation   = ctx.player_participations.exclude(result = 't').count()
-        matches_without_participation_qs = ctx.squad_participations.values('pmatch', 'result').exclude(
-            pmatch__in = ctx.player_participations.values_list('pmatch', flat=True)
+    def __call__(self, ctx: FeatureContext) -> Optional[float]:
+        victories_with_participation = ctx.match_participations_of_player.filter(result = 'w').count()
+        matches_with_participation   = ctx.match_participations_of_player.exclude(result = 't').count()
+        matches_without_participation_qs = ctx.match_participations_universe.values('pmatch', 'result').exclude(
+            pmatch__in = ctx.match_participations_of_player.values_list('pmatch', flat = True)
         ).exclude(result = 't').order_by('pmatch').distinct()
         matches_without_participation    = matches_without_participation_qs.count()
         if matches_with_participation < self.min_datapoints or matches_without_participation < self.min_datapoints:

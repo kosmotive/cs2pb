@@ -1,6 +1,6 @@
-import datetime
 import logging
 import uuid
+from datetime import datetime
 
 from api import api
 from stats.features import (
@@ -189,7 +189,7 @@ class Account(AbstractUser):
     def update_matches(self, force=False):
         last_queued_update = self.last_queued_update
         if last_queued_update is None or force or (
-            datetime.datetime.now() - last_queued_update.scheduled
+            datetime.now() - last_queued_update.scheduled
         ).total_seconds() / 60 >= 5:
             return queue_update_task(self)
         else:
@@ -429,17 +429,31 @@ class SquadMembership(models.Model):
 
         # Update the stats
         ctx = FeatureContext(match_participations, self.player)
+        self.stats.clear()
         for feature in Features.all:
-            self.stats[feature.name] = feature(ctx)
+            self.stats[feature.slug] = feature(ctx)
+
+        # Prune dangling trends from old versions of the feature set
+        for feature in list(self.trends.keys()):
+            if feature not in self.stats:
+                del self.trends[feature]
 
         # Compute the trends
         for feature in Features.all:
-            if feature.name in previous_stats.keys():
-                trend = self.stats[feature.name] - previous_stats[feature.name]
+            feature_value = self.stats.get(feature.slug)
+            previous_feature_value = previous_stats.get(feature.slug)
 
-                # Preserve the previous trend value if the player did not play since the last update
+            # Compute the trend if both the current and previous feature values are available
+            if feature_value is not None and previous_feature_value is not None:
+                trend = feature_value - previous_feature_value
+
+                # Preserve the previous trend value if nothing has changed since the last update
                 if trend != 0:
-                    self.trends[feature.name] = trend
+                    self.trends[feature.slug] = trend
+
+            # Otherwise, the trend is undefined
+            else:
+                self.trends[feature.slug] = None
 
         # Save the updated data
         self.save()
@@ -447,21 +461,21 @@ class SquadMembership(models.Model):
 
 class Invitation(models.Model):
 
-    uuid          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    steam_profile = models.OneToOneField(SteamProfile, on_delete=models.PROTECT)
-    squad         = models.ForeignKey(Squad, on_delete=models.CASCADE, related_name='invitations')
-    discord_name  = models.CharField(blank=True , max_length=30)
+    uuid          = models.UUIDField(primary_key = True, default = uuid.uuid4, editable = False)
+    steam_profile = models.OneToOneField(SteamProfile, on_delete = models.PROTECT)
+    squad         = models.ForeignKey(Squad, on_delete = models.CASCADE, related_name = 'invitations')
+    discord_name  = models.CharField(blank = True , max_length = 30)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['steam_profile', 'squad'], name='unique_steam_profile_squad'
+                fields = ['steam_profile', 'squad'], name = 'unique_steam_profile_squad'
             ),
         ]
 
     @property
     def url(self):
-        return reverse('join', args=(self.pk,))
+        return reverse('join', args = (self.pk,))
 
     def absolute_url(self, request):
         return request.build_absolute_uri(self.url)

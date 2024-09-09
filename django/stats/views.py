@@ -87,32 +87,52 @@ def get_badges(squad, player):
     return badges
 
 
-def compute_card(player, squad, features, orders = [np.inf]):
-    m = squad.memberships.filter(player = player).first()
+def compute_card(squad_membership, features, orders = [np.inf]):
 
     def stat(feature):
-        value = m.stats.get(feature.name, None)
-        max_value = squad.memberships.list_values(f'stats__{feature.name}').max()
+        value = squad_membership.stats.get(feature.slug, None)
+
+        # Compute the maximum value of the squad for normalization
+        max_value = squad_membership.squad.memberships.values(
+            f'stats__{feature.slug}',
+        ).exclude(
+            **{f'stats__{feature.slug}': None},  # https://stackoverflow.com/a/49956014/1444073
+        ).order_by(
+            f'-stats__{feature.slug}',
+        )[0][
+            f'stats__{feature.slug}'
+        ] if value is not None else None
+
+        # Check logics: `max_value` can only be None if `value` is None
+        assert value is None or (value is not None and max_value is not None), (feature.slug, value, max_value)
+
+        # Compose and return the full feature information for the squad member
         return {
             'name': feature.name,
-            'value': m.stats.get(feature.name, None),
+            'value': value,
             'load': None if value is None else 100 * min((1, value / max_value)),
             'load_raw': None if value is None else value / max_value,
             'max_value': max_value,
-            'trend': feature.trend_rel(m) if m is not None else None,
+            'trend': squad_membership.trends.get(feature.slug),
             'label': feature.format.format(value) if value is not None else '',
         }
 
     stats   = [stat(feature) for feature in features]
-    badges  = get_badges(squad, player)
+    badges  = get_badges(squad_membership.squad, squad_membership.player)
     card_data = {
-        'profile': player,
+        'profile': squad_membership.player,
         'stats': stats,
         'stats_dict': {s['name']: s['value'] for s in stats},
         'badges': badges,
     }
-    if getattr(player, 'account', None) is None and squad is not None:
-        card_data['invite_url'] = reverse('invite', kwargs = dict(steamid = player.steamid, squadid = squad.pk))
+    if getattr(squad_membership.player, 'account', None) is None and squad_membership.squad is not None:
+        card_data['invite_url'] = reverse(
+            'invite',
+            kwargs = dict(
+                steamid = squad_membership.player.steamid,
+                squadid = squad_membership.squad.pk,
+            ),
+        )
     for stat_idx, stat in enumerate(card_data['stats']):
         for order, idx_max in enumerate(orders, start = 1):
             if stat_idx < idx_max:
@@ -174,12 +194,11 @@ def squads(request, squad = None, expanded_stats = False):
         PlayerOfTheWeek.create_missing_badges(squad)
         cards = [
             compute_card(
-                m.player,
-                squad,
+                squad_membership,
                 features,
                 [2, 3, np.inf],
             )
-            for m in squad.memberships.exclude(
+            for squad_membership in squad.memberships.exclude(
                 position__isnull = True,
             ).order_by(
                 'position',
@@ -302,7 +321,7 @@ def player(request, squad, steamid):
         Features.damage_per_round,
         Features.kills_per_death,
     ]
-    card = compute_card(player, squad, features, [2, 3, np.inf])
+    card = compute_card(squad.memberships.filter(player = player).first(), features, [2, 3, np.inf])
     participations = MatchParticipation.objects.filter(player = player).order_by('pmatch__timestamp')
     context = dict(
         squad = squad,
