@@ -253,9 +253,9 @@ div.squad-members-appendix .legend-item .badge {
     left: 0;
     top: 0;
     border-right: 1px solid #ccc;
-    padding-right: 1mm;
+    padding-right: 2mm;
     height: 100%;
-    background-size: 83%;
+    background-size: 85%;
     background-repeat: no-repeat;
     filter: drop-shadow(0 0 1mm rgba(0,0,0,0.1));
 }
@@ -265,15 +265,15 @@ div.squad-members-appendix .legend-item .legend-item-label {
     vertical-align: middle;
     font-size: 100%;
     position: absolute;
-    left: 9mm;
+    left: 10mm;
     white-space: nowrap;
 }
 
 div.squad-members-appendix .legend-item .legend-item-description {
     display: block;
-    font-size: 80%;
+    font-size: 77%;
     position: absolute;
-    left: 9mm;
+    left: 10mm;
     top: 1.8em;
 }
 
