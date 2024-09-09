@@ -889,7 +889,7 @@ class GamingSession__close(TestCase):
         self.session1.delete()
         self.match1.delete()
         self.participation1.delete()
-        self.squad.update_positions()
+        self.squad.update_stats()
 
         # Close the currently played session
         self.session2.close()
@@ -908,7 +908,7 @@ class GamingSession__close(TestCase):
         )
 
     def test_constant_kpi(self):
-        self.squad.update_positions()
+        self.squad.update_stats()
 
         # Close the currently played session
         self.session2.close()
@@ -929,7 +929,7 @@ class GamingSession__close(TestCase):
         )
 
     def test_increasing_kpi(self):
-        self.squad.update_positions()
+        self.squad.update_stats()
 
         # Increase the KPI
         self.participation2.adr = 140
@@ -956,7 +956,7 @@ class GamingSession__close(TestCase):
         )
 
     def test_decreasing_kpi(self):
-        self.squad.update_positions()
+        self.squad.update_stats()
 
         # Decrease the KPI
         self.participation2.adr = 100
@@ -983,7 +983,7 @@ class GamingSession__close(TestCase):
         )
 
     def test_multiple_matches(self):
-        self.squad.update_positions()
+        self.squad.update_stats()
 
         # Add a second participant to the current session (teammate)
         self.participation3 = models.MatchParticipation.objects.create(
@@ -1067,7 +1067,7 @@ class GamingSession__close(TestCase):
         )
 
     def test_rising_star(self):
-        self.squad.update_positions()
+        self.squad.update_stats()
 
         # Increase the KPI
         self.participation2.adr = 140

@@ -316,7 +316,7 @@ class Squad(models.Model):
         self.last_changelog_announcement = changelog[0]['sha']
         self.save()
 
-    def update_positions(self) -> None:  # TODO: Rename to `update_stats`
+    def update_stats(self) -> None:
         """
         Update the stats, trends, and leaderboard positions of the squad members.
         """

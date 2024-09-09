@@ -206,7 +206,7 @@ def squads(request, squad = None, expanded_stats = False):
 
     context['squads'] = list()
     for squad in squad_list:
-        squad.update_positions()
+        squad.update_stats()
         for account in Account.objects.filter(
             steam_profile__in = squad.memberships.values_list('player__pk', flat = True)
         ):

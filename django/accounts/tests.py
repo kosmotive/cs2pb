@@ -101,7 +101,7 @@ class Account__update_matches(TestCase):
 
 
 @patch('accounts.models.SquadMembership.update_stats')
-class Squad__update_positions(TestCase):
+class Squad__update_stats(TestCase):
 
     @testsuite.fake_api('accounts.models')
     def setUp(self):
@@ -122,13 +122,13 @@ class Squad__update_positions(TestCase):
         m.stats['player_value'] = value
         m.save()
 
-    def test_all_newcomers(self, mock__update_stats):
+    def test_all_newcomers(self, mock__SquadMembership__update_stats):
         self.update_player_value(self.players[0], 0.9)
         self.update_player_value(self.players[1], 1.1)
         self.update_player_value(self.players[2], 0.8)
         self.update_player_value(self.players[3], 0.7)
 
-        self.squad.update_positions()
+        self.squad.update_stats()
 
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
@@ -138,7 +138,7 @@ class Squad__update_positions(TestCase):
         self.assertEqual(memberships.get(player = self.players[2]).position, 2)
         self.assertEqual(memberships.get(player = self.players[3]).position, 3)
 
-    def test_one_newcomer(self, mock__update_stats):
+    def test_one_newcomer(self, mock__SquadMembership__update_stats):
         self.update_position(self.players[0], 1)
         self.update_position(self.players[1], 0)
         self.update_position(self.players[3], 2)
@@ -148,7 +148,7 @@ class Squad__update_positions(TestCase):
         self.update_player_value(self.players[2], 0.8)
         self.update_player_value(self.players[3], 0.7)
 
-        self.squad.update_positions()
+        self.squad.update_stats()
 
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification_text = ScheduledNotification.objects.get().text
@@ -168,7 +168,7 @@ class Squad__update_positions(TestCase):
         self.assertEqual(memberships.get(player = self.players[2]).position, 2)
         self.assertEqual(memberships.get(player = self.players[3]).position, 3)
 
-    def test_swap(self, mock__update_stats):
+    def test_swap(self, mock__SquadMembership__update_stats):
         self.update_position(self.players[0], 0)
         self.update_position(self.players[1], 1)
         self.update_position(self.players[2], 2)
@@ -179,7 +179,7 @@ class Squad__update_positions(TestCase):
         self.update_player_value(self.players[2], 0.8)
         self.update_player_value(self.players[3], 0.7)
 
-        self.squad.update_positions()
+        self.squad.update_stats()
 
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification_text = ScheduledNotification.objects.get().text
@@ -199,7 +199,7 @@ class Squad__update_positions(TestCase):
         self.assertEqual(memberships.get(player = self.players[2]).position, 2)
         self.assertEqual(memberships.get(player = self.players[3]).position, 3)
 
-    def test_one_missing(self, mock__update_stats):
+    def test_one_missing(self, mock__SquadMembership__update_stats):
         self.update_position(self.players[0], 0)
         self.update_position(self.players[1], 1)
         self.update_position(self.players[2], 2)
@@ -209,7 +209,7 @@ class Squad__update_positions(TestCase):
         self.update_player_value(self.players[2], 0.8)
         self.update_player_value(self.players[3], None)
 
-        self.squad.update_positions()
+        self.squad.update_stats()
 
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification_text = ScheduledNotification.objects.get().text
