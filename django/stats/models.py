@@ -644,33 +644,6 @@ class MatchParticipation(models.Model):
     def filter(qs, period):
         return qs if period is None else qs.filter(**period.filters())
 
-    class Period:
-
-        LONG_TERM_TREND_SHIFT  = -60 * 60 * 24 * 7 # 7 days to the past
-        SHORT_TERM_TREND_SHIFT = -60 * 60 * 12     # half a day to the past
-        DEFAULT_DAYS = 30
-
-        def __init__(self):
-            timestamp_now = datetime.timestamp(datetime.now())
-            self.start = None
-            self.end   = timestamp_now
-
-        def without_old(self, days=DEFAULT_DAYS):
-            timestamp_now = datetime.timestamp(datetime.now())
-            self.start = timestamp_now - days * 24 * 60 * 60
-            return self
-
-        def shift(self, seconds):
-            if self.start is not None: self.start += seconds
-            if self.end   is not None: self.end   += seconds
-            return self
-
-        def filters(self):
-            filters = dict()
-            if self.start is not None: filters['pmatch__timestamp__gte'] = self.start
-            if self.end   is not None: filters['pmatch__timestamp__lte'] = self.end
-            return filters
-
 
 def get_or_none(qs, **kwargs):
     try:
