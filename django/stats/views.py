@@ -131,6 +131,7 @@ def compute_card(
         assert value is None or (value is not None and max_value is not None), (feature.slug, value, max_value)
 
         # Compose and return the full feature information for the squad member
+        print('***', squad_membership.player.name, feature.name, squad_membership.trends.get(feature.slug))
         return {
             'name': feature.name,
             'value': value,

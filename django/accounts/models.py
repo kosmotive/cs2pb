@@ -404,13 +404,16 @@ class SquadMembership(models.Model):
     )
     position = models.PositiveSmallIntegerField(
         null = True,
+        blank = True,
         default = None,
     )
     stats = models.JSONField(
         default = dict,
+        blank = True,
     )
     trends = models.JSONField(
         default = dict,
+        blank = True,
     )
 
     @property

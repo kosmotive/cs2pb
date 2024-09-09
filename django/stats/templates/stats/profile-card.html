@@ -22,11 +22,11 @@
                 <div class="profile-stat-bar">
                     <div class="profile-stat-bar-outer">
                         <div class="profile-stat-bar-inner" style="width: {{ stat.load }}%;">&nbsp;</div>
-                        {% if stat.trend_rel > 0 %}
+                        {% if stat.trend > 0 %}
                             <div class="profile-stat-bar-trend-up"><svg viewBox="0 0 1 1">
                                 <path d="M 0,0 L 0,1 L 1,0.5 Z" fill="#000"/>
                             </svg></div>
-                        {% elif stat.trend_rel < 0 %}
+                        {% elif stat.trend < 0 %}
                             <div class="profile-stat-bar-trend-down"><svg viewBox="0 0 1 1">
                                 <path d="M 1,0 L 1,1 L 0,0.5 Z" fill="#000"/>
                             </svg></div>
