@@ -188,15 +188,14 @@ class GamingSession(models.Model):
             )
             if notification is not None:
                 plot = plot_trends(
-                    self.squad,
-                    top_player,
+                    self.squad.memberships.filter(player = top_player).get(),
                     feature_contexts[top_player.steamid],  # The feature context for the session trends
                     [
                         Features.player_value,
                         Features.participation_effect,
                         Features.headshot_rate,
-                        Features.average_damage_per_round,
-                        Features.kill_per_death,
+                        Features.damage_per_round,
+                        Features.kills_per_death,
                     ],
                 )
                 notification.attach(plot)

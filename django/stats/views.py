@@ -25,10 +25,7 @@ from django.shortcuts import (
 from django.urls import reverse
 
 from . import potw
-from .features import (
-    FeatureContext,
-    Features,
-)
+from .features import Features
 from .models import (
     GamingSession,
     Match,
@@ -91,8 +88,22 @@ def get_badges(squad, player):
 
 
 def compute_card(player, squad, features, orders = [np.inf]):
-    context = FeatureContext.create_default(player, squad)
-    stats   = [feature(context) for feature in features]
+    m = squad.memberships.filter(player = player).first()
+
+    def stat(feature):
+        value = m.stats.get(feature.name, None)
+        max_value = squad.memberships.list_values(f'stats__{feature.name}').max()
+        return {
+            'name': feature.name,
+            'value': m.stats.get(feature.name, None),
+            'load': None if value is None else 100 * min((1, value / max_value)),
+            'load_raw': None if value is None else value / max_value,
+            'max_value': max_value,
+            'trend': feature.trend_rel(m) if m is not None else None,
+            'label': feature.format.format(value) if value is not None else '',
+        }
+
+    stats   = [stat(feature) for feature in features]
     badges  = get_badges(squad, player)
     card_data = {
         'profile': player,
@@ -149,9 +160,9 @@ def squads(request, squad = None, expanded_stats = False):
     else:
         return redirect('login')
 
-    features = [Features.pv, Features.pe, Features.hsr]
+    features = [Features.player_value, Features.participation_effect, Features.headshot_rate]
     if expanded_stats:
-        features += [Features.adr, Features.kd]
+        features += [Features.damage_per_round, Features.kills_per_death]
 
     context['squads'] = list()
     for squad in squad_list:
@@ -284,7 +295,13 @@ def add_globals_to_context(context):
 def player(request, squad, steamid):
     squad = Squad.objects.get(uuid = squad)
     player = SteamProfile.objects.get(pk = steamid)
-    features = [Features.pv, Features.pe, Features.hsr, Features.adr, Features.kd]
+    features = [
+        Features.player_value,
+        Features.participation_effect,
+        Features.headshot_rate,
+        Features.damage_per_round,
+        Features.kills_per_death,
+    ]
     card = compute_card(player, squad, features, [2, 3, np.inf])
     participations = MatchParticipation.objects.filter(player = player).order_by('pmatch__timestamp')
     context = dict(

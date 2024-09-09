@@ -1,4 +1,10 @@
-from django.db.models import F, Avg, Value
+from cs2pb_typing import List
+
+from django.db.models import (
+    Avg,
+    F,
+    Value,
+)
 from django.db.models.functions import Sqrt
 
 
@@ -35,7 +41,7 @@ class ExpressionFeature(Feature):
 
 class ParticipationEffect(Feature):
 
-    def __init__(self, min_datapoints = 2): ## this should be made higher later
+    def __init__(self, min_datapoints = 2):
         super().__init__(
             'Participation effect',
             'The expected causal effect of particpating in a squad match towards winning that match (aka treatment '
@@ -62,7 +68,7 @@ class ParticipationEffect(Feature):
 
 class Features:
 
-    average_damage_per_round = ExpressionFeature(
+    damage_per_round = ExpressionFeature(
         F_float('adr'),
         'Damage per round',
         'The damage per round, averaged over all matches.',
@@ -81,7 +87,7 @@ class Features:
         'Headshots per kill.',
     )
 
-    kill_per_death = ExpressionFeature(
+    kills_per_death = ExpressionFeature(
         F_float('kills') / F_float('deaths'),
         'Kills per death',
         'The kills/death ratio, averaged over all matches.',
@@ -95,7 +101,7 @@ class Features:
         'Geometric mean of kills per death ration and the average damage per round (divided by 100).',
     )
 
-    all = []  # Filled automatically
+    all: List[Feature] = []  # Filled automatically
 
 
 for attr_name in dir(Features):
