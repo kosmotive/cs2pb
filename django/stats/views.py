@@ -340,6 +340,7 @@ def add_globals_to_context(context):
 
 def player(request, squad, steamid):
     squad = Squad.objects.get(uuid = squad)
+    squad.update_stats()
     player = SteamProfile.objects.get(pk = steamid)
     squad_membership = squad.memberships.filter(player = player).first()
 
