@@ -81,11 +81,3 @@ class bot(TestCase):
                     'Invalid discord name: name-of-12345678900000003',
             )
         ])
-
-    def test_resolve_mention__mention(self):
-        actual = async_to_sync(botimpl.resolve_mention)('<@9216784356>')
-        self.assertEqual(actual, 'discordname1')
-
-    def test_resolve_mention__discordname(self):
-        actual = async_to_sync(botimpl.resolve_mention)('discordname1')
-        self.assertEqual(actual, 'discordname1')

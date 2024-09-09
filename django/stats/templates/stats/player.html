@@ -47,7 +47,7 @@ function convolve( data, kernel )
             const k = i + j;
             if( k >= 0 && k < data.length )
             {
-                const kernelValue = kernel[ j + n ];
+                const kernelValue = kernel[ n - j ];
                 value += kernelValue * data[ k ];
                 weights += kernelValue;
             }
@@ -61,7 +61,7 @@ function convolve( data, kernel )
  */
 const matchNumList = [ {% for mp in participations %}{{ forloop.counter }}{% if not forloop.last %},{% endif %}{% endfor %} ];
 const pv = [ {% for mp in participations %}
-Math.sqrt(100 * ({{ mp.kills }} / {{ mp.deaths }}) * {{ mp.adr }}){% if not forloop.last %},{% endif %}
+Math.sqrt(({{ mp.kills }} / {{ mp.deaths }}) * (0.01 * {{ mp.adr }})){% if not forloop.last %},{% endif %}
 {% endfor %} ];
 
 </script>
@@ -89,7 +89,7 @@ Math.sqrt(100 * ({{ mp.kills }} / {{ mp.deaths }}) * {{ mp.adr }}){% if not forl
 
             </div>
 
-            <div id="pv-plot" style="width:600px; height: 250px;"></div>
+            <div id="pv-plot" style="width:600px; height: 280px;"></div>
 
         </div>
 
@@ -123,17 +123,32 @@ function updatePlot( sigma )
         {
             x: matchNumList,
             y: pv_smooth,
-            name: 'Average'
+            name: 'Form',
+            line: {
+                shape: 'spline'
+            }
         },
         {
             x: matchNumList,
             y: pv,
             mode: 'markers',
             name: 'Matches'
+        },
+        {
+            x: [{{ period_start }}, {{ period_end }}],
+            y: [{{ period_average }}, {{ period_average }}],
+            mode: 'lines',
+            name: '30-days average',
+            hoverinfo: 'skip',
+            line: {
+                width: 2,
+                dash: 'dot',
+                color: '#ff6699'
+            }
         }
     ];
 
-    /* Compute uncertainties.
+    /* Compute confidences.
      */
     if( kernel.length > 1 )
     {
@@ -143,35 +158,41 @@ function updatePlot( sigma )
             differences2[ i ] = Math.pow( pv[ i ] - pv_smooth[ i ], 2 );
         }
         const meanDifferences = convolve( differences2, kernel );
-        const uncertainties    = new Array( pv.length );
-        const uncertainties_lb = new Array( pv.length );
-        const uncertainties_ub = new Array( pv.length );
+        const confidences    = new Array( pv.length );
+        const confidences_lb = new Array( pv.length );
+        const confidences_ub = new Array( pv.length );
         for( var i = 0; i < pv.length; ++i )
         {
             const uncertainty = Math.sqrt( meanDifferences[ i ] );
-            uncertainties   [ i ] = 2 * uncertainty;
-            uncertainties_lb[ i ] = pv_smooth[ i ] - uncertainty;
+            confidences   [ i ] = 2 * uncertainty;
+            confidences_lb[ i ] = pv_smooth[ i ] - uncertainty;
         }
         traces.push(
             {
                 x: matchNumList,
-                y: uncertainties_lb,
+                y: confidences_lb,
                 fillcolor: '#00000000',
                 type: 'scatter',
                 mode: 'none',
-                stackgroup: 'uncertainties',
-                hoverinfo: 'skip'
+                stackgroup: 'confidences',
+                hoverinfo: 'skip',
+                line: {
+                    shape: 'spline'
+                }
             }
         );
         traces.push(
             {
                 x: matchNumList,
-                y: uncertainties,
+                y: confidences,
                 fillcolor: '#3682be22',
                 type: 'scatter',
                 mode: 'none',
-                stackgroup: 'uncertainties',
-                hoverinfo: 'skip'
+                stackgroup: 'confidences',
+                hoverinfo: 'skip',
+                line: {
+                    shape: 'spline'
+                }
             }
         );
     }
@@ -180,9 +201,56 @@ function updatePlot( sigma )
         {
             xaxis: { title: { text: 'Match count' } },
             yaxis: config_yaxis,
-            margin: { t: 20, l: 50, b: 50, r: 10 },
+            margin: { t: 45, l: 50, b: 50, r: 10 },
             showlegend: false,
-            width: 800
+            width: 800,
+            shapes: [
+                {
+                    type: 'line',
+                    x0: {{ period_start }},
+                    x1: {{ period_start }},
+                    y0: 0,
+                    y1: 1.08,
+                    yref: 'paper',
+                    line: {
+                        width: 1,
+                        color: '#ff6699'
+                    }
+                },
+                {
+                    type: 'line',
+                    x0: {{ period_end }},
+                    x1: {{ period_end }},
+                    y0: 0,
+                    y1: 1.08,
+                    yref: 'paper',
+                    line: {
+                        width: 1,
+                        color: '#ff6699'
+                    }
+                },
+                {
+                    type: 'rect',
+                    x0: {{ period_start }},
+                    x1: {{ period_end }},
+                    y0: 0.96,
+                    y1: 1.08,
+                    yref: 'paper',
+                    fillcolor: '#ff6699',
+                    line: {
+                        width: 0
+                    },
+                    label: {
+                        text: '⇦ 30-days average ⇨',
+                        textposition: 'top center',
+                        font: {
+                            size: 12,
+                            weight: 'bold',
+                            color: 'white'
+                        },
+                    },
+                }
+            ]
         },
         {
             displaylogo: false

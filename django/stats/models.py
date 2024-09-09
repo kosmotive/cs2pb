@@ -16,6 +16,14 @@ from api import (
     api,
     fetch_match_details,
 )
+from cs2pb_typing import (
+    FrozenSet,
+    List,
+    Literal,
+    Optional,
+    Self,
+    Tuple,
+)
 
 from django.core.exceptions import (
     MultipleObjectsReturned,
@@ -28,6 +36,7 @@ from django.db import (
 from django.db.models import (
     Avg,
     F,
+    QuerySet,
 )
 from django.db.models.signals import m2m_changed
 
@@ -37,67 +46,125 @@ from .features import (
     Features,
 )
 
+from django.conf import settings
+
 log = logging.getLogger(__name__)
 
 
-def csgo_timestamp(timestamp):
+def csgo_timestamp_to_datetime(timestamp) -> datetime:
+    """
+    Convert a CSGO timestamp to a `datetime` object.
+    """
     return datetime.fromtimestamp(timestamp)
 
 
-def csgo_timestamp_to_datetime(timestamp, fmt='%-d %b %Y %H:%M'):
-    return csgo_timestamp(timestamp).strftime(fmt)
+def csgo_timestamp_to_strftime(timestamp: int, fmt: str = r'%-d %b %Y %H:%M') -> str:
+    """
+    Convert a CSGO timestamp to a formatted string.
+    """
+    return csgo_timestamp_to_datetime(timestamp).strftime(fmt)
 
 
 class GamingSession(models.Model):
+    """
+    A gaming session is a period of time during which a squad plays matches.
 
-    squad       = models.ForeignKey(Squad, related_name='sessions', on_delete=models.CASCADE)
-    is_closed   = models.BooleanField(default=False)
-    rising_star = models.ForeignKey(SteamProfile, on_delete=models.CASCADE, null=True, blank=True)
+    The matches do not have to be played together. Possibly, each squad member plays separately.
+    """
 
-    def close(self):
+    squad = models.ForeignKey(Squad, related_name = 'sessions', on_delete = models.CASCADE)
+    """
+    The squad that played the matches in this session.
+    """
+
+    is_closed = models.BooleanField(default = False)
+    """
+    Whether the session is closed. A closed session is one that has ended and for which the performance of the players
+    has been computed.
+    """
+
+    rising_star = models.ForeignKey(
+        SteamProfile,
+        on_delete = models.CASCADE,
+        null = True,
+        blank = True,
+    )
+    """
+    The player who was the rising star of the session (if any).
+    """
+
+    def close(self) -> None:
+        """
+        Close the session.
+        """
         was_already_closed = self.is_closed
         self.is_closed = True
         self.save()
+
+        # Ensure that the session is not closed twice
         if was_already_closed:
             return
 
-        # Compute the performance of the players
+        # Process the participated squad members
         participated_steamids = self.participated_steamids
-        comments = list()
-        top_player, top_player_trend_rel = None, 0
-        participated_squad_members = 0
+        comments: List[str] = list()
+        top_player: Optional[SteamProfile] = None
+        top_player_trend_rel: float = 0
+        participated_squad_members: int = 0
+        feature_contexts = dict()
         for m in self.squad.memberships.all():
+
             if m.player.steamid not in participated_steamids:
                 continue
             participated_squad_members += 1
-            pv_today = Features.pv(FeatureContext.create_default(m.player, trend_shift = 0, days = 0.5))['value']
-            pv_ref   = Features.pv(FeatureContext.create_default(m.player, trend_shift = 0))['value']
+
+            # Compute the PV of the player in this session
+            feature_contexts[m.player.steamid] = (
+                ctx := FeatureContext(
+                    MatchParticipation.objects.filter(player = m.player, pmatch__sessions = self),
+                    m.player,
+                )
+            )
+            pv_today = Features.player_value(ctx)
+
+            # Skip further consideration if today's PV or the reference PV is not available
+            pv_ref = m.stats.get('player_value', None)
             if pv_today is None or pv_ref is None:
                 continue
+
+            # Compute the relative trend
             pv_trend = pv_today - pv_ref
             kpi = dict(
                 value = pv_today,
                 trend_rel = 0 if pv_trend == 0 else (pv_trend / pv_ref if pv_ref > 0 else np.infty),
             )
+
+            # Update the top squad participant
             if top_player is None or kpi['trend_rel'] > top_player_trend_rel:
                 top_player = m.player
                 top_player_trend_rel = kpi['trend_rel']
+
+            # Proclaim the PV trend of the player, if their relative trend *rounded to 1 decimal* is larger than 0.1%
             if abs(kpi['trend_rel']) > 0.0005:
                 icon = '📈' if kpi['trend_rel'] > 0 else '📉'
                 comments.append(
                     f' <{m.player.steamid}> {icon} {100 * kpi["trend_rel"]:+.1f}% ({kpi["value"]:.2f})'
                 )
+
+            # Otherwise, just proclaim the PV of the player
             else:
                 comments.append(
                     f' <{m.player.steamid}> ±0.00% ({kpi["value"]:.2f})'
                 )
+
+        # Compose the notification text for Discord out of the comments generated above
         text = 'Looks like your session has ended!'
         if len(comments) > 0:
             text += ' Here is your current performance compared to your 30-days average: ' + ', '.join(comments)
             text += ', with respect to the *player value*.'
         self.squad.notify_on_discord(text)
 
-        # Create a summary of the matches
+        # Compose another notification for a summary of the matches
         text = 'Matches played in this session:'
         for pmatch in self.matches.filter(
             matchparticipation__player__in = self.squad.memberships.values_list('player__pk', flat = True)
@@ -112,15 +179,24 @@ class GamingSession(models.Model):
                 )[pmatch.result]
         self.squad.notify_on_discord(text)
 
-        # Determine the rising star
+        # Determine the rising star (if any)
         if participated_squad_members > 1 and top_player is not None and top_player_trend_rel > 0.01:
             from .plots import trends as plot_trends
             notification = self.squad.notify_on_discord(
-                squad = self.squad,
-                text = f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!',
+                f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!',
             )
             if notification is not None:
-                plot = plot_trends(self.squad, top_player, Features.MANY)
+                plot = plot_trends(
+                    self.squad.memberships.filter(player = top_player).get(),
+                    feature_contexts[top_player.steamid],  # The feature context for the session trends
+                    [
+                        Features.player_value,
+                        Features.participation_effect,
+                        Features.headshot_rate,
+                        Features.damage_per_round,
+                        Features.kills_per_death,
+                    ],
+                )
                 notification.attach(plot)
             self.rising_star = top_player
             self.save()
@@ -132,30 +208,52 @@ class GamingSession(models.Model):
             for session in added_sessions:
                 if session.is_closed:
                     continue
-                if GamingSession.objects.filter(squad = session.squad, is_closed = True, matches__timestamp__gt = instance.timestamp_end).exists():
-                    log.info(f'Setting session {session.pk} added to match {instance.pk} (str(instance)) to closed since a new closed session of the same squad exists')
+                if GamingSession.objects.filter(
+                    squad = session.squad,
+                    is_closed = True,
+                    matches__timestamp__gt = instance.timestamp_end,
+                ).exists():
+                    log.info(
+                        f'Setting session {session.pk} added to match {instance.pk} (str(instance)) to closed '
+                        f'since a new closed session of the same squad exists'
+                    )
                     session.is_closed = True
-                    session.save() 
+                    session.save()
 
     @property
-    def participated_steamids(self):
+    def participated_steamids(self) -> FrozenSet[str]:
+        """
+        Get the Steam IDs of the players who participated in the session.
+        """
         steamids = set()
         for pmatch in self.matches.all():
             for mp in pmatch.matchparticipation_set.all():
                 steamids.add(mp.player.steamid)
-        return steamids
+        return frozenset(steamids)
 
     @property
-    def participants(self):
+    def participants(self) -> List[SteamProfile]:
+        """
+        Get the players who participated in the session.
+        """
         return [SteamProfile.objects.get(steamid = steamid) for steamid in self.participated_steamids]
 
     @property
-    def participated_squad_members(self):
-        participated_squad_members_steamids = self.squad.memberships.filter(
+    def participated_squad_members_steamids(self) -> QuerySet:
+        """
+        Get the Steam IDs of the squad members who participated in the session.
+        """
+        return self.squad.memberships.filter(
             player__steamid__in = self.participated_steamids
         ).values_list('player__steamid', flat = True)
+
+    @property
+    def participated_squad_members(self):
+        """
+        Get the squad members who participated in the session.
+        """
         return SteamProfile.objects.filter(
-            steamid__in = participated_squad_members_steamids,
+            steamid__in = self.participated_squad_members_steamids,
             matchparticipation__pmatch__in = self.matches.values_list('pk', flat = True),
         ).values(
             'steamid',
@@ -168,91 +266,210 @@ class GamingSession(models.Model):
         )
 
     @property
-    def first_match(self):
-        if not self.matches.exists(): return None
+    def first_match(self) -> Optional['Match']:
+        """
+        Get the first match of the session, or `None` if the session has no matches.
+        """
+        if not self.matches.exists():
+            return None
         return self.matches.earliest('timestamp')
 
     @property
-    def last_match(self):
-        if not self.matches.exists(): return None
+    def last_match(self) -> Optional['Match']:
+        """
+        Get the last match of the session, or `None` if the session has no matches.
+        """
+        if not self.matches.exists():
+            return None
         return self.matches.latest('timestamp')
 
     @property
-    def started(self):
+    def started(self) -> Optional[int]:
+        """
+        The CSGO timestamp of the first match of the session, or `None` if the session has no matches.
+        """
         return None if self.first_match is None else self.first_match.timestamp
 
     @property
-    def ended(self):
+    def ended(self) -> Optional[int]:
+        """
+        The CSGO timestamp of the last match of the session plus the duration of the match (in seconds), or `None` if
+        the session has no matches.
+        """
         return None if self.last_match is None else self.last_match.timestamp + self.last_match.duration
 
     @property
-    def started_datetime(self):
-        return '–' if self.started is None else datetime.fromtimestamp(self.started).strftime('%-d %b %Y %H:%M')
+    def started_datetime(self) -> str:
+        """
+        Get the human-readable date and time of the start of the session.
+        """
+        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%-d %b %Y %H:%M')
 
     @property
-    def started_date(self):
-        return '–' if self.started is None else datetime.fromtimestamp(self.started).strftime('%-d %b %Y')
+    def started_date(self) -> str:
+        """
+        Get the human-readable date of the start of the session.
+        """
+        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%-d %b %Y')
 
     @property
-    def started_time(self):
-        return '–' if self.started is None else datetime.fromtimestamp(self.started).strftime('%H:%M')
+    def started_time(self) -> str:
+        """
+        Get the human-readable time of the start of the session.
+        """
+        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%H:%M')
 
     @property
-    def ended_datetime(self):
-        return '–' if self.ended is None else datetime.fromtimestamp(self.ended).strftime('%-d %b %Y %H:%M')
+    def ended_datetime(self) -> str:
+        """
+        Get the human-readable date and time of the end of the session.
+        """
+        return '–' if self.ended is None else csgo_timestamp_to_strftime(self.ended, r'%-d %b %Y %H:%M')
 
     @property
-    def ended_time(self):
-        return '–' if self.ended is None else datetime.fromtimestamp(self.ended).strftime('%H:%M')
+    def ended_time(self) -> str:
+        """
+        Get the human-readable time of the end of the session.
+        """
+        return '–' if self.ended is None else csgo_timestamp_to_strftime(self.ended, r'%H:%M')
 
     @property
-    def started_weekday(self):
-        return '' if self.started is None else datetime.fromtimestamp(self.started).strftime('%A')
+    def started_weekday(self) -> str:
+        """
+        Get the human-readable weekday of the start of the session.
+        """
+        return '' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%A')
 
     @property
-    def started_weekday_short(self):
-        return '' if self.started is None else datetime.fromtimestamp(self.started).strftime('%a')
+    def started_weekday_short(self) -> str:
+        """
+        Get the human-readable abbreviation of the weekday of the start of the session.
+        """
+        return '' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%a')
 
-    def __str__(self):
+    def __str__(self) -> str:
+        """
+        Get the string representation of the gaming session.
+        """
         try:
             if self.matches.all().exists():
                 return f'{self.started_datetime} — {self.ended_datetime} ({self.pk})'
-        except:
+        except:  # noqa: E722
             pass
         return f'Empty Gaming Session ({self.pk})'
 
 
-def get_match_result(team_idx, team_scores):
+def get_match_result(team_idx: int, team_scores: Tuple[int, int]) -> Literal['w', 'l', 't']:
+    """
+    Get the result of a match for a given team.
+
+    Arguments:
+        team_idx: The index of the team for which to get the result (0 or 1).
+        team_scores: The scores of the two teams in the match.
+
+    Returns:
+        The result is either a win ('w'), a loss ('l'), or a tie ('t').
+    """
+    assert 0 <= team_idx < 2, f'Invalid team index: {team_idx}'
     own_team_score = team_scores[ team_idx]
     opp_team_score = team_scores[(team_idx + 1) % 2]
-    if own_team_score < opp_team_score: return 'l'
-    if own_team_score > opp_team_score: return 'w'
+    if own_team_score < opp_team_score:
+        return 'l'
+    if own_team_score > opp_team_score:
+        return 'w'
     return 't'
 
 
 class Match(models.Model):
+    """
+    A match that has been played and finished.
+    """
 
-    sharecode   = models.CharField(blank=False, max_length=50)
-    timestamp   = models.PositiveBigIntegerField()
+    sharecode = models.CharField(blank=False, max_length=50)
+    """
+    The share code of the match.
+    """
+
+    timestamp = models.PositiveBigIntegerField()
+    """
+    The CSGO timestamp of the match.
+    """
+
     score_team1 = models.PositiveSmallIntegerField()
+    """
+    The score of team 1 (first five players) in the match.
+    """
+
     score_team2 = models.PositiveSmallIntegerField()
-    duration    = models.PositiveSmallIntegerField()
-    map_name    = models.SlugField()
-    sessions    = models.ManyToManyField(GamingSession, related_name='matches', blank=True)
+    """
+    The score of team 2 (last five players) in the match.
+    """
+
+    duration = models.PositiveSmallIntegerField()
+    """
+    The duration of the match in seconds.
+    """
+
+    map_name = models.SlugField()
+    """
+    The name of the map on which the match was played.
+    """
+
+    sessions = models.ManyToManyField(GamingSession, related_name = 'matches', blank = True)
+    """
+    The gaming sessions in which the match was played.
+    """
 
     class Meta:
-        verbose_name_plural = "Matches"
+
+        verbose_name_plural = 'Matches'
+        """
+        The plural name of the model (this is how it appears in the admin console).
+        """
+
         constraints = [
             models.UniqueConstraint(
-                fields=['sharecode', 'timestamp'], name='unique_sharecode_timestamp'
+                fields = ['sharecode', 'timestamp'], name = 'unique_sharecode_timestamp',
             )
         ]
+        """
+        The combination of the share code and the timestamp must be unique.
+        """
 
     @staticmethod
-    def create_from_data(data):
-        existing_matches = Match.objects.filter(sharecode = data['sharecode'], timestamp = data['timestamp'])
-        if len(existing_matches) != 0: return existing_matches.get()
+    def create_from_data(data: dict) -> Self:
+        """
+        Get a :class:`Match` object corresponding to the given data.
 
+        The following data must be supplied via the `data` dictionary:
+
+        - `sharecode`: The share code of the match.
+        - `timestamp`: The CSGO timestamp of the match.
+        - `steam_ids`: List of the Steam IDs of the participated players. The first five players are in team 1, and the
+          last five players are in team 2.
+        - `summary`: The summary of the match, that is an object with the following attributes:
+            - `map`: The URL of the demo file of the match.
+            - `team_scores`: Tuple of the scores of the two teams.
+            - `match_duration`: The duration of the match in seconds.
+            - `enemy_kills`: List of the number of enemy kills for each player.
+            - `enemy_headshots`: List of the number of enemy headshots for each player.
+            - `assists`: List of the number of assists for each player.
+            - `deaths`: List of the number of deaths for each player.
+            - `scores`: List of the scores for each player.
+            - `mvps`: List of the number of MVPs for each player.
+
+        The values for `enemy_kills`, `enemy_headshots`, `assists`, `deaths`, `scores`, `mvps` must be given in the same
+        order as the `steam_ids`.
+
+        Returns:
+            If a match with the same share code and timestamp already exists, then the corresponding object is returned.
+            Otherwise, a new :class:`Match` object is created from the given data and returned.
+        """
+        existing_matches = Match.objects.filter(sharecode = data['sharecode'], timestamp = data['timestamp'])
+        if len(existing_matches) != 0:
+            return existing_matches.get()
+
+        # Fetch the match details (download and parse the demo file)
         fetch_match_details(data)
 
         with transaction.atomic():
@@ -341,19 +558,19 @@ class Match(models.Model):
 
     @property
     def datetime(self):
-        return csgo_timestamp_to_datetime(self.timestamp)
+        return csgo_timestamp_to_strftime(self.timestamp)
 
     @property
     def datetime_end(self):
-        return csgo_timestamp_to_datetime(self.timestamp + self.duration)
+        return csgo_timestamp_to_strftime(self.timestamp + self.duration)
 
     @property
     def time(self):
-        return csgo_timestamp_to_datetime(self.timestamp, fmt='%H:%M')
+        return csgo_timestamp_to_strftime(self.timestamp, fmt='%H:%M')
 
     @property
     def time_end(self):
-        return csgo_timestamp_to_datetime(self.timestamp + self.duration, fmt='%H:%M')
+        return csgo_timestamp_to_strftime(self.timestamp + self.duration, fmt='%H:%M')
 
     def get_participation(self, player):
         if isinstance(player, str):
@@ -427,33 +644,6 @@ class MatchParticipation(models.Model):
     def filter(qs, period):
         return qs if period is None else qs.filter(**period.filters())
 
-    class Period:
-
-        LONG_TERM_TREND_SHIFT  = -60 * 60 * 24 * 7 # 7 days to the past
-        SHORT_TERM_TREND_SHIFT = -60 * 60 * 12     # half a day to the past
-        DEFAULT_DAYS = 30
-
-        def __init__(self):
-            timestamp_now = datetime.timestamp(datetime.now())
-            self.start = None
-            self.end   = timestamp_now
-
-        def without_old(self, days=DEFAULT_DAYS):
-            timestamp_now = datetime.timestamp(datetime.now())
-            self.start = timestamp_now - days * 24 * 60 * 60
-            return self
-
-        def shift(self, seconds):
-            if self.start is not None: self.start += seconds
-            if self.end   is not None: self.end   += seconds
-            return self
-
-        def filters(self):
-            filters = dict()
-            if self.start is not None: filters['pmatch__timestamp__gte'] = self.start
-            if self.end   is not None: filters['pmatch__timestamp__lte'] = self.end
-            return filters
-
 
 def get_or_none(qs, **kwargs):
     try:
@@ -506,15 +696,15 @@ class PlayerOfTheWeek(models.Model):
 
     @property
     def competition_start(self):
-        return csgo_timestamp(self.competition_start_timestamp)
+        return csgo_timestamp_to_datetime(self.competition_start_timestamp)
 
     @property
     def competition_end(self):
-        return csgo_timestamp(self.competition_end_timestamp)
+        return csgo_timestamp_to_datetime(self.competition_end_timestamp)
 
     @property
     def competition_end_datetime(self):
-        return csgo_timestamp_to_datetime(self.competition_end_timestamp)
+        return csgo_timestamp_to_strftime(self.competition_end_timestamp)
 
     @property
     def week(self):
@@ -598,7 +788,7 @@ class PlayerOfTheWeek(models.Model):
 
     @staticmethod
     def create_badge(badge_data):
-        if datetime.timestamp(csgo_timestamp(badge_data['timestamp'])) > datetime.timestamp(datetime.now()): return None
+        if datetime.timestamp(csgo_timestamp_to_datetime(badge_data['timestamp'])) > datetime.timestamp(datetime.now()): return None
         badge = PlayerOfTheWeek(timestamp = badge_data['timestamp'], squad = badge_data['squad'], mode = badge_data['mode'])
         for player_data in badge_data['leaderboard']:
             if   player_data['place_candidate'] == 1: badge.player1 = player_data['player']
@@ -628,8 +818,8 @@ class PlayerOfTheWeek(models.Model):
                 log.error(f'Failed to create missing badges.', exc_info=True)
 
     class Meta:
-        verbose_name        = 'Player-of-the-Week badge';
-        verbose_name_plural = 'Player-of-the-Week badges';
+        verbose_name        = 'Player-of-the-Week badge'
+        verbose_name_plural = 'Player-of-the-Week badges'
 
     def __str__(self):
         return f'{self.week}/{self.year}'
@@ -641,8 +831,8 @@ class MatchBadgeType(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
     class Meta:
-        verbose_name        = 'Match-based badge type';
-        verbose_name_plural = 'Match-based badge types';
+        verbose_name        = 'Match-based badge type'
+        verbose_name_plural = 'Match-based badge types'
 
 
 class MatchBadge(models.Model):
@@ -763,7 +953,7 @@ class UpdateTask(models.Model):
         self.execution_timestamp = datetime.timestamp(datetime.now())
         self.save()
 
-        if self.account.enabled:
+        if self.account.enabled and settings.CSGO_API_ENABLED:
             try:
                 first_sharecode = self.account.sharecode
                 new_match_data  = api.fetch_matches(first_sharecode, SteamAPIUser(self.account.steamid, self.account.steam_auth))

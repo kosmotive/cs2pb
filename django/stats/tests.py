@@ -642,7 +642,7 @@ class split_into_chunks(TestCase):
 
 
 class matches(TestCase):
-    
+
     @testsuite.fake_api('accounts.models')
     def setUp(self):
         self.factory = RequestFactory()
@@ -731,23 +731,31 @@ class UpdateTask__run(TestCase):
     def setUp(self):
         self.player = models.SteamProfile.objects.create(steamid = '12345678900000001')
         self.account = Account.objects.create(steam_profile = self.player, last_sharecode = 'xxx-sharecode-xxx')
-        self.task = models.UpdateTask(account = self.account, scheduled_timestamp = datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)))
+        self.task = models.UpdateTask(
+            account = self.account,
+            scheduled_timestamp =
+            datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)),
+        )
         self.assertFalse(self.task.completed)
         self.assertTrue(self.account.enabled)
 
+    @patch.object(models.settings, 'CSGO_API_ENABLED', True)
     @patch('api.api.fetch_matches', side_effect = api.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'))
     def test_invalid_sharecode_error(self, mock_api_fetch_matches):
         self.task.run()
 
-        # Accounts with invalid `last_sharecode` should be disabled, because there is no point in retrying an update for an invalid sharecode
+        # Accounts with invalid `last_sharecode` should be disabled, because there is no point in retrying an update
+        # for an invalid sharecode
         self.assertFalse(self.account.enabled)
 
         # Verify that the task was completed (there is no point in repeating it)
         self.assertTrue(self.task.completed)
 
+    @patch.object(models.settings, 'CSGO_API_ENABLED', True)
     @patch('api.api.fetch_matches', side_effect = ValueError)
     def test_fetch_matches_error(self, mock_api_fetch_matches):
-        # Verify that the error is passed through (so it can be handled by `run_pending_tasks`, see the `run_pending_tasks` test)
+        # Verify that the error is passed through (so it can be handled by `run_pending_tasks`, see the
+        # `run_pending_tasks` test)
         self.assertRaises(ValueError, self.task.run)
 
         # Verify that the task is not completed (can be repeated later, usually after a new task is scheduled)
@@ -766,6 +774,56 @@ class UpdateTask__run(TestCase):
 
         # Verify that the task was not actually processed
         self.assertEqual(mock_api_fetch_matches.call_count, 0)
+
+
+class GamingSession(TestCase):
+
+    def setUp(self):
+        self.squad = Squad.objects.create(name = 'Test Squad', discord_channel_id = '1234')
+        self.session = models.GamingSession.objects.create(squad = self.squad)
+        self.matches = [
+            models.Match.objects.create(
+                sharecode = f'xxx-{midx}',
+                timestamp = timestamp,
+                score_team1 = 12,
+                score_team2 = 12,
+                duration = 3000,
+                map_name = 'de_dust2',
+            )
+            for midx, timestamp in enumerate([10, 3600])
+        ]
+        for m in self.matches:
+            m.sessions.add(self.session)
+
+    def test__first_match(self):
+        self.assertEqual(self.session.first_match, self.matches[0])
+
+    def test__last_match(self):
+        self.assertEqual(self.session.last_match, self.matches[-1])
+
+    def test__started(self):
+        self.assertEqual(self.session.started, 10)
+
+    def test__ended(self):
+        self.assertEqual(self.session.ended, 6600)
+
+    def test__started_datetime(self):
+        self.assertEqual(self.session.started_datetime, '1 Jan 1970 01:00')
+
+    def test__ended_datetime(self):
+        self.assertEqual(self.session.ended_datetime, '1 Jan 1970 02:50')
+
+    def test__started_time(self):
+        self.assertEqual(self.session.started_time, '01:00')
+
+    def test__ended_time(self):
+        self.assertEqual(self.session.ended_time, '02:50')
+
+    def test__started_weekday(self):
+        self.assertEqual(self.session.started_weekday, 'Thursday')
+
+    def test__started_weekday_short(self):
+        self.assertEqual(self.session.started_weekday_short, 'Thu')
 
 
 class GamingSession__close(TestCase):
@@ -831,26 +889,33 @@ class GamingSession__close(TestCase):
         self.session1.delete()
         self.match1.delete()
         self.participation1.delete()
+        self.squad.update_stats()
 
         # Close the currently played session
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
 
         # Verify the scheduled Discord notifcation for player performance
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.all()[0]
         self.assertEqual(notification.squad.pk, self.squad.pk)
-        pv = math.sqrt((20 / 15) * 120.5 / 100)
         self.assertEqual(
-            f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
-            f'<12345678900000001> ±0.00% ({pv :.2f}), with respect to the *player value*.',
+            f'Looks like your session has ended!',
             notification.text,
         )
 
     def test_constant_kpi(self):
+        self.squad.update_stats()
+
         # Close the currently played session
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
 
         # Verify the scheduled Discord notifcation for player performance
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
@@ -864,6 +929,8 @@ class GamingSession__close(TestCase):
         )
 
     def test_increasing_kpi(self):
+        self.squad.update_stats()
+
         # Increase the KPI
         self.participation2.adr = 140
         self.participation2.save()
@@ -872,20 +939,25 @@ class GamingSession__close(TestCase):
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
 
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
+
         # Verify the scheduled Discord notifcation for player performance
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.all()[0]
         self.assertEqual(notification.squad.pk, self.squad.pk)
-        pv_previous = math.sqrt((20 / 15) * 120.5 / 100)
-        pv_today    = math.sqrt((20 / 15) * 140 / 100)
-        pv_ref      = (pv_previous + pv_today) / 2
+        pv_previous  = math.sqrt((20 / 15) * 120.5 / 100)
+        pv_today     = math.sqrt((20 / 15) * 140 / 100)
+        pv_trend_rel = (pv_today - pv_previous) / pv_previous
         self.assertEqual(
             f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
-            f'<12345678900000001> 📈 +{100 * (pv_today - pv_ref) / pv_ref :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
+            f'<12345678900000001> 📈 +{100 * pv_trend_rel :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
             notification.text,
         )
 
     def test_decreasing_kpi(self):
+        self.squad.update_stats()
+
         # Decrease the KPI
         self.participation2.adr = 100
         self.participation2.save()
@@ -894,20 +966,25 @@ class GamingSession__close(TestCase):
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
 
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
+
         # Verify the scheduled Discord notifcation for player performance
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.all()[0]
         self.assertEqual(notification.squad.pk, self.squad.pk)
         pv_previous = math.sqrt((20 / 15) * 120.5 / 100)
         pv_today    = math.sqrt((20 / 15) * 100 / 100)
-        pv_ref      = (pv_previous + pv_today) / 2
+        pv_trend_rel = (pv_today - pv_previous) / pv_previous
         self.assertEqual(
             f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
-            f'<12345678900000001> 📉 {100 * (pv_today - pv_ref) / pv_ref :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
+            f'<12345678900000001> 📉 {100 * pv_trend_rel :.1f}% ({pv_today :.2f}), with respect to the *player value*.',
             notification.text,
         )
 
     def test_multiple_matches(self):
+        self.squad.update_stats()
+
         # Add a second participant to the current session (teammate)
         self.participation3 = models.MatchParticipation.objects.create(
             player = self.player2,
@@ -974,6 +1051,9 @@ class GamingSession__close(TestCase):
         self.session2.close()
         self.assertTrue(self.session2.is_closed)
 
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
+
         # Verify the scheduled Discord notification for summary of played matches
         self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 2)
         notification = ScheduledNotification.objects.all()[1]
@@ -985,3 +1065,50 @@ class GamingSession__close(TestCase):
             '- *de_inferno*, **13:12** won 🤘\n'
             '- *de_dust2*, **12:13** lost 💩',
         )
+
+    def test_rising_star(self):
+        self.squad.update_stats()
+
+        # Increase the KPI
+        self.participation2.adr = 140
+        self.participation2.save()
+
+        # Add a second participant to the current session (teammate)
+        self.participation3 = models.MatchParticipation.objects.create(
+            player = self.player2,
+            pmatch = self.match2,
+            position = 1,
+            team = self.participation2.team,
+            result = self.participation2.result,
+            kills = 10,
+            assists = 5,
+            deaths = 10,
+            score = 15,
+            mvps = 3,
+            headshots = 10,
+            adr = 90,
+        )
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star
+        self.assertEqual(self.session2.rising_star.pk, self.player1.pk)
+
+        # Verify the scheduled Discord notification for the rising star
+        self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 3)
+        notification = ScheduledNotification.objects.all()[2]
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+        self.assertEqual(
+            notification.text,
+            'And today\'s **rising star** was: 🌟 <12345678900000001>!',
+        )
+
+        # Verify the radar plot
+        import numpy as np
+        import matplotlib.image as mpimg
+        attachment = notification.get_attachment()
+        img_actual = mpimg.imread(attachment, format = 'png')
+        img_expected = mpimg.imread('tests/data/radarplot.png')
+        self.assertAlmostEqual(np.linalg.norm(img_actual - img_expected), 0, delta = 0.1)

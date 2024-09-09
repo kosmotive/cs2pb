@@ -100,8 +100,8 @@ class Account__update_matches(TestCase):
         self.assertEqual(task3.scheduled, update3_datetime)
 
 
-@patch.object(stats.features.FeatureContext, 'create_default')
-class Squad__update_positions(TestCase):
+@patch('accounts.models.SquadMembership.update_stats')
+class Squad__update_stats(TestCase):
 
     @testsuite.fake_api('accounts.models')
     def setUp(self):
@@ -111,23 +111,24 @@ class Squad__update_positions(TestCase):
         self.squad = accounts.models.Squad.objects.create(name = 'squad', discord_channel_id = '1234')
         for player in self.players:
             accounts.models.SquadMembership.objects.create(squad = self.squad, player = player)
-        self.pv_dict = dict()
 
     def update_position(self, player, position):
         m = self.squad.memberships.get(player = player)
         m.position = position
         m.save()
 
-    def test_all_newcomers(self, mock__create_default):
-        self.pv_dict[self.players[0].steamid] = dict(value = 0.9)
-        self.pv_dict[self.players[1].steamid] = dict(value = 1.1)
-        self.pv_dict[self.players[2].steamid] = dict(value = 0.8)
-        self.pv_dict[self.players[3].steamid] = dict(value = 0.7)
+    def update_player_value(self, player, value):
+        m = self.squad.memberships.get(player = player)
+        m.stats['player_value'] = value
+        m.save()
 
-        mock__create_default.side_effect = lambda player, squad: player.steamid
-        with patch.object(stats.features.Features, 'pv') as mock_pv:
-            mock_pv.side_effect = self.pv_dict.get
-            self.squad.update_positions()
+    def test_all_newcomers(self, mock__SquadMembership__update_stats):
+        self.update_player_value(self.players[0], 0.9)
+        self.update_player_value(self.players[1], 1.1)
+        self.update_player_value(self.players[2], 0.8)
+        self.update_player_value(self.players[3], 0.7)
+
+        self.squad.update_stats()
 
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
@@ -137,20 +138,17 @@ class Squad__update_positions(TestCase):
         self.assertEqual(memberships.get(player = self.players[2]).position, 2)
         self.assertEqual(memberships.get(player = self.players[3]).position, 3)
 
-    def test_one_newcomer(self, mock__create_default):
+    def test_one_newcomer(self, mock__SquadMembership__update_stats):
         self.update_position(self.players[0], 1)
         self.update_position(self.players[1], 0)
         self.update_position(self.players[3], 2)
 
-        self.pv_dict[self.players[0].steamid] = dict(value = 0.9)
-        self.pv_dict[self.players[1].steamid] = dict(value = 1.1)
-        self.pv_dict[self.players[2].steamid] = dict(value = 0.8)
-        self.pv_dict[self.players[3].steamid] = dict(value = 0.7)
+        self.update_player_value(self.players[0], 0.9)
+        self.update_player_value(self.players[1], 1.1)
+        self.update_player_value(self.players[2], 0.8)
+        self.update_player_value(self.players[3], 0.7)
 
-        mock__create_default.side_effect = lambda player, squad: player.steamid
-        with patch.object(stats.features.Features, 'pv') as mock_pv:
-            mock_pv.side_effect = self.pv_dict.get
-            self.squad.update_positions()
+        self.squad.update_stats()
 
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification_text = ScheduledNotification.objects.get().text
@@ -170,21 +168,18 @@ class Squad__update_positions(TestCase):
         self.assertEqual(memberships.get(player = self.players[2]).position, 2)
         self.assertEqual(memberships.get(player = self.players[3]).position, 3)
 
-    def test_swap(self, mock__create_default):
+    def test_swap(self, mock__SquadMembership__update_stats):
         self.update_position(self.players[0], 0)
         self.update_position(self.players[1], 1)
         self.update_position(self.players[2], 2)
         self.update_position(self.players[3], 3)
 
-        self.pv_dict[self.players[0].steamid] = dict(value = 0.9)
-        self.pv_dict[self.players[1].steamid] = dict(value = 1.1)
-        self.pv_dict[self.players[2].steamid] = dict(value = 0.8)
-        self.pv_dict[self.players[3].steamid] = dict(value = 0.7)
+        self.update_player_value(self.players[0], 0.9)
+        self.update_player_value(self.players[1], 1.1)
+        self.update_player_value(self.players[2], 0.8)
+        self.update_player_value(self.players[3], 0.7)
 
-        mock__create_default.side_effect = lambda player, squad: player.steamid
-        with patch.object(stats.features.Features, 'pv') as mock_pv:
-            mock_pv.side_effect = self.pv_dict.get
-            self.squad.update_positions()
+        self.squad.update_stats()
 
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification_text = ScheduledNotification.objects.get().text
@@ -204,20 +199,17 @@ class Squad__update_positions(TestCase):
         self.assertEqual(memberships.get(player = self.players[2]).position, 2)
         self.assertEqual(memberships.get(player = self.players[3]).position, 3)
 
-    def test_one_missing(self, mock__create_default):
+    def test_one_missing(self, mock__SquadMembership__update_stats):
         self.update_position(self.players[0], 0)
         self.update_position(self.players[1], 1)
         self.update_position(self.players[2], 2)
 
-        self.pv_dict[self.players[0].steamid] = dict(value = 1.1)
-        self.pv_dict[self.players[1].steamid] = dict(value = None)
-        self.pv_dict[self.players[2].steamid] = dict(value = 0.8)
-        self.pv_dict[self.players[3].steamid] = dict(value = None)
+        self.update_player_value(self.players[0], 1.1)
+        self.update_player_value(self.players[1], None)
+        self.update_player_value(self.players[2], 0.8)
+        self.update_player_value(self.players[3], None)
 
-        mock__create_default.side_effect = lambda player, squad: player.steamid
-        with patch.object(stats.features.Features, 'pv') as mock_pv:
-            mock_pv.side_effect = self.pv_dict.get
-            self.squad.update_positions()
+        self.squad.update_stats()
 
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification_text = ScheduledNotification.objects.get().text

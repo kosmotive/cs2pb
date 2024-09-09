@@ -4,7 +4,7 @@
 .DS_Store
 *.swp
 /activate.sh
-/django/db.sqlite3
+/django/db.sqlite3*
 /django/tmp*.json
 /django/discordbot/settings.json
 /django/static-deployed

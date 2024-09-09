@@ -11,7 +11,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  check_settings:
+  run_tests:
 
     runs-on: ubuntu-latest
     name: Run test-suite
