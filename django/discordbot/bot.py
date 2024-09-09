@@ -1,23 +1,19 @@
-import discord, discord.utils
-import json
 import asyncio
+import json
 import logging
-import re
 import os
 
-from django.db import transaction
-from django.core.exceptions import ObjectDoesNotExist
+import discord
+import discord.utils
+from accounts.models import Squad
 from asgiref.sync import sync_to_async
-
 from discord.ext import commands
-from datetime import datetime
+from discordbot.models import (
+    InvitationDraft,
+    ScheduledNotification,
+)
 
-from accounts.models import Squad, SteamProfile
-from discordbot.models import ScheduledNotification, InvitationDraft
-from stats.models import MatchParticipation
-from stats import plots
-from stats.features import Features, FeatureContext
-
+from django.core.exceptions import ObjectDoesNotExist
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +21,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-bot = commands.Bot(command_prefix='/', intents=intents)
+bot = commands.Bot(command_prefix = '/', intents = intents)
 
 
 @sync_to_async
@@ -33,7 +29,8 @@ def get_squad(channel_id = None, squad_id = None):
     assert channel_id or squad_id
     if squad_id is None:
         squads = Squad.objects.filter(discord_channel_id = channel_id)
-        if len(squads) == 0: return None
+        if len(squads) == 0:
+            return None
         squad = squads.get()
     else:
         squad = Squad.objects.get(uuid = squad_id)
@@ -66,13 +63,6 @@ def create_invitation(squad, discord_name):
         return None
 
 
-def get_or_none(qs, *args, **kwargs):
-    try:
-        return qs.get(*args, **kwargs)
-    except ObjectDoesNotExist:
-        return None
-
-
 class BotError(Exception):
 
     def __init__(self, msg):
@@ -82,84 +72,16 @@ class BotError(Exception):
         return self.msg
 
 
-class UnrecognizedNameError(BotError):
-
-    def __init__(self, name):
-        super().__init__(f'Failed to recognize name: {name}')
-        self.name = name
-
-
-class UnrecognizedFeatureError(BotError):
-
-    def __init__(self, name):
-        super().__init__(f'Failed to recognize feature: {name}')
-        self.name = name
-
-
-def get_features(features_add, features_remove):
-    for feature in features_remove:
-        if not hasattr(Features, feature):
-            raise UnrecognizedFeatureError(feature)
-    stats = [stat for stat in Features.MANY if stat.slug not in features_remove]
-    for feature in features_add:
-        if hasattr(Features, feature):
-            stats.append(getattr(Features, feature))
-        else:
-            raise UnrecognizedFeatureError(feature)
-    return stats
-
-
-def recognize_name(squad, name): # name must be either full Discord name or Steam name
-    qs = SteamProfile.objects.filter(squads = squad)
-    player = get_or_none(qs, account__discord_name = name) or get_or_none(qs, name = name)
-    if not player: raise UnrecognizedNameError(name)
-    return player
-
-
-@sync_to_async
-def plot_stats(squad, name1, name2=None, features_add=[], features_remove=[], days=None, **filters): # names must be either full Discord names or Steam names
-    log.info(f'Fetching stats for {name1}' + (f' and {name2}' if name2 is not None else ''))
-    player1 = recognize_name(squad, name1)
-    if name2 is not None:
-        player2 = recognize_name(squad, name2)
-        if player1.pk == player2.pk: player2 = None
-    else:
-        player2 = None
-    features = get_features(features_add, features_remove)
-    contexts = [FeatureContext.create_default(player1, squad, days, **filters)]
-    labels   = [player1.clean_name]
-    if player2 is not None:
-        contexts.append(FeatureContext.create_default(player2, squad, days, **filters))
-        labels  .append(player2.clean_name)
-    return plots.radar(*contexts, features = features, labels = labels)
-
-
-@sync_to_async
-def plot_squad_stats(squad, features, days = None, **filters):
-    features = get_features(features, [f.slug for f in Features.MANY])
-    contexts, labels = [], []
-    for m in squad.memberships.all():
-        contexts.append(FeatureContext.create_default(m.player, squad, days, **filters))
-        labels  .append(m.player.clean_name)
-    return plots.bars(*contexts, features = features, labels = labels)
-
-
-@sync_to_async
-def plot_trends(squad, name, days, features_add=[], features_remove=[], **filters):
-    log.info(f'Fetching trends for {name}')
-    player    = recognize_name(squad, name)
-    features  = get_features(features_add, features_remove)
-    return plots.trends(squad, player, features, days, **filters)
-
-
 async def tick():
     user_lookup = {user.name: user.mention for user in bot.users}.get
     new_notifications = await pop_scheduled_notifications(user_lookup)
     for n in new_notifications:
-        if n['channel_id'] is None: continue
+        if n['channel_id'] is None:
+            continue
         channel = bot.get_channel(int(n['channel_id']))
         kwargs = dict(content = n['text'])
-        if n['attachment'] is not None: kwargs['file'] = discord.File(n['attachment'], filename='stats.png')
+        if n['attachment'] is not None:
+            kwargs['file'] = discord.File(n['attachment'], filename='stats.png')
         await channel.send(**kwargs)
 
 
@@ -198,123 +120,13 @@ async def join(ctx):
         discord_name = await get_full_discord_name(ctx.user)
         invitation = await create_invitation(squad, discord_name)
         if invitation is None:
-            await ctx.response.send_message(f'Sorry bro, you are not on the list ¯\\_(ツ)_/¯\nType `/who_is_your_creator` and I\'ll tell you whom to ask.')
+            await ctx.response.send_message(
+                f'Sorry bro, you are not on the list ¯\\_(ツ)_/¯' '\n'
+                f'Type `/who_is_your_creator` and I\'ll tell you whom to ask.'
+            )
         else:
             url = f'{settings["base_url"]}{invitation.url}'
-            await ctx.response.send_message(f'This invitation is only for you ma friend:\n{url}', ephemeral=True)
-
-
-mention_pattern = re.compile(r'^ *<@([0-9]+)> *$')
-
-
-async def resolve_mention(token):
-    """Resolves a token if it is a mention to the corresponding full Discord name.
-    """
-    if token is None: return None
-    m = mention_pattern.match(token)
-    if m is not None:
-        user = discord.utils.get(bot.get_all_members(), id=int(m.group(1)))
-        log.debug(f'Resolved "{token}" to {user.name}')
-        return await get_full_discord_name(user)
-    else:
-        return token
-
-
-add_feature_pattern    = re.compile(r'(?:^|[ ,])\+?([a-z]+)')
-remove_feature_pattern = re.compile(r'(?:^|[ ,])-([a-z]+)')
-
-
-@bot.tree.command(description='Show your stats or of any other player of the squad.')
-@discord.app_commands.describe(squad   = 'The ID of the squad used to look up Steam profile names')
-@discord.app_commands.describe(player1 = 'Mention, Discord name, or Steam profile name')
-@discord.app_commands.describe(player2 = 'Mention, Discord name, or Steam profile name')
-@discord.app_commands.describe(days    = 'The period of time to consider for the stats')
-@discord.app_commands.describe(features = 'List of features to include or exclude (e.g, afbs -fbsr -kd)')
-async def stats(ctx, squad:str=None, player1:str=None, player2:str=None, days:int=None, features:str=''):
-    squad = await get_squad(channel_id = ctx.channel_id, squad_id = squad)
-    if squad is None:
-        await ctx.response.send_message(f'No squad registered for this Discord channel')
-    else:
-        name0  = await get_full_discord_name(ctx.user)
-        name1  = await resolve_mention(player1)
-        name2  = await resolve_mention(player2)
-        kwargs = dict(
-            features_add    = add_feature_pattern.findall(features),
-            features_remove = remove_feature_pattern.findall(features),
-            days = days,
-        )
-        try:
-            if name1 and name2:
-                result = await plot_stats(squad, name1, name2, **kwargs)
-            elif name1:
-                result = await plot_stats(squad, name1, name0, **kwargs)
-            else:
-                result = await plot_stats(squad, name0, **kwargs)
-        except UnrecognizedNameError as ex:
-            members = ', '.join([m.player.name for m in squad.memberships_list])
-            await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord IDs, or Steam profile names, for example: {members}')
-            return
-        except UnrecognizedFeatureError as ex:
-            features = '\n'.join([f'\n`{s.slug}`: **{s.name}**\n{s.description}' for s in Features.ALL])
-            await ctx.response.send_message(f'I didn\'t recognize the feature `{ex.name}`. The following are available:\n{features}')
-            return
-        if result is None:
-            await ctx.response.send_message(f'Insufficient data')
-        else:
-            await ctx.response.send_message(file=discord.File(result, filename='stats.png'))
-
-
-@bot.tree.command(description='Show your trends or of any other player of the squad.')
-@discord.app_commands.describe(squad   = 'The ID of the squad used to look up Steam profile names')
-@discord.app_commands.describe(player  = 'Mention, Discord name, or Steam profile name')
-@discord.app_commands.describe(days    = 'The period of time to consider for the stats')
-@discord.app_commands.describe(features = 'List of features to include or exclude (e.g, afbs -fbsr -kd)')
-async def trends(ctx, squad:str=None, player:str=None, days:int=None, features:str=''):
-    squad = await get_squad(channel_id = ctx.channel_id, squad_id = squad)
-    if squad is None:
-        await ctx.response.send_message(f'No squad registered for this Discord channel')
-    else:
-        name   = await resolve_mention(player) if player else await get_full_discord_name(ctx.user)
-        kwargs = dict(
-            features_add    = add_feature_pattern.findall(features),
-            features_remove = remove_feature_pattern.findall(features),
-        )
-        try:
-            result = await plot_trends(squad, name, days, **kwargs)
-        except UnrecognizedNameError as ex:
-            members = ', '.join([m.player.name for m in squad.memberships_list])
-            await ctx.response.send_message(f'I didn\'t recognize the player `{ex.name}`. Either use mentions, Discord IDs, or Steam profile names, for example: {members}')
-            return
-        except UnrecognizedFeatureError as ex:
-            features = '\n'.join([f'\n`{s.slug}`: **{s.name}**\n{s.description}' for s in Features.ALL])
-            await ctx.response.send_message(f'I didn\'t recognize the feature `{ex.name}`. The following are available:\n{features}')
-            return
-        if result is None:
-            await ctx.response.send_message(f'Insufficient data')
-        else:
-            await ctx.response.send_message(file=discord.File(result, filename='stats.png'))
-
-
-@bot.tree.command(description='Show the stats of the whole squad.')
-@discord.app_commands.describe(features = 'List of features to include (e.g, kd, tc)')
-@discord.app_commands.describe(squad   = 'The ID of the squad')
-@discord.app_commands.describe(days    = 'The period of time to consider for the stats')
-async def squadstats(ctx, features:str, squad:str=None, days:int=None):
-    squad = await get_squad(channel_id = ctx.channel_id, squad_id = squad)
-    if squad is None:
-        await ctx.response.send_message(f'No squad registered for this Discord channel')
-    else:
-        features = add_feature_pattern.findall(features)
-        try:
-            result = await plot_squad_stats(squad, features, days)
-        except UnrecognizedFeatureError as ex:
-            features = '\n'.join([f'\n`{s.slug}`: **{s.name}**\n{s.description}' for s in Features.ALL])
-            await ctx.response.send_message(f'I didn\'t recognize the feature `{ex.name}`. The following are available:\n{features}')
-            return
-        if result is None:
-            await ctx.response.send_message(f'Insufficient data')
-        else:
-            await ctx.response.send_message(file=discord.File(result, filename='stats.png'))
+            await ctx.response.send_message(f'This invitation is only for you ma friend:\n{url}', ephemeral = True)
 
 
 @bot.tree.command(description='Credits')
