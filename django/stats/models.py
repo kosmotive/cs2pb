@@ -303,14 +303,14 @@ class GamingSession(models.Model):
         """
         Get the human-readable date and time of the start of the session.
         """
-        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%-d %b %Y %H:%M')
+        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%b %-d, %Y, %H:%M')
 
     @property
     def started_date(self) -> str:
         """
         Get the human-readable date of the start of the session.
         """
-        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%-d %b %Y')
+        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%b %-d, %Y')
 
     @property
     def started_time(self) -> str:
@@ -324,7 +324,7 @@ class GamingSession(models.Model):
         """
         Get the human-readable date and time of the end of the session.
         """
-        return '–' if self.ended is None else csgo_timestamp_to_strftime(self.ended, r'%-d %b %Y %H:%M')
+        return '–' if self.ended is None else csgo_timestamp_to_strftime(self.ended, r'%b %-d, %Y, %H:%M')
 
     @property
     def ended_time(self) -> str:
@@ -574,7 +574,7 @@ class Match(models.Model):
     
     @property
     def date(self):
-        return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%-d %b %Y')
+        return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%b %-d, %Y')
     
     @property
     def weekday(self):
