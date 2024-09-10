@@ -58,7 +58,7 @@ def csgo_timestamp_to_datetime(timestamp) -> datetime:
     return datetime.fromtimestamp(timestamp)
 
 
-def csgo_timestamp_to_strftime(timestamp: int, fmt: str = r'%-d %b %Y %H:%M') -> str:
+def csgo_timestamp_to_strftime(timestamp: int, fmt: str = r'%b %-d, %Y, %H:%M') -> str:
     """
     Convert a CSGO timestamp to a formatted string.
     """
@@ -303,49 +303,49 @@ class GamingSession(models.Model):
         """
         Get the human-readable date and time of the start of the session.
         """
-        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%b %-d, %Y, %H:%M')
+        return '-' if self.first_match is None else self.first_match.datetime
 
     @property
     def started_date(self) -> str:
         """
         Get the human-readable date of the start of the session.
         """
-        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%b %-d, %Y')
+        return '-' if self.first_match is None else self.first_match.date
 
     @property
     def started_time(self) -> str:
         """
         Get the human-readable time of the start of the session.
         """
-        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%H:%M')
+        return '-' if self.first_match is None else self.first_match.time
 
     @property
     def ended_datetime(self) -> str:
         """
         Get the human-readable date and time of the end of the session.
         """
-        return '–' if self.ended is None else csgo_timestamp_to_strftime(self.ended, r'%b %-d, %Y, %H:%M')
+        return '-' if self.last_match is None else self.last_match.datetime_end
 
     @property
     def ended_time(self) -> str:
         """
         Get the human-readable time of the end of the session.
         """
-        return '–' if self.ended is None else csgo_timestamp_to_strftime(self.ended, r'%H:%M')
+        return '-' if self.last_match is None else self.last_match.time_end
 
     @property
     def started_weekday(self) -> str:
         """
         Get the human-readable weekday of the start of the session.
         """
-        return '' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%A')
+        return '-' if self.first_match is None else self.first_match.weekday
 
     @property
     def started_weekday_short(self) -> str:
         """
         Get the human-readable abbreviation of the weekday of the start of the session.
         """
-        return '' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%a')
+        return '-' if self.first_match is None else self.first_match.weekday_short
 
     def __str__(self) -> str:
         """
@@ -499,7 +499,7 @@ class Match(models.Model):
                     steam_profile = SteamProfile.objects.create(steamid = steamid)
                 else:
                     steam_profile = steam_profiles[0]
-                    steam_profile.save() # updates data from Steam API
+                    steam_profile.save()  # Updates data from Steam API
 
                 players.append(steam_profile)
 
