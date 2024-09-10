@@ -1130,7 +1130,7 @@ class UpdateTask(models.Model):
     The account for which to fetch new matches.
     """
 
-    scheduled_timestamp = models.PositiveBigIntegerField(verbose_name = 'Scheduled')
+    scheduling_timestamp = models.PositiveBigIntegerField(verbose_name = 'Scheduled')
     """
     The timestamp when the task was scheduled.
     """
@@ -1144,7 +1144,7 @@ class UpdateTask(models.Model):
     The timestamp when the task started executing.
     """
 
-    completed_timestamp = models.PositiveBigIntegerField(
+    completion_timestamp = models.PositiveBigIntegerField(
         null = True,
         blank = True,
         verbose_name = 'Completed',
@@ -1154,36 +1154,65 @@ class UpdateTask(models.Model):
     """
 
     @property
-    def scheduled(self):
-        return datetime.fromtimestamp(self.scheduled_timestamp)
+    def scheduling_datetime(self) -> datetime:
+        """
+        Get the datetime object of when the task was scheduled.
+        """
+        return datetime.fromtimestamp(self.scheduling_timestamp)
 
     @property
-    def execution(self):
-        if self.execution_timestamp is None: return None
-        else: return datetime.fromtimestamp(self.execution_timestamp)
+    def execution_datetime(self) -> Optional[datetime]:
+        """
+        Get the datetime object of when the task started executing.
+        """
+        if self.execution_timestamp is None:
+            return None
+        else:
+            return datetime.fromtimestamp(self.execution_timestamp)
 
     @property
-    def completed(self):
-        if self.completed_timestamp is None: return None
-        else: return datetime.fromtimestamp(self.completed_timestamp)
+    def completion_datetime(self) -> Optional[datetime]:
+        """
+        Get the datetime object of when the task completed.
+        """
+        if self.completion_timestamp is None:
+            return None
+        else:
+            return datetime.fromtimestamp(self.completion_timestamp)
 
     @property
-    def scheduled_datetime(self):
-        return self.scheduled.strftime('%-d %b %Y %H:%M')
+    def scheduling_date_and_time(self) -> str:
+        """
+        Get the human-readable date and time of when the task was scheduled.
+        """
+        return self.scheduling_datetime.strftime(r'%b %-d, %Y, %H:%M')
 
     @property
-    def execution_datetime(self):
-        if self.execution is None: return None
-        else: return self.execution.strftime('%-d %b %Y %H:%M')
+    def execution_date_and_time(self) -> Optional[str]:
+        """
+        Get the human-readable date and time of when the task started executing.
+        """
+        if self.execution_datetime is None:
+            return None
+        else:
+            return self.execution_datetime.strftime(r'%b %-d, %Y, %H:%M')
 
     @property
-    def completed_datetime(self):
-        if self.completed is None: return None
-        else: return self.completed.strftime('%-d %b %Y %H:%M')
+    def completion_date_and_time(self) -> Optional[str]:
+        """
+        Get the human-readable date and time of when the task completed.
+        """
+        if self.completion_datetime is None:
+            return None
+        else:
+            return self.completion_datetime.strftime(r'%b %-d, %Y, %H:%M')
 
     @property
-    def is_completed(self):
-        return self.completed_timestamp is not None
+    def is_completed(self) -> bool:
+        """
+        Check if the task has been completed
+        """
+        return self.completion_timestamp is not None
 
     def run(self):
         self.execution_timestamp = datetime.timestamp(datetime.now())
@@ -1192,7 +1221,10 @@ class UpdateTask(models.Model):
         if self.account.enabled and settings.CSGO_API_ENABLED:
             try:
                 first_sharecode = self.account.sharecode
-                new_match_data  = api.fetch_matches(first_sharecode, SteamAPIUser(self.account.steamid, self.account.steam_auth))
+                new_match_data = api.fetch_matches(
+                    first_sharecode,
+                    SteamAPIUser(self.account.steamid, self.account.steam_auth),
+                )
 
                 old_participations = list(self.account.match_participations().order_by('pmatch__timestamp'))
                 for match_data in new_match_data:
@@ -1204,14 +1236,18 @@ class UpdateTask(models.Model):
                     except FileNotFoundError as ex:
                         if str(ex) == 'JSON path does not exist!':
                             # see: https://github.com/pnxenopoulos/awpy/issues/291
-                            log.error(f'Skipping match with sharecode {match_data["sharecode"]} due to error: https://github.com/pnxenopoulos/awpy/issues/291')
+                            log.error(
+                                f'Skipping match with sharecode {match_data["sharecode"]} due to error: '
+                                f'https://github.com/pnxenopoulos/awpy/issues/291'
+                            )
                             fast_forward = True
                         else:
                             raise
 
                     self.account.last_sharecode = match_data['sharecode']
                     self.account.save()
-                    if fast_forward: continue
+                    if fast_forward:
+                        continue
 
                     participation = pmatch.get_participation(self.account.steam_profile)
                     MatchBadge.award(participation, old_participations)
@@ -1222,11 +1258,10 @@ class UpdateTask(models.Model):
                 self.account.enabled = False
                 self.account.save()
 
-        self.completed_timestamp = datetime.timestamp(datetime.now())
+        self.completion_timestamp = datetime.timestamp(datetime.now())
         self.save()
 
         self.account.handle_finished_update()
 
         kept_tasks = UpdateTask.objects.order_by('-scheduled_timestamp')[:100]
-        UpdateTask.objects.exclude(pk__in=kept_tasks.values_list('pk', flat=True)).delete()
-
+        UpdateTask.objects.exclude(pk__in = kept_tasks.values_list('pk', flat = True)).delete()

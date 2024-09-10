@@ -784,7 +784,7 @@ class UpdateTask__run(TestCase):
             scheduled_timestamp =
             datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)),
         )
-        self.assertFalse(self.task.completed)
+        self.assertFalse(self.task.completion_datetime)
         self.assertTrue(self.account.enabled)
 
     @patch.object(models.settings, 'CSGO_API_ENABLED', True)
@@ -797,7 +797,7 @@ class UpdateTask__run(TestCase):
         self.assertFalse(self.account.enabled)
 
         # Verify that the task was completed (there is no point in repeating it)
-        self.assertTrue(self.task.completed)
+        self.assertTrue(self.task.completion_datetime)
 
     @patch.object(models.settings, 'CSGO_API_ENABLED', True)
     @patch('api.api.fetch_matches', side_effect = ValueError)
@@ -807,7 +807,7 @@ class UpdateTask__run(TestCase):
         self.assertRaises(ValueError, self.task.run)
 
         # Verify that the task is not completed (can be repeated later, usually after a new task is scheduled)
-        self.assertFalse(self.task.completed)
+        self.assertFalse(self.task.completion_datetime)
 
         # Verify that the account is still enabled
         self.assertTrue(self.account.enabled)

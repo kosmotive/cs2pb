@@ -62,7 +62,7 @@ class Account__update_matches(TestCase):
             self.account.update_matches()
         self.assertEqual(len(stats.models.UpdateTask.objects.filter(account = self.account)), 1)
         task1 = stats.models.UpdateTask.objects.get(account = self.account)
-        self.assertEqual(task1.scheduled, update1_datetime)
+        self.assertEqual(task1.scheduling_datetime, update1_datetime)
 
         # [9:02] Mark the task as completed (after two minutes)
         _mark_task_as_completed(task1)
@@ -73,7 +73,7 @@ class Account__update_matches(TestCase):
             mock_datetime.timestamp = timestamp
             self.account.update_matches()
         self.assertEqual(len(stats.models.UpdateTask.objects.filter(account = self.account)), 1)
-        self.assertEqual(stats.models.UpdateTask.objects.get(account = self.account).scheduled, update1_datetime)
+        self.assertEqual(stats.models.UpdateTask.objects.get(account = self.account).scheduling_datetime, update1_datetime)
 
         # [9:06] Try to schedule an update six minutes after the first one (should be accepted)
         update2_datetime = update1_datetime + datetime.timedelta(minutes = 6)
@@ -83,7 +83,7 @@ class Account__update_matches(TestCase):
             self.account.update_matches()
         self.assertEqual(len(stats.models.UpdateTask.objects.filter(account = self.account)), 2)
         task2 = stats.models.UpdateTask.objects.filter(account = self.account).latest('scheduled_timestamp')
-        self.assertEqual(task2.scheduled, update2_datetime)
+        self.assertEqual(task2.scheduling_datetime, update2_datetime)
 
         # [9:06] Mark the task as started
         _mark_task_as_started(task2)
@@ -97,7 +97,7 @@ class Account__update_matches(TestCase):
             self.account.update_matches()
         self.assertEqual(len(stats.models.UpdateTask.objects.filter(account = self.account)), 3)
         task3 = stats.models.UpdateTask.objects.filter(account = self.account).latest('scheduled_timestamp')
-        self.assertEqual(task3.scheduled, update3_datetime)
+        self.assertEqual(task3.scheduling_datetime, update3_datetime)
 
 
 @patch('accounts.models.SquadMembership.update_stats')
