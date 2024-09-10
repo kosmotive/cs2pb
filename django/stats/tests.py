@@ -427,7 +427,6 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
         )
         for uidx, user in enumerate(self.players):
             mp = models.MatchParticipation(player = user, pmatch = m)
-            mp.position  = uidx % 3
             mp.team      = 1 + uidx // 3
             mp.result    = models.get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
             mp.kills     =  20   + uidx

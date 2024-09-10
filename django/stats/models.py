@@ -504,7 +504,6 @@ class Match(models.Model):
                 players.append(steam_profile)
 
                 mp = MatchParticipation(player = steam_profile, pmatch = m)
-                mp.position  =     pos  % 5 # this is the CSGO scoreboard position (corresponds to the score), in CS2 it is not used
                 mp.team      = 1 + pos // 5
                 mp.result    = get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
                 mp.kills     = kills
@@ -602,9 +601,8 @@ class MatchParticipation(models.Model):
     player = models.ForeignKey(SteamProfile, on_delete=models.PROTECT, verbose_name='Player')
     pmatch = models.ForeignKey(Match, on_delete=models.CASCADE, verbose_name='Match')
 
-    position = models.PositiveSmallIntegerField()  # scoreboard position
-    team     = models.PositiveSmallIntegerField()  # team 1 or team 2
-    result   = models.CharField(blank=False, max_length=1)  # (t) tie, (w) win, (l) loss
+    team   = models.PositiveSmallIntegerField()  # team 1 or team 2
+    result = models.CharField(blank=False, max_length=1)  # (t) tie, (w) win, (l) loss
 
     kills     = models.PositiveSmallIntegerField()  # enemy kills
     assists   = models.PositiveSmallIntegerField()
@@ -618,9 +616,6 @@ class MatchParticipation(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=['player', 'pmatch'], name='unique_player_pmatch'
-            ),
-            models.UniqueConstraint(
-                fields=['pmatch', 'team', 'position'], name='unique_pmatch_team_position',
             ),
         ]
         ordering = ['-adr'] # in CSGO, this was `position` (corresponding to the score), but in CS2 the ordering is determiend by the ADR

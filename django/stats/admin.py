@@ -7,7 +7,7 @@ from stats.models import Match, MatchParticipation, PlayerOfTheWeek, MatchBadge,
 
 class MatchParticipationInline(admin.TabularInline):
     model = MatchParticipation
-    ordering = ('team', 'position')
+    ordering = ('team', '-adr')
 
 
 @admin.register(Match)

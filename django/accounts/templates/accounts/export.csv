@@ -1,2 +1,2 @@
-Match ID;Timestamp;Map;Duration;Score team 1;Score team 2;Team;Result;Position;Kills;Assists;Deaths;Score;MVPs;Headshots;ADR{% for mp in participations %}
-{{ mp.pmatch.pk }};{{ mp.pmatch.timestamp }};{{ mp.pmatch.map_name }};{{ mp.pmatch.duration }};{{ mp.pmatch.score_team1 }};{{ mp.pmatch.score_team2 }};{{ mp.team }};{{ mp.result }};{{ mp.position }};{{ mp.kills }};{{ mp.assists }};{{ mp.deaths }};{{ mp.score }};{{ mp.mvps }};{{ mp.headshots }};{{ mp.adr }}{% endfor %}
+Match ID;Timestamp;Map;Duration;Score team 1;Score team 2;Team;Result;Kills;Assists;Deaths;Score;MVPs;Headshots;ADR{% for mp in participations %}
+{{ mp.pmatch.pk }};{{ mp.pmatch.timestamp }};{{ mp.pmatch.map_name }};{{ mp.pmatch.duration }};{{ mp.pmatch.score_team1 }};{{ mp.pmatch.score_team2 }};{{ mp.team }};{{ mp.result }};{{ mp.kills }};{{ mp.assists }};{{ mp.deaths }};{{ mp.score }};{{ mp.mvps }};{{ mp.headshots }};{{ mp.adr }}{% endfor %}
