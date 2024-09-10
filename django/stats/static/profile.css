@@ -1,0 +1,81 @@
+h2 {
+    border-bottom: 1px solid #424242;
+    color: #424242;
+    width: 790px;
+    font-weight: bold;
+    margin-top: 2rem;
+    margin-bottom: 0.2rem;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    font-style: italic;
+}
+
+#player-of-the-week-list {
+    list-style-type: none;
+}
+
+#player-of-the-week-list .badge {
+    width: 7.5mm;
+    height: 7.5mm;
+    position: relative;
+    display: inline-block;
+    filter: drop-shadow(0 0 1mm rgba(0,0,0,0.1));
+    vertical-align: middle;
+}
+
+#other-achievements {
+    border-spacing: 1rem;
+    white-space: nowrap;
+}
+
+#other-achievements .badge-frequency {
+    font-weight: lighter;
+}
+
+#other-achievements .badge {
+    width: 15mm;
+    height: 15mm;
+    position: relative;
+    display: inline-block;
+    filter: drop-shadow(0 0 1mm rgba(0,0,0,0.1));
+}
+
+#other-achievements tr > td {
+    vertical-align: top;
+    padding: 0;
+    position: relative;
+}
+
+#other-achievements tr > td:first-child {
+    border-right: 1px solid #ccc;
+    padding-right: 1rem;
+}
+
+#other-achievements .session-date {
+    position: absolute;
+    left: 9em;
+}
+
+#other-achievements .session-time {
+    position: absolute;
+    left: 16em;
+}
+
+#other-achievements .match-map {
+    font-family: Georgia, 'Times New Roman', Times, serif;
+    text-transform: capitalize;
+}
+
+#other-achievements .match-weekday {
+    position: absolute;
+    left: 7.5em;
+}
+
+#other-achievements .match-date {
+    position: absolute;
+    left: 14em;
+}
+
+#other-achievements .match-time {
+    position: absolute;
+    left: 21em;
+}

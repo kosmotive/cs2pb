@@ -566,11 +566,23 @@ class Match(models.Model):
 
     @property
     def time(self):
-        return csgo_timestamp_to_strftime(self.timestamp, fmt='%H:%M')
+        return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%H:%M')
 
     @property
     def time_end(self):
-        return csgo_timestamp_to_strftime(self.timestamp + self.duration, fmt='%H:%M')
+        return csgo_timestamp_to_strftime(self.timestamp + self.duration, fmt = r'%H:%M')
+    
+    @property
+    def date(self):
+        return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%-d %b %Y')
+    
+    @property
+    def weekday(self):
+        return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%A')
+    
+    @property
+    def weekday_short(self):
+        return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%a')
 
     def get_participation(self, player):
         if isinstance(player, str):
