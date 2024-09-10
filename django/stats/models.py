@@ -211,7 +211,7 @@ class GamingSession(models.Model):
                 if GamingSession.objects.filter(
                     squad = session.squad,
                     is_closed = True,
-                    matches__timestamp__gt = instance.timestamp_end,
+                    matches__timestamp__gt = instance.ended_timestamp,
                 ).exists():
                     log.info(
                         f'Setting session {session.pk} added to match {instance.pk} (str(instance)) to closed '
@@ -296,7 +296,7 @@ class GamingSession(models.Model):
         The CSGO timestamp of the last match of the session plus the duration of the match (in seconds), or `None` if
         the session has no matches.
         """
-        return None if self.last_match is None else self.last_match.timestamp + self.last_match.duration
+        return None if self.last_match is None else self.last_match.ended_timestamp
 
     @property
     def started_datetime(self) -> str:
@@ -324,14 +324,14 @@ class GamingSession(models.Model):
         """
         Get the human-readable date and time of the end of the session.
         """
-        return '-' if self.last_match is None else self.last_match.datetime_end
+        return '-' if self.last_match is None else self.last_match.ended_datetime
 
     @property
     def ended_time(self) -> str:
         """
         Get the human-readable time of the end of the session.
         """
-        return '-' if self.last_match is None else self.last_match.time_end
+        return '-' if self.last_match is None else self.last_match.ended_time
 
     @property
     def started_weekday(self) -> str:
@@ -516,7 +516,15 @@ class Match(models.Model):
                 mp.save()
 
             for kill_data in data['kills'].to_dict(orient='records'):
-                if kill_data['attacker_team_name'] == kill_data['victim_team_name'] or kill_data['attacker_steamid'] == 'None': continue
+
+                if any(
+                    (
+                        kill_data['attacker_team_name'] == kill_data['victim_team_name'],
+                        kill_data['attacker_steamid'] == 'None',
+                    ),
+                ):
+                    continue
+
                 kev = KillEvent()
                 kev.killer = MatchParticipation.objects.filter(pmatch = m, player = kill_data['attacker_steamid']).get()
                 kev.victim = MatchParticipation.objects.filter(pmatch = m, player = kill_data[  'victim_steamid']).get()
@@ -552,35 +560,56 @@ class Match(models.Model):
         return self.score_team1 + self.score_team2
 
     @property
-    def timestamp_end(self):
+    def ended_timestamp(self):
         return self.timestamp + self.duration
 
     @property
     def datetime(self):
+        """
+        Get the human-readable date and time of the start of the match.
+        """
         return csgo_timestamp_to_strftime(self.timestamp)
 
     @property
-    def datetime_end(self):
+    def ended_datetime(self):
+        """
+        Get the human-readable date and time of the end of the match.
+        """
         return csgo_timestamp_to_strftime(self.timestamp + self.duration)
 
     @property
     def time(self):
+        """
+        Get the human-readable time of the start of the match.
+        """
         return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%H:%M')
 
     @property
-    def time_end(self):
+    def ended_time(self):
+        """
+        Get the human-readable time of the end of the match.
+        """
         return csgo_timestamp_to_strftime(self.timestamp + self.duration, fmt = r'%H:%M')
-    
+
     @property
     def date(self):
+        """
+        Get the human-readable date of the start of the match.
+        """
         return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%b %-d, %Y')
-    
+
     @property
     def weekday(self):
+        """
+        Get the human-readable weekday of the start of the match.
+        """
         return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%A')
-    
+
     @property
     def weekday_short(self):
+        """
+        Get the human-readable abbreviation of the weekday of the start of the match.
+        """
         return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%a')
 
     def get_participation(self, player):
