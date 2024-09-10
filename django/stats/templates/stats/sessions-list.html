@@ -52,7 +52,7 @@
                         <td>D</td>
                         <td>A</td>
                         <td>ADR</td>
-                        <td>&starf;</td>
+                        <td>PV</td>
                         <td>HS</td>
                     </tr>
 
@@ -72,7 +72,7 @@
                         <td>{{ mp.deaths }}</td>
                         <td>{{ mp.assists }}</td>
                         <td>{{ mp.adr|floatformat:1 }}</td>
-                        <td>{{ mp.mvps }}</td>
+                        <td>{{ mp|player_value|stringformat:".2f" }}</td>
                         <td>{{ mp.headshots|divide:mp.kills|stringformat:".1f" }}</td>
                     </tr>
 
