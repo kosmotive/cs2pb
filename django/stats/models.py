@@ -1042,34 +1042,45 @@ class MatchBadge(models.Model):
             MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:])
         MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace')
         MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill')
-        MatchBadge.award_margin_badge(participation, 'carrier', order='-adr', margin=1.8, emoji='🍆')
-        MatchBadge.award_margin_badge(participation, 'peach', order='adr', margin=0.75, emoji='🍑')
+        MatchBadge.award_margin_badge(participation, 'carrier', order = '-adr', margin = 1.8, emoji = '🍆')
+        MatchBadge.award_margin_badge(participation, 'peach', order = 'adr', margin = 0.75, emoji = '🍑')
 
     @staticmethod
     def award_surpass_yourself_badge(participation, old_participations):
-        badge_type = MatchBadgeType.objects.get(slug='surpass-yourself')
-        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
+        badge_type = MatchBadgeType.objects.get(slug = 'surpass-yourself')
+        if MatchBadge.objects.filter(badge_type = badge_type, participation=participation).exists():
+            return
         kd_series = [mp.kd for mp in old_participations]
         kd_mean = np.mean(kd_series)
         kd_std  = np.std (kd_series)
         threshold = kd_mean + 2 * kd_std
         if participation.kd > threshold:
-            log.info(f'Surpass-yourself badge awarded to {participation.player.name} for K/D {participation.kd} whre threshold was {threshold}')
+            log.info(
+                f'Surpass-yourself badge awarded to {participation.player.name} '
+                f'for K/D {participation.kd} where threshold was {threshold}'
+            )
             MatchBadge.objects.create(badge_type=badge_type, participation=participation)
-            text = f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in recognition of their far-above average performance on *{participation.pmatch.map_name}* recently!'
+            text = (
+                f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in recognition '
+                f'of their far-above average performance on *{participation.pmatch.map_name}* recently!'
+            )
             for m in participation.player.squad_memberships.all():
                 m.squad.notify_on_discord(text)
 
     @staticmethod
     def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug):
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
-        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
+        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
+            return
         number = participation.streaks(n = kill_number)
         if number > 0:
             log.info(f'{participation.player.name} achieved {badge_type.name} {number} time(s)')
             MatchBadge.objects.create(badge_type = badge_type, participation = participation, frequency = number)
             frequency = '' if number == 1 else f' {number} times'
-            text = f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on *{participation.pmatch.map_name}* recently!'
+            text = (
+                f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on '
+                f'*{participation.pmatch.map_name}* recently!'
+            )
             for m in participation.player.squad_memberships.all():
                 m.squad.notify_on_discord(text)
 
@@ -1077,7 +1088,8 @@ class MatchBadge(models.Model):
     def award_margin_badge(participation, badge_type_slug, order, margin, emoji):
         kpi = order[1:] if order[0] in '+-' else order
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
-        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
+        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
+            return
         teammates = participation.pmatch.matchparticipation_set.filter(team = participation.team).order_by(order)
 
         awarded = teammates[0].pk == participation.pk and any(
@@ -1090,7 +1102,10 @@ class MatchBadge(models.Model):
         if awarded:
             log.info(f'{participation.player.name} received the {badge_type.name}')
             MatchBadge.objects.create(badge_type = badge_type, participation = participation)
-            text = f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** on *{participation.pmatch.map_name}*!'
+            text = (
+                f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** '
+                f'on *{participation.pmatch.map_name}*!'
+            )
             for m in participation.player.squad_memberships.all():
                 m.squad.notify_on_discord(text)
 
@@ -1100,17 +1115,43 @@ class MatchBadge(models.Model):
 
         constraints = [
             models.UniqueConstraint(
-                fields=['participation', 'badge_type'], name='unique_participation_badge_type'
+                fields = ['participation', 'badge_type'], name = 'unique_participation_badge_type',
             )
         ]
 
 
 class UpdateTask(models.Model):
+    """
+    A task that fetches new matches for an account and triggers all subsequent updates.
+    """
 
-    account = models.ForeignKey(Account, related_name='update_tasks', on_delete=models.CASCADE)
-    scheduled_timestamp = models.PositiveBigIntegerField(verbose_name='Scheduled')
-    execution_timestamp = models.PositiveBigIntegerField(null=True, blank=True, verbose_name='Execution started') # when the execution started
-    completed_timestamp = models.PositiveBigIntegerField(null=True, blank=True, verbose_name='Completed') # when the execution finished
+    account = models.ForeignKey(Account, related_name = 'update_tasks', on_delete = models.CASCADE)
+    """
+    The account for which to fetch new matches.
+    """
+
+    scheduled_timestamp = models.PositiveBigIntegerField(verbose_name = 'Scheduled')
+    """
+    The timestamp when the task was scheduled.
+    """
+
+    execution_timestamp = models.PositiveBigIntegerField(
+        null = True,
+        blank = True,
+        verbose_name = 'Execution started',
+    )
+    """
+    The timestamp when the task started executing.
+    """
+
+    completed_timestamp = models.PositiveBigIntegerField(
+        null = True,
+        blank = True,
+        verbose_name = 'Completed',
+    )
+    """
+    The timestamp when the task completed.
+    """
 
     @property
     def scheduled(self):
