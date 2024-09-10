@@ -564,49 +564,49 @@ class Match(models.Model):
         return self.timestamp + self.duration
 
     @property
-    def datetime(self):
+    def datetime(self) -> str:
         """
         Get the human-readable date and time of the start of the match.
         """
         return csgo_timestamp_to_strftime(self.timestamp)
 
     @property
-    def ended_datetime(self):
+    def ended_datetime(self) -> str:
         """
         Get the human-readable date and time of the end of the match.
         """
         return csgo_timestamp_to_strftime(self.timestamp + self.duration)
 
     @property
-    def time(self):
+    def time(self) -> str:
         """
         Get the human-readable time of the start of the match.
         """
         return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%H:%M')
 
     @property
-    def ended_time(self):
+    def ended_time(self) -> str:
         """
         Get the human-readable time of the end of the match.
         """
         return csgo_timestamp_to_strftime(self.timestamp + self.duration, fmt = r'%H:%M')
 
     @property
-    def date(self):
+    def date(self) -> str:
         """
         Get the human-readable date of the start of the match.
         """
         return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%b %-d, %Y')
 
     @property
-    def weekday(self):
+    def weekday(self) -> str:
         """
         Get the human-readable weekday of the start of the match.
         """
         return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%A')
 
     @property
-    def weekday_short(self):
+    def weekday_short(self) -> str:
         """
         Get the human-readable abbreviation of the weekday of the start of the match.
         """
@@ -627,19 +627,60 @@ m2m_changed.connect(GamingSession.sessions_changed, sender=Match.sessions.throug
 
 class MatchParticipation(models.Model):
 
-    player = models.ForeignKey(SteamProfile, on_delete=models.PROTECT, verbose_name='Player')
-    pmatch = models.ForeignKey(Match, on_delete=models.CASCADE, verbose_name='Match')
+    player = models.ForeignKey(SteamProfile, on_delete = models.PROTECT, verbose_name = 'Player')
+    """
+    The player who participated in the match.
+    """
 
-    team   = models.PositiveSmallIntegerField()  # team 1 or team 2
-    result = models.CharField(blank=False, max_length=1)  # (t) tie, (w) win, (l) loss
+    pmatch = models.ForeignKey(Match, on_delete = models.CASCADE, verbose_name = 'Match')
+    """
+    The match in which the player participated.
+    """
 
-    kills     = models.PositiveSmallIntegerField()  # enemy kills
-    assists   = models.PositiveSmallIntegerField()
-    deaths    = models.PositiveSmallIntegerField()
-    score     = models.PositiveSmallIntegerField()
-    mvps      = models.PositiveSmallIntegerField()
-    headshots = models.PositiveSmallIntegerField()  # enemy headshots
-    adr       = models.FloatField()                 # average damage per round
+    team = models.PositiveSmallIntegerField()
+    """
+    The team in which the player participated (must be either 1 or 2).
+    """
+
+    result = models.CharField(blank = False, max_length = 1)
+    """
+    The result of the match for the player. Must be either 'w' (win), 'l' (loss), or 't' (tie).
+    """
+
+    kills = models.PositiveSmallIntegerField()
+    """
+    The number of enemy kills the player scored in the match.
+    """
+
+    assists = models.PositiveSmallIntegerField()
+    """
+    The number of assists the player scored in the match.
+    """
+
+    deaths = models.PositiveSmallIntegerField()
+    """
+    The number of deaths the player had in the match.
+    """
+
+    score = models.PositiveSmallIntegerField()
+    """
+    The score of the player in the match.
+    """
+
+    mvps = models.PositiveSmallIntegerField()
+    """
+    The number of MVPs the player scored in the match.
+    """
+
+    headshots = models.PositiveSmallIntegerField()
+    """
+    The number of headshots on enemies the player scored in the match.
+    """
+
+    adr = models.FloatField()
+    """
+    The average damage per round the player scored in the match.
+    """
 
     class Meta:
         constraints = [
@@ -647,7 +688,7 @@ class MatchParticipation(models.Model):
                 fields=['player', 'pmatch'], name='unique_player_pmatch'
             ),
         ]
-        ordering = ['-adr'] # in CSGO, this was `position` (corresponding to the score), but in CS2 the ordering is determiend by the ADR
+        ordering = ['-adr']
 
     def clean(self, *args, **kwargs):
         if self.team not in (1, 2):
@@ -672,7 +713,8 @@ class MatchParticipation(models.Model):
         """
         rounds = np.zeros(100, int)
         for kev in self.kill_events.all():
-            if kev.round is None: continue
+            if kev.round is None:
+                continue
             rounds[kev.round] += 1
         return (rounds == n).sum()
 
@@ -695,13 +737,34 @@ def get_or_none(qs, **kwargs):
 
 
 class KillEvent(models.Model):
+    """
+    A kill event in a match.
+    """
 
-    killer = models.ForeignKey(MatchParticipation, related_name= 'kill_events', on_delete=models.CASCADE)
-    victim = models.ForeignKey(MatchParticipation, related_name='death_events', on_delete=models.CASCADE)
+    killer = models.ForeignKey(MatchParticipation, related_name =  'kill_events', on_delete = models.CASCADE)
+    """
+    The player who scored the kill.
+    """
 
-    round = models.PositiveSmallIntegerField(null=True, blank=True)
-    kill_type = models.PositiveSmallIntegerField() # 1 if T kills CT and 2 if CT kills T
-    bomb_planted = models.BooleanField(null=False) # True iff bomb was already planted
+    victim = models.ForeignKey(MatchParticipation, related_name = 'death_events', on_delete = models.CASCADE)
+    """
+    The player who was killed.
+    """
+
+    round = models.PositiveSmallIntegerField(null = True, blank = True)
+    """
+    The round number in which the kill occurred.
+    """
+
+    kill_type = models.PositiveSmallIntegerField()
+    """
+    The type of the kill. Must be either 1 (T kills CT) or 2 (CT kills T).
+    """
+
+    bomb_planted = models.BooleanField(null = False)
+    """
+    Whether the bomb was already planted when the kill occurred.
+    """
 
     killer_x = models.FloatField()
     killer_y = models.FloatField()
@@ -713,13 +776,57 @@ class KillEvent(models.Model):
 
 
 class PlayerOfTheWeek(models.Model):
+    """
+    The outcome of a weekly challenge.
+    """
 
     timestamp = models.PositiveBigIntegerField()
-    player1   = models.ForeignKey(SteamProfile, null=True , on_delete=models.SET_NULL, blank=True, related_name='potw1') # gold
-    player2   = models.ForeignKey(SteamProfile, null=True , on_delete=models.SET_NULL, blank=True, related_name='potw2') # silver
-    player3   = models.ForeignKey(SteamProfile, null=True , on_delete=models.SET_NULL, blank=True, related_name='potw3') # bronze
-    squad     = models.ForeignKey(Squad       , null=False, on_delete=models.CASCADE)
-    mode      = models.CharField(blank=False, max_length=20)
+    """
+    The CSGO timestamp of when the challenge ended or will end.
+    """
+
+    player1 = models.ForeignKey(
+        SteamProfile,
+        null = True ,
+        on_delete = models.SET_NULL,
+        blank = True,
+        related_name = 'potw1',
+    )
+    """
+    The player who won the first place.
+    """
+
+    player2 = models.ForeignKey(
+        SteamProfile,
+        null = True ,
+        on_delete = models.SET_NULL,
+        blank = True,
+        related_name = 'potw2',
+    )
+    """
+    The player who won the second place.
+    """
+
+    player3 = models.ForeignKey(
+        SteamProfile,
+        null = True ,
+        on_delete = models.SET_NULL,
+        blank = True,
+        related_name = 'potw3',
+    )
+    """
+    The player who won the third place.
+    """
+
+    squad = models.ForeignKey(Squad, null = False, on_delete = models.CASCADE)
+    """
+    The squad that this weekly challenge is or was for.
+    """
+
+    mode = models.CharField(blank = False, max_length = 20)
+    """
+    The mode of the challenge.
+    """
 
     @property
     def competition_start_timestamp(self):
