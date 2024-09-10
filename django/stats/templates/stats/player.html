@@ -94,14 +94,14 @@ Math.sqrt(({{ mp.kills }} / {{ mp.deaths }}) * (0.01 * {{ mp.adr }})){% if not f
 
             {% if badges.potw %}
 
-                <h2>Showcase</h2>
+                <h2>Trophy cabinet</h2>
 
                 <ul id="player-of-the-week-list">{% for badge in badges.potw %}
 
                     <li>
                         <img src="{% static 'badges' %}/potw-{{ badge.position }}.png" class="badge" />
 
-                        Player of the Week
+                        <span class="potw-title">Player of the Week
                         {% if badge.position == 1 %}
                             1<span class="sup">st</span>
                         {% elif badge.position == 2 %}
@@ -109,8 +109,9 @@ Math.sqrt(({{ mp.kills }} / {{ mp.deaths }}) * (0.01 * {{ mp.adr }})){% if not f
                         {% elif badge.position == 3 %}
                             3<span class="sup">rd</span>
                         {% endif %}
-                        Class
-                        {{ badge.potw.week }}/{{ badge.potw.year }}
+                        Class</span>
+                        <span class="potw-week-year">{{ badge.potw.week }}/{{ badge.potw.year }}</span>
+                        <span class="potw-mode">{{ badge.potw.mode|potw_mode_name }}</span>
                     </li>
             
                 {% endfor %}</ul>

@@ -4,6 +4,8 @@ from django import template
 from django.template.defaultfilters import stringfilter
 from django.utils.safestring import mark_safe
 
+import stats.potw
+
 
 register = template.Library()
 
@@ -36,6 +38,11 @@ def get_value(dictionary, key):
 
 
 @register.filter
+def potw_mode_name(mode):
+    return stats.potw.get_mode_by_id(mode).name
+
+
+@register.filter
 def list_of_match_badges(qs):
     
     def format_badge(badge):
@@ -45,7 +52,7 @@ def list_of_match_badges(qs):
         yield f'<span class="match-date">{ badge.participation.pmatch.date }</span>'
         yield f'<span class="match-time">{ badge.participation.pmatch.time }</span>'
         if badge.frequency > 1:
-            yield f' {badge.frequency}&times;'
+            yield f'<span class="match-badge-frequency">{badge.frequency}&times;</span>'
         yield '</li>'
 
     if len(qs) > 0:

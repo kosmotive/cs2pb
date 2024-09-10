@@ -11,6 +11,7 @@ h2 {
 
 #player-of-the-week-list {
     list-style-type: none;
+    position: relative;
 }
 
 #player-of-the-week-list .badge {
@@ -20,6 +21,25 @@ h2 {
     display: inline-block;
     filter: drop-shadow(0 0 1mm rgba(0,0,0,0.1));
     vertical-align: middle;
+}
+
+#player-of-the-week-list .potw-title {
+    position: absolute;
+    left: 4.5em;
+    padding-top: 0.3em;
+}
+
+#player-of-the-week-list .potw-week-year {
+    position: absolute;
+    left: 18.5em;
+    padding-top: 0.3em;
+}
+
+#player-of-the-week-list .potw-mode {
+    position: absolute;
+    left: 23.5em;
+    font-weight: lighter;
+    padding-top: 0.3em;
 }
 
 #other-achievements {
@@ -53,29 +73,41 @@ h2 {
 #other-achievements .session-date {
     position: absolute;
     left: 9em;
+    padding-top: 0.1em;
 }
 
 #other-achievements .session-time {
     position: absolute;
     left: 16em;
+    padding-top: 0.1em;
 }
 
 #other-achievements .match-map {
     font-family: Georgia, 'Times New Roman', Times, serif;
     text-transform: capitalize;
+    padding-top: 0.1em;
 }
 
 #other-achievements .match-weekday {
     position: absolute;
     left: 7.5em;
+    padding-top: 0.1em;
 }
 
 #other-achievements .match-date {
     position: absolute;
     left: 14em;
+    padding-top: 0.1em;
 }
 
 #other-achievements .match-time {
     position: absolute;
     left: 21em;
+    padding-top: 0.1em;
+}
+
+#other-achievements .match-badge-frequency {
+    position: absolute;
+    left: 25em;
+    padding-top: 0.1em;
 }
