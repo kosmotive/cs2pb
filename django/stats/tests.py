@@ -1,26 +1,48 @@
 import datetime
 import math
 import time
+import uuid
 from types import SimpleNamespace
 from unittest.mock import patch
-import uuid
 
-from django.http import HttpResponseNotFound
-from django.test import TestCase, RequestFactory
-from django.urls import reverse
-
-from accounts.models import Account, Squad, SteamProfile, SquadMembership
 import api
+from accounts.models import (
+    Account,
+    Squad,
+    SquadMembership,
+    SteamProfile,
+)
 from discordbot.models import ScheduledNotification
-from stats import models
-from stats import potw
-from stats import views
-from stats import updater
+from stats import (
+    models,
+    potw,
+    updater,
+    views,
+)
 from tests import testsuite
 from url_forward import get_redirect_url_to
 
+from django.http import HttpResponseNotFound
+from django.test import (
+    RequestFactory,
+    TestCase,
+)
+from django.urls import reverse
 
-def create_kill_event(mp_killer, mp_victim, round = 1, kill_type = 0, bomb_planted = False, killer_x = 0, killer_y = 0, killer_z = 0, victim_x = 0, victim_y = 0, victim_z = 0):
+
+def create_kill_event(
+        mp_killer: models.MatchParticipation,
+        mp_victim: models.MatchParticipation,
+        round: int = 1,
+        kill_type: int = 0,
+        bomb_planted: bool = False,
+        killer_x: int = 0,
+        killer_y: int = 0,
+        killer_z: int = 0,
+        victim_x: int = 0,
+        victim_y: int = 0,
+        victim_z: int = 0,
+    ):
     return models.KillEvent(
         killer = mp_killer,
         victim = mp_victim,
@@ -316,7 +338,9 @@ class Squad__do_changelog_announcements(TestCase):
         squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
         c = {
             'message': 'Hotfix: Minor layout improvements',
-            'url': get_redirect_url_to('https://github.com/kodikit/cs2pb/commits/9074a7a848a6ac74ba729757e1b2a4a971586190'),
+            'url': get_redirect_url_to(
+                'https://github.com/kodikit/cs2pb/commits/9074a7a848a6ac74ba729757e1b2a4a971586190',
+            ),
             'sha': '9074a7a848a6ac74ba729757e1b2a4a971586190',
             'date': '2024-07-26',
         }
@@ -332,12 +356,19 @@ class Squad__do_changelog_announcements(TestCase):
             self.assertNotIn(Squad__do_changelog_announcements.changelog[-1]['url'], text)
 
     def test_without_discord_channel(self):
-        squad = Squad.objects.create(name='squad', last_changelog_announcement=Squad__do_changelog_announcements.changelog[-1]['sha'])
+        squad = Squad.objects.create(
+            name = 'squad',
+            last_changelog_announcement = Squad__do_changelog_announcements.changelog[-1]['sha'],
+        )
         squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
     def test(self):
-        squad = Squad.objects.create(name='squad', discord_channel_id='xxx', last_changelog_announcement=Squad__do_changelog_announcements.changelog[-1]['sha'])
+        squad = Squad.objects.create(
+            name = 'squad',
+            discord_channel_id = 'xxx',
+            last_changelog_announcement = Squad__do_changelog_announcements.changelog[-1]['sha'],
+        )
         squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification = ScheduledNotification.objects.get()
@@ -536,8 +567,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
     def test_mode(self):
         data1 = models.PlayerOfTheWeek.get_next_badge_data(self.squad)
-        badge1 = models.PlayerOfTheWeek.create_badge(data1)
-        pmatch2 = self._create_match(badge1.timestamp)
+        models.PlayerOfTheWeek.create_badge(data1)
         data2 = models.PlayerOfTheWeek.get_next_badge_data(self.squad)
         self.assertEqual(data2['mode'], potw.mode_cycle[1].id)
         self.assertEqual(data2['week'], 2)
@@ -646,14 +676,33 @@ class matches(TestCase):
     @testsuite.fake_api('accounts.models')
     def setUp(self):
         self.factory = RequestFactory()
-        self.player = SteamProfile.objects.create(steamid='12345678900000001')
-        self.squad = Squad.objects.create(name='Test Squad')
+        self.player = SteamProfile.objects.create(steamid = '12345678900000001')
+        self.squad = Squad.objects.create(name = 'Test Squad')
         SquadMembership.objects.create(squad = self.squad, player = self.player)
-        self.account = Account.objects.create(steam_profile=self.player)
-        self.session = models.GamingSession.objects.create(squad=self.squad)
-        self.match = models.Match.objects.create(timestamp=int(time.time()), score_team1=12, score_team2=13, duration=1653, map_name='de_dust2')
+        self.account = Account.objects.create(steam_profile = self.player)
+        self.session = models.GamingSession.objects.create(squad = self.squad)
+        self.match = models.Match.objects.create(
+            timestamp = int(time.time()),
+            score_team1 = 12,
+            score_team2 = 13,
+            duration = 1653,
+            map_name = 'de_dust2',
+        )
         self.match.sessions.add(self.session)
-        self.participation = models.MatchParticipation.objects.create(player=self.player, pmatch=self.match, position=0, team=1, result='l', kills=20, assists=10, deaths=15, score=30, mvps=5, headshots=15, adr=120.5)
+        self.participation = models.MatchParticipation.objects.create(
+            player = self.player,
+            pmatch = self.match,
+            position = 0,
+            team = 1,
+            result = 'l',
+            kills = 20,
+            assists = 10,
+            deaths = 15,
+            score = 30,
+            mvps = 5,
+            headshots = 15,
+            adr = 120.5,
+        )
 
     def test_matches_with_squad(self):
         response = self.client.get(reverse('matches', kwargs={'squad': self.squad.uuid}))
@@ -1106,8 +1155,8 @@ class GamingSession__close(TestCase):
         )
 
         # Verify the radar plot
-        import numpy as np
         import matplotlib.image as mpimg
+        import numpy as np
         attachment = notification.get_attachment()
         img_actual = mpimg.imread(attachment, format = 'png')
         img_expected = mpimg.imread('tests/data/radarplot.png')

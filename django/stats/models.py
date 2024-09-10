@@ -590,17 +590,17 @@ class MatchParticipation(models.Model):
     player = models.ForeignKey(SteamProfile, on_delete=models.PROTECT, verbose_name='Player')
     pmatch = models.ForeignKey(Match, on_delete=models.CASCADE, verbose_name='Match')
 
-    position = models.PositiveSmallIntegerField() # scoreboard position
-    team     = models.PositiveSmallIntegerField() # team 1 or team 2
-    result   = models.CharField(blank=False, max_length=1) # (t) tie, (w) win, (l) loss
+    position = models.PositiveSmallIntegerField()  # scoreboard position
+    team     = models.PositiveSmallIntegerField()  # team 1 or team 2
+    result   = models.CharField(blank=False, max_length=1)  # (t) tie, (w) win, (l) loss
 
-    kills     = models.PositiveSmallIntegerField() # enemy kills
+    kills     = models.PositiveSmallIntegerField()  # enemy kills
     assists   = models.PositiveSmallIntegerField()
     deaths    = models.PositiveSmallIntegerField()
     score     = models.PositiveSmallIntegerField()
     mvps      = models.PositiveSmallIntegerField()
-    headshots = models.PositiveSmallIntegerField() # enemy headshots
-    adr       = models.FloatField()                # average damage per round
+    headshots = models.PositiveSmallIntegerField()  # enemy headshots
+    adr       = models.FloatField()                 # average damage per round
 
     class Meta:
         constraints = [
