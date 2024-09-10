@@ -18,7 +18,7 @@ class MatchAdmin(admin.ModelAdmin):
     def has_add_permission(self, request, obj=None):
         return False
 
-    list_display = ('map_name', 'datetime', 'score_team1', 'score_team2', 'session_list')
+    list_display = ('map_name', 'date_and_time', 'score_team1', 'score_team2', 'session_list')
     list_filter = ('map_name',)
 
     search_fields = ('map_name', 'timestamp', 'sharecode')
@@ -42,7 +42,7 @@ class PlayerOfTheWeekAdmin(admin.ModelAdmin):
 
     model = PlayerOfTheWeek
 
-    list_display = ('name', 'competition_end_datetime', 'squad', 'player1', 'player2', 'player3')
+    list_display = ('name', 'challenge_end_datetime', 'squad', 'player1', 'player2', 'player3')
     list_filter = ('squad',)
     readonly_fields = ('timestamp', 'squad')
 
@@ -120,16 +120,16 @@ class GamingSessionAdmin(admin.ModelAdmin):
 
     model = GamingSession
 
-    list_display = ('id', 'squad', 'participants_list', 'is_closed', 'started_datetime', 'ended_datetime')
+    list_display = ('id', 'squad', 'participants_list', 'is_closed', 'started_date_and_time', 'ended_date_and_time')
     list_filter = ('squad',)
 
     fieldsets = (
-        (None, {'fields': ('squad', 'is_closed', 'started_datetime', 'ended_datetime', 'rising_star')}),
+        (None, {'fields': ('squad', 'is_closed', 'started_date_and_time', 'ended_date_and_time', 'rising_star')}),
     )
     add_fieldsets = (
         (None, {'fields': ('squad', 'rising_star')}),
     )
-    readonly_fields = ('started_datetime', 'ended_datetime')
+    readonly_fields = ('started_date_and_time', 'ended_date_and_time')
 
     actions = [close_session]
 

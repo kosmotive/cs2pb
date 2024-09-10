@@ -856,10 +856,10 @@ class GamingSession(TestCase):
         self.assertEqual(self.session.ended, 6600)
 
     def test__started_datetime(self):
-        self.assertEqual(self.session.started_datetime, 'Jan 1, 1970, 01:00')
+        self.assertEqual(self.session.started_date_and_time, 'Jan 1, 1970, 01:00')
 
     def test__ended_datetime(self):
-        self.assertEqual(self.session.ended_datetime, 'Jan 1, 1970, 02:50')
+        self.assertEqual(self.session.ended_date_and_time, 'Jan 1, 1970, 02:50')
 
     def test__started_time(self):
         self.assertEqual(self.session.started_time, '01:00')
