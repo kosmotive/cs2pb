@@ -1033,7 +1033,7 @@ class MatchBadgeType(models.Model):
 class MatchBadge(models.Model):
 
     participation = models.ForeignKey(MatchParticipation, related_name = 'badges', on_delete = models.PROTECT)
-    badge_type    = models.ForeignKey(MatchBadgeType, related_name = 'btype', on_delete = models.PROTECT)  # FIXME: rename related_name to `badge`?
+    badge_type    = models.ForeignKey(MatchBadgeType, related_name = 'badges', on_delete = models.PROTECT)
     frequency     = models.PositiveSmallIntegerField(null = False, default = 1)
 
     @staticmethod
