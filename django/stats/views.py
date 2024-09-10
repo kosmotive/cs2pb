@@ -1,4 +1,5 @@
 import logging
+import numbers
 import os
 
 import gitinfo
@@ -6,7 +7,12 @@ import numpy as np
 from accounts.models import (
     Account,
     Squad,
+    SquadMembership,
     SteamProfile,
+)
+from cs2pb_typing import (
+    List,
+    Optional,
 )
 
 from django.core.mail import send_mail
@@ -15,9 +21,7 @@ from django.db.models import (
     F,
     Max,
 )
-from django.http import (
-    HttpResponseNotFound,
-)
+from django.http import HttpResponseNotFound
 from django.shortcuts import (
     redirect,
     render,
@@ -26,7 +30,7 @@ from django.urls import reverse
 
 from . import potw
 from .features import (
-    FeatureContext,
+    Feature,
     Features,
 )
 from .models import (
@@ -54,6 +58,19 @@ badge_order = [
     'peach',
     'ace',
     'quad-kill',
+]
+
+
+all_features_collapsed = [
+    Features.player_value,
+    Features.participation_effect,
+    Features.headshot_rate,
+]
+
+
+all_features_expanded = all_features_collapsed + [
+    Features.damage_per_round,
+    Features.kills_per_death,
 ]
 
 
@@ -90,18 +107,64 @@ def get_badges(squad, player):
     return badges
 
 
-def compute_card(player, squad, features, orders = [np.inf]):
-    context = FeatureContext.create_default(player, squad)
-    stats   = [feature(context) for feature in features]
-    badges  = get_badges(squad, player)
+def compute_card(
+        squad_membership: SquadMembership,
+        features: List[Feature],
+        orders: List[numbers.Real] = [2, 3, np.inf],
+    ):
+
+    def stat(feature):
+        value = squad_membership.stats.get(feature.slug, None)
+
+        # Compute the maximum value of the squad for normalization
+        max_value = squad_membership.squad.memberships.values(
+            f'stats__{feature.slug}',
+        ).exclude(
+            **{f'stats__{feature.slug}': None},  # https://stackoverflow.com/a/49956014/1444073
+        ).order_by(
+            f'-stats__{feature.slug}',
+        )[0][
+            f'stats__{feature.slug}'
+        ] if value is not None else None
+
+        # Check logics: `max_value` can only be None if `value` is None
+        assert value is None or (value is not None and max_value is not None), (feature.slug, value, max_value)
+
+        # Format the trend string
+        trend = squad_membership.trends.get(feature.slug)
+        trend_str = f'{trend:+.2f}' if trend is not None else ''
+        if len(trend_str) > 0 and float(trend_str) == 0:
+            trend_str = ''
+            trend = 0  # pretend that the trend is zero if it is too small
+
+        # Compose and return the full feature information for the squad member
+        return {
+            'name': feature.name,
+            'value': value,
+            'load': None if value is None else 100 * min((1, value / max_value)),
+            'load_raw': None if value is None else value / max_value,
+            'max_value': max_value,
+            'trend': trend,
+            'trend_str': trend_str,
+            'label': feature.format.format(value) if value is not None else '',
+        }
+
+    stats   = [stat(feature) for feature in features]
+    badges  = get_badges(squad_membership.squad, squad_membership.player)
     card_data = {
-        'profile': player,
+        'profile': squad_membership.player,
         'stats': stats,
         'stats_dict': {s['name']: s['value'] for s in stats},
         'badges': badges,
     }
-    if getattr(player, 'account', None) is None and squad is not None:
-        card_data['invite_url'] = reverse('invite', kwargs = dict(steamid = player.steamid, squadid = squad.pk))
+    if getattr(squad_membership.player, 'account', None) is None and squad_membership.squad is not None:
+        card_data['invite_url'] = reverse(
+            'invite',
+            kwargs = dict(
+                steamid = squad_membership.player.steamid,
+                squadid = squad_membership.squad.pk,
+            ),
+        )
     for stat_idx, stat in enumerate(card_data['stats']):
         for order, idx_max in enumerate(orders, start = 1):
             if stat_idx < idx_max:
@@ -149,13 +212,9 @@ def squads(request, squad = None, expanded_stats = False):
     else:
         return redirect('login')
 
-    features = [Features.pv, Features.pe, Features.hsr]
-    if expanded_stats:
-        features += [Features.adr, Features.kd]
-
     context['squads'] = list()
     for squad in squad_list:
-        squad.update_positions()
+        squad.update_stats()
         for account in Account.objects.filter(
             steam_profile__in = squad.memberships.values_list('player__pk', flat = True)
         ):
@@ -163,12 +222,10 @@ def squads(request, squad = None, expanded_stats = False):
         PlayerOfTheWeek.create_missing_badges(squad)
         cards = [
             compute_card(
-                m.player,
-                squad,
-                features,
-                [2, 3, np.inf],
+                squad_membership,
+                all_features_expanded if expanded_stats else all_features_collapsed,
             )
-            for m in squad.memberships.exclude(
+            for squad_membership in squad.memberships.exclude(
                 position__isnull = True,
             ).order_by(
                 'position',
@@ -283,15 +340,37 @@ def add_globals_to_context(context):
 
 def player(request, squad, steamid):
     squad = Squad.objects.get(uuid = squad)
+    squad.update_stats()
     player = SteamProfile.objects.get(pk = steamid)
-    features = [Features.pv, Features.pe, Features.hsr, Features.adr, Features.kd]
-    card = compute_card(player, squad, features, [2, 3, np.inf])
+    squad_membership = squad.memberships.filter(player = player).first()
+
+    # Compute the player card
+    card = compute_card(squad_membership, all_features_expanded)
+
+    # Fetch the player's match participations
     participations = MatchParticipation.objects.filter(player = player).order_by('pmatch__timestamp')
+
+    # Determine the start and end of the period for accounted period
+    accounted_participations = squad_membership.accounted_match_participations
+    accounted_period_start: Optional[int] = None
+    accounted_period_end: Optional[int] = None
+    for pidx, participation in enumerate(participations):
+        if participation.pk in accounted_participations.values_list('pk', flat = True):
+            if accounted_period_start is None:
+                accounted_period_start = pidx
+            accounted_period_end = pidx + 1
+
+    # Compose the context for the player page
     context = dict(
         squad = squad,
         request = request,
         player = card,
         participations = participations,
+        period_start = accounted_period_start,
+        period_end = accounted_period_end,
+        period_average = squad_membership.stats.get('player_value'),
     )
+
+    # Add the global context and render the player page
     add_globals_to_context(context)
     return render(request, 'stats/player.html', context)

@@ -1,27 +1,55 @@
 import logging
-import matplotlib as mpl
-mpl.use('Agg')
-
-import matplotlib.pyplot as plt
-import numpy as np
-
-from django.db.models.query import QuerySet
-
-from .features import Features, FeatureContext, escape_none
-
 from datetime import datetime
 from io import BytesIO
+from numbers import Real
 
+import matplotlib as mpl
+import numpy as np
+from accounts.models import SquadMembership, SteamProfile
+from cs2pb_typing import (
+    Dict,
+    List,
+    Optional,
+    Union,
+)
+
+from .features import (
+    Feature,
+    FeatureContext,
+    Features,
+)
+
+mpl.use('Agg')
+
+import matplotlib.pyplot as plt  # noqa: E402
 
 log = logging.getLogger(__name__)
 
-DEFAULT_COLORS = plt.rcParams['axes.prop_cycle'].by_key()['color']
+DEFAULT_COLORS: List[str] = plt.rcParams['axes.prop_cycle'].by_key()['color']
+"""
+Default color cycle.
+"""
+
+DataChunkType = Union[SquadMembership, FeatureContext]
 
 
 class Renderer:
+    """
+    Provides a figure for off-screen plotting.
+    """
 
-    def __init__(self, fmt='png'):
-        self.fmt = fmt
+    data: BytesIO
+    """
+    The compressed data of the figure.
+    """
+
+    format: str
+    """
+    The compression format to store the figure in.
+    """
+
+    def __init__(self, format = 'png'):
+        self.format = format
 
     def __enter__(self):
         self.fig = plt.figure()
@@ -30,7 +58,7 @@ class Renderer:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
             buf = BytesIO()
-            self.fig.savefig(buf, format=self.fmt)
+            self.fig.savefig(buf, format = self.format)
             buf.seek(0)
             self.data = buf
 
@@ -43,100 +71,105 @@ def parse_timestamp(timestamp):
     return datetime.fromtimestamp(timestamp)
 
 
-def unroll_datachunks(features, *datachunks):
-    from .models import MatchParticipation
-    values       = list()
-    oldest_match = None
-    stats_lut    = dict()
-    for dr_idx, datachunk in enumerate(datachunks):
+def unwrap_datachunks(features: List[Feature], *datachunks: DataChunkType) -> List[List[Real]]:
+    values: List[List[Real]] = list()
+    for dc_idx, datachunk in enumerate(datachunks):
+
         if isinstance(datachunk, FeatureContext):
-            if not datachunk.player_participations.exists() and datachunk.squad_participations.exists(): return None
-            stats = [feature(datachunk) for feature in features]
-            stats_lut[dr_idx] = stats
-            loads  = [stat['load_raw'] if stat['load_raw'] is not None else None for stat in stats]
-            scales = [stat['max_value'] if stat['max_value'] is not None else None for stat in stats]
-            period = MatchParticipation.Period().without_old(datachunk.days)
-            datachunk_filtered = datachunk.filtered(period)
-            for qs in (datachunk_filtered.player_participations, datachunk_filtered.squad_participations):
-                if qs is None or len(qs) == 0: continue
-                _oldest_match = qs.earliest('pmatch__timestamp').pmatch
-                if oldest_match is None or _oldest_match.timestamp < oldest_match.timestamp:
-                    oldest_match = _oldest_match
-        elif isinstance(datachunk, tuple) and len(datachunk) == 2 and datachunk[0] == 'trend' and isinstance(datachunk[1], int):
-            stats = stats_lut[datachunk[1]]
-            loads = [(1 + escape_none(stat['trend_rel'], 0)) * stat['load'] / 100 if stat['load'] is not None else None for stat in stats]
-        else:
-            raise ValueError(f'Unknown datachunk at position {dr_idx}: {str(datachunk)}')
-        values.append(loads)
-    feature_names = [stat['name'] for stat in stats]
-    return values, feature_names, oldest_match, scales
+            values.append([feature(datachunk) for feature in features])
+            continue
+
+        if isinstance(datachunk, SquadMembership):
+            values.append([datachunk.stats[feature.slug] for feature in features])
+            continue
+
+        raise ValueError(f'Unknown datachunk at position {dc_idx}: {str(datachunk)}')
+
+    return values
 
 
-def add_default_hints(r, oldest_match):
-    text_period = f'{format_date(parse_timestamp(oldest_match.timestamp))}—{format_date(datetime.now())}'
-    text_percentages = '% values are with respect to the 84th percentile of the normal distribution (except for participation effect).'
-    plt.text(0.02, 0.95, text_period, transform=r.fig.transFigure)
-    plt.text(0.98, 0.02, text_percentages, transform=r.fig.transFigure, ha='right', color='#bbb', fontsize=8)
-    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.15)
+def add_default_hints(r: Renderer, player: SteamProfile, max_player_name_length: int = 20) -> None:
+    # Add information about the player
+    if player is not None:
+        player_name = player.clean_name
+        if len(player_name) > max_player_name_length:
+            player_name = player_name[:max_player_name_length] + '...'
+        plt.text(0.98, 0.9, player_name, transform = r.fig.transFigure, ha = 'right', fontsize = 12)
+
+    # Add information about the features
+    text_percentages = (
+        'Damage per round is normalized by a factor of 0.01.'
+    )
+    plt.text(0.98, 0.02, text_percentages, transform = r.fig.transFigure, ha = 'right', color = '#bbb', fontsize = 8)
 
 
-def radar(*datachunks, labels = [], features = Features.MANY, feature_substitutions = {}, plot_kwargs = [], fill_kwargs = []):
+def radar(
+        *datachunks: DataChunkType,
+        labels: List[str] = [],
+        features: List[Feature] = Features.all,
+        feature_substitutions: Dict[str, str] = {
+            'Assists per death': 'Assists per\ndeath',
+            'Headshot rate': 'Headshot\nrate',
+            'Participation effect': 'Participation\neffect',
+            'Damage per round': 'Damage\nper round',
+            'Kills per death': 'Kills per\ndeath',
+        },
+        plot_kwargs: List[dict] = [],
+        fill_kwargs: List[dict] = [],
+        normalization: Dict[Feature, float] = {
+            Features.damage_per_round: 0.01,
+        },
+        player: Optional[SteamProfile] = None,
+    ) -> BytesIO:
+    """
+    """
     from .radarplot import radar as _radar
     assert len(datachunks) > 0 and len(datachunks) == len(labels), f'datachunks: {datachunks}, labels: {labels}'
-    feature_substitutions.setdefault('Flashbang score', 'Flashbang\nscore')
-    feature_substitutions.setdefault('Assists per death', 'Assists per\ndeath')
-    feature_substitutions.setdefault('Utility damage per round', 'Utility damage\nper round')
-    feature_substitutions.setdefault('Headshot ratio', 'Headshot\nratio')
-    feature_substitutions.setdefault('Team impact', 'Team\nimpact')
-    feature_substitutions.setdefault('Participation effect', 'Participation\neffect')
-    feature_substitutions.setdefault('Damage per round', 'Damage\nper round')
-    feature_substitutions.setdefault('Kills per death', 'Kills per\ndeath')
-    values, feature_names, oldest_match = unroll_datachunks(features, *datachunks)[:3]
-    feature_names = [feature_substitutions.get(name, name) for name in feature_names]
+
+    # Unwrap the datachunks into a list of lines
+    line_list = unwrap_datachunks(features, *datachunks)
+
+    # Apply feature-wise normalization
+    for line in line_list:
+        for feature, factor in normalization.items():
+            fidx = features.index(feature)
+            line[fidx] *= factor
+
+    # Determine the feature names with respect to `feature_substitutions`
+    feature_names = [feature_substitutions.get(feature.name, feature.name) for feature in features]
+
+    # Render the radar plot
     with Renderer() as r:
-        values = [np.asarray(line).astype(float) for line in values]
+        values = [np.asarray(line).astype(float) for line in line_list]
         _radar(r.fig, feature_names, *values, labels = labels, plot_kwargs = plot_kwargs, fill_kwargs = fill_kwargs)
-        add_default_hints(r, oldest_match)
+        add_default_hints(r, player)
+        plt.subplots_adjust(left = 0.1, right = 0.9, top = 0.9, bottom = 0.15)
+
+    # Return the compressed data
     return r.data
 
 
-def trends(squad, player, features, days = None, trend_shift = None, **filters):
-    context    = FeatureContext.create_default(player, squad, days, trend_shift, **filters)
-    datachunks = [context, ('trend', 0)]
-    labels     = [player.clean_name, f'Trend ({-context.trend_shift / (60 * 60 * 24):g} days)']
-    return radar(*datachunks, features = features, labels = labels,
+def trends(
+        squad_membership: SquadMembership,
+        context: FeatureContext,
+        features: List[Feature],
+    ) -> BytesIO:
+    datachunks = [squad_membership, context]
+    labels = [
+        f'30-days average',
+        f'Current performance',
+    ]
+    return radar(
+        *datachunks,
+        features = features,
+        labels = labels,
+        player = squad_membership.player,
         plot_kwargs = [
-            {'c': DEFAULT_COLORS[0]},
-            {'c': DEFAULT_COLORS[0], 'ls': '--'},
+            {'c': DEFAULT_COLORS[0], 'lw': 1},
+            {'c': DEFAULT_COLORS[0], 'lw': 2, 'ls': '--'},
         ],
         fill_kwargs = [
             {},
             {'alpha': 0},
-        ])
-
-
-def bars(*datachunks, labels = [], features = Features.MANY):
-    assert len(datachunks) > 0 and len(datachunks) == len(labels), f'datachunks: {datachunks}, labels: {labels}'
-    values, feature_names, oldest_match, scales = unroll_datachunks(features, *datachunks, *[('trend', idx) for idx, _ in enumerate(datachunks)])
-    X_values = np.array(values[:len(labels) ]).T.astype(float)
-    X_trends = np.array(values[ len(labels):]).T.astype(float)
-    ymax = 0
-    with Renderer() as r:
-        label_locations = np.arange(len(labels))
-        bar_width = 1 / (1 + len(features))
-        group_width = bar_width * len(features)
-        for idx, (x_values, name, scale, x_trends) in enumerate(zip(X_values, feature_names, scales, X_trends)):
-            bar_locations = label_locations - group_width / 2 + bar_width * idx + bar_width / 2
-            if scale is not None and scale != 1: name = f'{name} (×{scale:.1f})'
-            plt.bar(bar_locations, x_values, bar_width, label=name, lw=1, ec='white')
-            dt = x_trends - x_values
-            for location, dti, xi in zip(bar_locations, dt, x_values):
-                plt.annotate('', xy=(location, xi + dti), xytext=(location, xi - dti), arrowprops=dict(arrowstyle = '-|>', mutation_scale=20, color='k'))
-                ymax = max((ymax, xi + dti, xi - dti))
-        plt.legend(prop=dict(size=7), ncol=2)
-        plt.xticks(label_locations, labels)
-        plt.ylim(0, ymax + 0.05)
-        plt.grid(axis='y')
-        add_default_hints(r, oldest_match)
-    return r.data
-
+        ],
+    )

@@ -4,7 +4,7 @@ from django.urls import reverse
 from django.utils.safestring import mark_safe
 
 from .forms import AccountCreationForm, AccountChangeForm, SteamProfileCreationForm
-from .models import Account, SteamProfile, Squad, Invitation
+from .models import Account, SteamProfile, Squad, Invitation, SquadMembership
 
 from stats.models import MatchParticipation, MatchBadge
 
@@ -121,8 +121,14 @@ def announce_on_discord(modeladmin, request, queryset):
     for squad in queryset.all():
         if squad.discord_channel_id:
             url  = squad.absolute_url(request)
-            text = f'{url}\nWanna join the club of cool kids? Type `/join`!'
+            text = f'{url}\nWanna join the cool kids\' club? Type `/join`!'
             ScheduledNotification.objects.create(squad = squad, text = text)
+
+
+@admin.action(description='Update stats')
+def update_stats(modeladmin, request, queryset):
+    for squad in queryset.all():
+        squad.update_stats()
 
 
 @admin.register(Squad)
@@ -132,10 +138,10 @@ class SquadAdmin(admin.ModelAdmin):
 
     list_display = ('name', 'uuid', 'members_count')
 
-    actions = [announce_on_discord]
+    actions = [announce_on_discord, update_stats]
 
     def get_queryset(self, *args, **kwargs):
-        return super().get_queryset(*args, **kwargs).prefetch_related('members')
+        return super().get_queryset(*args, **kwargs).prefetch_related('memberships')
 
     @admin.display(description='Members')
     def members_count(self, squad):
@@ -156,3 +162,10 @@ class InvitationAdmin(admin.ModelAdmin):
         url = invitation.absolute_url(self.request)
         return mark_safe(f'<a href="{url}">{url}</a>')
 
+
+@admin.register(SquadMembership)
+class SquadMembershipAdmin(admin.ModelAdmin):
+
+    model = SquadMembership
+    list_display = ('player', 'squad', 'position', 'stats', 'trends')
+    list_filter = ('squad',)

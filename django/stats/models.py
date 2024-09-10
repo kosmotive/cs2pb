@@ -111,17 +111,24 @@ class GamingSession(models.Model):
         top_player: Optional[SteamProfile] = None
         top_player_trend_rel: float = 0
         participated_squad_members: int = 0
+        feature_contexts = dict()
         for m in self.squad.memberships.all():
 
             if m.player.steamid not in participated_steamids:
                 continue
             participated_squad_members += 1
 
-            # Compute the PV of the player today and the reference PV
-            pv_today = Features.pv(FeatureContext.create_default(m.player, trend_shift = 0, days = 0.5))['value']
-            pv_ref   = Features.pv(FeatureContext.create_default(m.player, trend_shift = 0))['value']
+            # Compute the PV of the player in this session
+            feature_contexts[m.player.steamid] = (
+                ctx := FeatureContext(
+                    MatchParticipation.objects.filter(player = m.player, pmatch__sessions = self),
+                    m.player,
+                )
+            )
+            pv_today = Features.player_value(ctx)
 
-            # Skip trend computation if the values are not available (e.g., because the player has insufficient matches)
+            # Skip further consideration if today's PV or the reference PV is not available
+            pv_ref = m.stats.get('player_value', None)
             if pv_today is None or pv_ref is None:
                 continue
 
@@ -176,11 +183,20 @@ class GamingSession(models.Model):
         if participated_squad_members > 1 and top_player is not None and top_player_trend_rel > 0.01:
             from .plots import trends as plot_trends
             notification = self.squad.notify_on_discord(
-                squad = self.squad,
-                text = f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!',
+                f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>!',
             )
             if notification is not None:
-                plot = plot_trends(self.squad, top_player, Features.MANY)
+                plot = plot_trends(
+                    self.squad.memberships.filter(player = top_player).get(),
+                    feature_contexts[top_player.steamid],  # The feature context for the session trends
+                    [
+                        Features.player_value,
+                        Features.assists_per_death,
+                        Features.headshot_rate,
+                        Features.damage_per_round,
+                        Features.kills_per_death,
+                    ],
+                )
                 notification.attach(plot)
             self.rising_star = top_player
             self.save()
@@ -521,8 +537,8 @@ class Match(models.Model):
                 account = getattr(player, 'account', None)
                 if account is None:
                     continue
-                for m in account.steam_profile.squad_memberships.all():
-                    squad_ids.add(m.squad.pk)
+                for membership in account.steam_profile.squad_memberships.all():
+                    squad_ids.add(membership.squad.pk)
             for squad_id in squad_ids:
                 squad = Squad.objects.get(uuid = squad_id)
                 squad.handle_new_match(m)
@@ -574,17 +590,17 @@ class MatchParticipation(models.Model):
     player = models.ForeignKey(SteamProfile, on_delete=models.PROTECT, verbose_name='Player')
     pmatch = models.ForeignKey(Match, on_delete=models.CASCADE, verbose_name='Match')
 
-    position = models.PositiveSmallIntegerField() # scoreboard position
-    team     = models.PositiveSmallIntegerField() # team 1 or team 2
-    result   = models.CharField(blank=False, max_length=1) # (t) tie, (w) win, (l) loss
+    position = models.PositiveSmallIntegerField()  # scoreboard position
+    team     = models.PositiveSmallIntegerField()  # team 1 or team 2
+    result   = models.CharField(blank=False, max_length=1)  # (t) tie, (w) win, (l) loss
 
-    kills     = models.PositiveSmallIntegerField() # enemy kills
+    kills     = models.PositiveSmallIntegerField()  # enemy kills
     assists   = models.PositiveSmallIntegerField()
     deaths    = models.PositiveSmallIntegerField()
     score     = models.PositiveSmallIntegerField()
     mvps      = models.PositiveSmallIntegerField()
-    headshots = models.PositiveSmallIntegerField() # enemy headshots
-    adr       = models.FloatField()                # average damage per round
+    headshots = models.PositiveSmallIntegerField()  # enemy headshots
+    adr       = models.FloatField()                 # average damage per round
 
     class Meta:
         constraints = [
@@ -627,33 +643,6 @@ class MatchParticipation(models.Model):
     @staticmethod
     def filter(qs, period):
         return qs if period is None else qs.filter(**period.filters())
-
-    class Period:
-
-        LONG_TERM_TREND_SHIFT  = -60 * 60 * 24 * 7 # 7 days to the past
-        SHORT_TERM_TREND_SHIFT = -60 * 60 * 12     # half a day to the past
-        DEFAULT_DAYS = 30
-
-        def __init__(self):
-            timestamp_now = datetime.timestamp(datetime.now())
-            self.start = None
-            self.end   = timestamp_now
-
-        def without_old(self, days=DEFAULT_DAYS):
-            timestamp_now = datetime.timestamp(datetime.now())
-            self.start = timestamp_now - days * 24 * 60 * 60
-            return self
-
-        def shift(self, seconds):
-            if self.start is not None: self.start += seconds
-            if self.end   is not None: self.end   += seconds
-            return self
-
-        def filters(self):
-            filters = dict()
-            if self.start is not None: filters['pmatch__timestamp__gte'] = self.start
-            if self.end   is not None: filters['pmatch__timestamp__lte'] = self.end
-            return filters
 
 
 def get_or_none(qs, **kwargs):
@@ -829,8 +818,8 @@ class PlayerOfTheWeek(models.Model):
                 log.error(f'Failed to create missing badges.', exc_info=True)
 
     class Meta:
-        verbose_name        = 'Player-of-the-Week badge';
-        verbose_name_plural = 'Player-of-the-Week badges';
+        verbose_name        = 'Player-of-the-Week badge'
+        verbose_name_plural = 'Player-of-the-Week badges'
 
     def __str__(self):
         return f'{self.week}/{self.year}'
@@ -842,8 +831,8 @@ class MatchBadgeType(models.Model):
     name = models.CharField(max_length=100, unique=True)
 
     class Meta:
-        verbose_name        = 'Match-based badge type';
-        verbose_name_plural = 'Match-based badge types';
+        verbose_name        = 'Match-based badge type'
+        verbose_name_plural = 'Match-based badge types'
 
 
 class MatchBadge(models.Model):
@@ -858,7 +847,7 @@ class MatchBadge(models.Model):
             MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:])
         MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace')
         MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill')
-        MatchBadge.award_margin_badge(participation, 'carrier', order='-adr', margin=2, emoji='🍆')
+        MatchBadge.award_margin_badge(participation, 'carrier', order='-adr', margin=1.8, emoji='🍆')
         MatchBadge.award_margin_badge(participation, 'peach', order='adr', margin=0.75, emoji='🍑')
 
     @staticmethod

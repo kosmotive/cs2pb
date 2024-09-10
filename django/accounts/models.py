@@ -316,16 +316,18 @@ class Squad(models.Model):
         self.last_changelog_announcement = changelog[0]['sha']
         self.save()
 
-    def update_positions(self) -> None:
+    def update_stats(self) -> None:
         """
-        Update the leaderboard positions of the squad members.
+        Update the stats, trends, and leaderboard positions of the squad members.
         """
+        for m in self.memberships.all():
+            m.update_stats()
 
         # Store the current positions for later comparison
         old_positions = {m: m.position for m in self.memberships.all()}
 
         # Update the positions according to the KPI
-        kpis = {m: Features.pv(FeatureContext.create_default(m.player, self))['value'] for m in self.memberships.all()}
+        kpis = {m: m.stats['player_value'] for m in self.memberships.all()}
         memberships = sorted(
             (m for m in kpis.keys() if kpis[m] is not None),
             key = lambda m: kpis[m],
@@ -402,27 +404,87 @@ class SquadMembership(models.Model):
     )
     position = models.PositiveSmallIntegerField(
         null = True,
+        blank = True,
         default = None,
     )
+    stats = models.JSONField(
+        default = dict,
+        blank = True,
+    )
+    trends = models.JSONField(
+        default = dict,
+        blank = True,
+    )
+
+    @property
+    def accounted_match_participations(self):
+        """
+        Return the match participations of the squad member that are relevant for the stats computation
+        """
+        return self.squad.match_participations(
+            pmatch__timestamp__gte = datetime.datetime.timestamp(
+                datetime.datetime.now()
+            ) - 30 * 24 * 60 * 60,  # 30 days ago
+            pmatch__sessions__is_closed = True,  # Exclude matches from sessions that did not end yet
+        )
+
+    def update_stats(self):
+        """
+        Update the stats and trends of the squad member based on their performance in the last 30 days.
+        """
+
+        # Store the current stats for later comparison
+        previous_stats = dict(self.stats)
+
+        # Update the stats
+        ctx = FeatureContext(self.accounted_match_participations, self.player)
+        self.stats.clear()
+        for feature in Features.all:
+            self.stats[feature.slug] = feature(ctx)
+
+        # Prune dangling trends from old versions of the feature set
+        for feature in list(self.trends.keys()):
+            if feature not in self.stats:
+                del self.trends[feature]
+
+        # Compute the trends
+        for feature in Features.all:
+            feature_value = self.stats.get(feature.slug)
+            previous_feature_value = previous_stats.get(feature.slug)
+
+            # Compute the trend if both the current and previous feature values are available
+            if feature_value is not None and previous_feature_value is not None:
+                trend = feature_value - previous_feature_value
+
+                # Preserve the previous trend value if nothing has changed since the last update
+                if trend != 0:
+                    self.trends[feature.slug] = trend
+
+            # Otherwise, the trend is undefined
+            else:
+                self.trends[feature.slug] = None
+
+        # Save the updated data
+        self.save()
 
 
 class Invitation(models.Model):
 
-    uuid          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    steam_profile = models.OneToOneField(SteamProfile, on_delete=models.PROTECT)
-    squad         = models.ForeignKey(Squad, on_delete=models.CASCADE, related_name='invitations')
-    discord_name  = models.CharField(blank=True , max_length=30)
+    uuid          = models.UUIDField(primary_key = True, default = uuid.uuid4, editable = False)
+    steam_profile = models.OneToOneField(SteamProfile, on_delete = models.PROTECT)
+    squad         = models.ForeignKey(Squad, on_delete = models.CASCADE, related_name = 'invitations')
+    discord_name  = models.CharField(blank = True , max_length = 30)
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['steam_profile', 'squad'], name='unique_steam_profile_squad'
+                fields = ['steam_profile', 'squad'], name = 'unique_steam_profile_squad'
             ),
         ]
 
     @property
     def url(self):
-        return reverse('join', args=(self.pk,))
+        return reverse('join', args = (self.pk,))
 
     def absolute_url(self, request):
         return request.build_absolute_uri(self.url)
