@@ -1,6 +1,7 @@
 import math
 
 from django import template
+from django.db.models import Sum
 from django.template.defaultfilters import stringfilter
 from django.utils.safestring import mark_safe
 
@@ -43,6 +44,11 @@ def potw_mode_name(mode):
 
 
 @register.filter
+def match_badge_count(qs):
+    return qs.aggregate(Sum('frequency'))['frequency__sum']
+
+
+@register.filter
 def list_of_match_badges(qs):
     
     def format_badge(badge):
@@ -52,7 +58,7 @@ def list_of_match_badges(qs):
         yield f'<span class="match-date">{ badge.participation.pmatch.date }</span>'
         yield f'<span class="match-time">{ badge.participation.pmatch.time }</span>'
         if badge.frequency > 1:
-            yield f'<span class="match-badge-frequency">{badge.frequency}&times;</span>'
+            yield f'<span class="match-badge-frequency">{ badge.frequency }&times;</span>'
         yield '</li>'
 
     if len(qs) > 0:

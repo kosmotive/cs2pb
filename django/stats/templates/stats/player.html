@@ -140,7 +140,7 @@ Math.sqrt(({{ mp.kills }} / {{ mp.deaths }}) * (0.01 * {{ mp.adr }})){% if not f
                                 <img src="{% static 'badges' %}/{{ badge_type }}.png" class="badge" />
                             </td>
                             <td>
-                                <h3>{{ badge.name }} <span class="badge-frequency">({{ badge.matches|length }}&times;)</span></h3>
+                                <h3>{{ badge.name }} <span class="badge-frequency">({{ badge.matches|match_badge_count }}&times;)</span></h3>
                                 {{ badge.matches|list_of_match_badges }}
                             </td>
                         </tr>
