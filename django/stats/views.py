@@ -332,7 +332,7 @@ def matches(request, squad=None, last_timestamp=None):
 
 def add_globals_to_context(context):
     context['version'] = gitinfo.get_head_info()
-    qs = UpdateTask.objects.filter(completed_timestamp = None)
+    qs = UpdateTask.objects.filter(completion_timestamp = None)
     qs = qs.values('account').annotate(count = Count('account'))
     if qs.count() > 0 and qs.latest('count')['count'] > 1:
         msg = 'There is a temporary malfunction of the Steam Client API.'

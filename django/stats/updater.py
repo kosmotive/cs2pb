@@ -21,7 +21,7 @@ def run_update_loop():
 
 def run_pending_tasks():
     from stats.models import UpdateTask
-    pending_tasks = UpdateTask.objects.filter(completed_timestamp=None).order_by('-scheduled_timestamp').all()
+    pending_tasks = UpdateTask.objects.filter(completion_timestamp=None).order_by('-scheduling_timestamp').all()
     for task in pending_tasks:
         try:
             task.run()
@@ -32,7 +32,7 @@ def run_pending_tasks():
 def queue_update_task(account):
     global update_thread
     from stats.models import UpdateTask
-    task = UpdateTask.objects.create(account=account, scheduled_timestamp=datetime.datetime.timestamp(datetime.datetime.now()))
+    task = UpdateTask.objects.create(account=account, scheduling_timestamp=datetime.datetime.timestamp(datetime.datetime.now()))
     if update_thread is None:
         update_thread = threading.Thread(target=run_update_loop, daemon=True)
         update_thread.start()

@@ -30,13 +30,13 @@ class InvitationDraft(models.Model):
 
 class ScheduledNotification(models.Model):
 
-    scheduled_timestamp = models.PositiveBigIntegerField(verbose_name='Scheduled', default=timestamp_now)
+    scheduling_timestamp = models.PositiveBigIntegerField(verbose_name='Scheduled', default=timestamp_now)
     squad = models.ForeignKey(Squad, related_name='notifications', on_delete=models.CASCADE)
     text  = models.TextField(blank=False)
 
     @property
     def scheduled(self):
-        return datetime.fromtimestamp(self.scheduled_timestamp)
+        return datetime.fromtimestamp(self.scheduling_timestamp)
 
     @property
     def scheduled_datetime(self):

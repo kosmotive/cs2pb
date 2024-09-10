@@ -1263,5 +1263,5 @@ class UpdateTask(models.Model):
 
         self.account.handle_finished_update()
 
-        kept_tasks = UpdateTask.objects.order_by('-scheduled_timestamp')[:100]
+        kept_tasks = UpdateTask.objects.order_by('-scheduling_timestamp')[:100]
         UpdateTask.objects.exclude(pk__in = kept_tasks.values_list('pk', flat = True)).delete()

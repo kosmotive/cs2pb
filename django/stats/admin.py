@@ -88,16 +88,14 @@ class UpdateTaskAdmin(admin.ModelAdmin):
 
     model = UpdateTask
 
-    list_display = ('account', '_is_completed', 'scheduled_datetime', '_execution_datetime', '_completed_datetime', '_actions')
-    list_filter = (('completed_timestamp', admin.EmptyFieldListFilter),)
+    list_display = ('account', '_is_completed', 'scheduling_datetime', '_execution_datetime', '_completion_datetime', '_actions')
+    list_filter = (('completion_timestamp', admin.EmptyFieldListFilter),)
 
     def _execution_datetime(self, task):
-        if task.execution_datetime is None: return 'Pending'
-        else: return task.execution_datetime
+        return task.execution_date_and_time or 'Pending'
 
-    def _completed_datetime(self, task):
-        if task.completed_datetime is None: return 'Pending'
-        else: return task.completed_datetime
+    def _completion_datetime(self, task):
+        return task.completion_date_and_time or 'Pending'
 
     def _is_completed(self, task):
         return task.is_completed

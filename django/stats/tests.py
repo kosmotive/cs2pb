@@ -781,8 +781,7 @@ class UpdateTask__run(TestCase):
         self.account = Account.objects.create(steam_profile = self.player, last_sharecode = 'xxx-sharecode-xxx')
         self.task = models.UpdateTask(
             account = self.account,
-            scheduled_timestamp =
-            datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)),
+            scheduling_timestamp = datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)),
         )
         self.assertFalse(self.task.completion_datetime)
         self.assertTrue(self.account.enabled)
