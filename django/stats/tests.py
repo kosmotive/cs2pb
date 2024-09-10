@@ -692,7 +692,6 @@ class matches(TestCase):
         self.participation = models.MatchParticipation.objects.create(
             player = self.player,
             pmatch = self.match,
-            position = 0,
             team = 1,
             result = 'l',
             kills = 20,
@@ -897,7 +896,6 @@ class GamingSession__close(TestCase):
         self.participation1 = models.MatchParticipation.objects.create(
             player = self.player1,
             pmatch = self.match1,
-            position = 0,
             team = 1,
             result = 'l',
             kills = 20,
@@ -921,7 +919,6 @@ class GamingSession__close(TestCase):
         self.participation2 = models.MatchParticipation.objects.create(
             player = self.player1,
             pmatch = self.match2,
-            position = 0,
             team = 1,
             result = 'l',
             kills = 20,
@@ -1038,7 +1035,6 @@ class GamingSession__close(TestCase):
         self.participation3 = models.MatchParticipation.objects.create(
             player = self.player2,
             pmatch = self.match2,
-            position = 1,
             team = self.participation2.team,
             result = self.participation2.result,
             kills = 10,
@@ -1061,7 +1057,6 @@ class GamingSession__close(TestCase):
         models.MatchParticipation.objects.create(
             player = self.player1,
             pmatch = match3,
-            position = 0,
             team = 1,
             result = 'w',
             kills = 20,
@@ -1084,7 +1079,6 @@ class GamingSession__close(TestCase):
         models.MatchParticipation.objects.create(
             player = self.player1,
             pmatch = match4,
-            position = 0,
             team = 1,
             result = 't',
             kills = 20,
@@ -1126,7 +1120,6 @@ class GamingSession__close(TestCase):
         self.participation3 = models.MatchParticipation.objects.create(
             player = self.player2,
             pmatch = self.match2,
-            position = 1,
             team = self.participation2.team,
             result = self.participation2.result,
             kills = 10,
