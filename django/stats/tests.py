@@ -1,5 +1,6 @@
 import datetime
 import math
+import os
 import time
 import uuid
 from types import SimpleNamespace
@@ -1160,4 +1161,9 @@ class GamingSession__close(TestCase):
         attachment = notification.get_attachment()
         img_actual = mpimg.imread(attachment, format = 'png')
         img_expected = mpimg.imread('tests/data/radarplot.png')
-        self.assertAlmostEqual(np.linalg.norm(img_actual - img_expected), 0, delta = 0.1)
+        try:
+            self.assertAlmostEqual(np.linalg.norm(img_actual - img_expected), 0, delta = 0.1)
+        except:  # noqa: E722
+            os.makedirs('tests/data/failed.actual', exist_ok = True)
+            mpimg.imsave('tests/data/failed.actual/radarplot.png', img_actual)
+            raise

@@ -191,7 +191,7 @@ class GamingSession(models.Model):
                     feature_contexts[top_player.steamid],  # The feature context for the session trends
                     [
                         Features.player_value,
-                        Features.participation_effect,
+                        Features.assists_per_death,
                         Features.headshot_rate,
                         Features.damage_per_round,
                         Features.kills_per_death,

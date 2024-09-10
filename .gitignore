@@ -13,12 +13,10 @@
 /django/reset.sh
 /django/static/maps/
 /django/tests/data/demos/*.dem.bz2
+/django/tests/data/failed.actual
 /django/*.sql
 __pycache__
 *.pyc
-/node/node_modules
-/node/package-lock.json
-/node/resolve.json
 /.no-bootstrap
 /envvars.development
 /envvars.production
