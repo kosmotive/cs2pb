@@ -132,7 +132,7 @@ def compute_card(
 
         # Format the trend string
         trend = squad_membership.trends.get(feature.slug)
-        trend_str = feature.format.format(trend) if trend is not None else ''
+        trend_str = f'{trend:+.2f}' if trend is not None else ''
         if len(trend_str) > 0 and float(trend_str) == 0:
             trend_str = ''
             trend = 0  # pretend that the trend is zero if it is too small
