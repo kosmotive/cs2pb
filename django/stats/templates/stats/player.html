@@ -193,7 +193,7 @@ function updatePlot( sigma )
             name: 'Matches'
         },
         {
-            x: [{{ period_start }}, {{ period_end }}],
+            x: [{{ period_start }} + 1, {{ period_end }}],
             y: [{{ period_average }}, {{ period_average }}],
             mode: 'lines',
             name: '30-days average',
@@ -265,8 +265,8 @@ function updatePlot( sigma )
             shapes: [
                 {
                     type: 'line',
-                    x0: {{ period_start }},
-                    x1: {{ period_start }},
+                    x0: {{ period_start }} + 1,
+                    x1: {{ period_start }} + 1,
                     y0: 0,
                     y1: 1.08,
                     yref: 'paper',
@@ -289,7 +289,7 @@ function updatePlot( sigma )
                 },
                 {
                     type: 'rect',
-                    x0: {{ period_start }},
+                    x0: {{ period_start }} + 1,
                     x1: {{ period_end }},
                     y0: 0.96,
                     y1: 1.08,
