@@ -1,7 +1,8 @@
-import requests
-import time
 import itertools
 import logging
+import time
+
+import requests
 
 log = logging.getLogger(__name__)
 

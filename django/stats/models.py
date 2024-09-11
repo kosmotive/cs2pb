@@ -25,6 +25,7 @@ from cs2pb_typing import (
     Tuple,
 )
 
+from django.conf import settings
 from django.core.exceptions import (
     MultipleObjectsReturned,
     ObjectDoesNotExist,
@@ -46,8 +47,6 @@ from .features import (
     Features,
 )
 
-from django.conf import settings
-
 log = logging.getLogger(__name__)
 
 
@@ -58,7 +57,7 @@ def csgo_timestamp_to_datetime(timestamp) -> datetime:
     return datetime.fromtimestamp(timestamp)
 
 
-def csgo_timestamp_to_strftime(timestamp: int, fmt: str = r'%-d %b %Y %H:%M') -> str:
+def csgo_timestamp_to_strftime(timestamp: int, fmt: str = r'%b %-d, %Y, %H:%M') -> str:
     """
     Convert a CSGO timestamp to a formatted string.
     """
@@ -211,7 +210,7 @@ class GamingSession(models.Model):
                 if GamingSession.objects.filter(
                     squad = session.squad,
                     is_closed = True,
-                    matches__timestamp__gt = instance.timestamp_end,
+                    matches__timestamp__gt = instance.ended_timestamp,
                 ).exists():
                     log.info(
                         f'Setting session {session.pk} added to match {instance.pk} (str(instance)) to closed '
@@ -296,56 +295,56 @@ class GamingSession(models.Model):
         The CSGO timestamp of the last match of the session plus the duration of the match (in seconds), or `None` if
         the session has no matches.
         """
-        return None if self.last_match is None else self.last_match.timestamp + self.last_match.duration
+        return None if self.last_match is None else self.last_match.ended_timestamp
 
     @property
-    def started_datetime(self) -> str:
+    def started_date_and_time(self) -> str:
         """
         Get the human-readable date and time of the start of the session.
         """
-        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%-d %b %Y %H:%M')
+        return '-' if self.first_match is None else self.first_match.date_and_time
 
     @property
     def started_date(self) -> str:
         """
         Get the human-readable date of the start of the session.
         """
-        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%-d %b %Y')
+        return '-' if self.first_match is None else self.first_match.date
 
     @property
     def started_time(self) -> str:
         """
         Get the human-readable time of the start of the session.
         """
-        return '–' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%H:%M')
+        return '-' if self.first_match is None else self.first_match.time
 
     @property
-    def ended_datetime(self) -> str:
+    def ended_date_and_time(self) -> str:
         """
         Get the human-readable date and time of the end of the session.
         """
-        return '–' if self.ended is None else csgo_timestamp_to_strftime(self.ended, r'%-d %b %Y %H:%M')
+        return '-' if self.last_match is None else self.last_match.ended_date_and_time
 
     @property
     def ended_time(self) -> str:
         """
         Get the human-readable time of the end of the session.
         """
-        return '–' if self.ended is None else csgo_timestamp_to_strftime(self.ended, r'%H:%M')
+        return '-' if self.last_match is None else self.last_match.ended_time
 
     @property
     def started_weekday(self) -> str:
         """
         Get the human-readable weekday of the start of the session.
         """
-        return '' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%A')
+        return '-' if self.first_match is None else self.first_match.weekday
 
     @property
     def started_weekday_short(self) -> str:
         """
         Get the human-readable abbreviation of the weekday of the start of the session.
         """
-        return '' if self.started is None else csgo_timestamp_to_strftime(self.started, r'%a')
+        return '-' if self.first_match is None else self.first_match.weekday_short
 
     def __str__(self) -> str:
         """
@@ -353,7 +352,7 @@ class GamingSession(models.Model):
         """
         try:
             if self.matches.all().exists():
-                return f'{self.started_datetime} — {self.ended_datetime} ({self.pk})'
+                return f'{self.started_date_and_time} — {self.ended_date_and_time} ({self.pk})'
         except:  # noqa: E722
             pass
         return f'Empty Gaming Session ({self.pk})'
@@ -499,12 +498,11 @@ class Match(models.Model):
                     steam_profile = SteamProfile.objects.create(steamid = steamid)
                 else:
                     steam_profile = steam_profiles[0]
-                    steam_profile.save() # updates data from Steam API
+                    steam_profile.save()  # Updates data from Steam API
 
                 players.append(steam_profile)
 
                 mp = MatchParticipation(player = steam_profile, pmatch = m)
-                mp.position  =     pos  % 5 # this is the CSGO scoreboard position (corresponds to the score), in CS2 it is not used
                 mp.team      = 1 + pos // 5
                 mp.result    = get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
                 mp.kills     = kills
@@ -517,7 +515,15 @@ class Match(models.Model):
                 mp.save()
 
             for kill_data in data['kills'].to_dict(orient='records'):
-                if kill_data['attacker_team_name'] == kill_data['victim_team_name'] or kill_data['attacker_steamid'] == 'None': continue
+
+                if any(
+                    (
+                        kill_data['attacker_team_name'] == kill_data['victim_team_name'],
+                        kill_data['attacker_steamid'] == 'None',
+                    ),
+                ):
+                    continue
+
                 kev = KillEvent()
                 kev.killer = MatchParticipation.objects.filter(pmatch = m, player = kill_data['attacker_steamid']).get()
                 kev.victim = MatchParticipation.objects.filter(pmatch = m, player = kill_data[  'victim_steamid']).get()
@@ -546,31 +552,64 @@ class Match(models.Model):
             return m
 
     def __str__(self):
-        return f'{self.map_name} ({self.datetime})'
+        return f'{self.map_name} ({self.date_and_time})'
 
     @property
     def rounds(self):
         return self.score_team1 + self.score_team2
 
     @property
-    def timestamp_end(self):
+    def ended_timestamp(self):
         return self.timestamp + self.duration
 
     @property
-    def datetime(self):
+    def date_and_time(self) -> str:
+        """
+        Get the human-readable date and time of the start of the match.
+        """
         return csgo_timestamp_to_strftime(self.timestamp)
 
     @property
-    def datetime_end(self):
+    def ended_date_and_time(self) -> str:
+        """
+        Get the human-readable date and time of the end of the match.
+        """
         return csgo_timestamp_to_strftime(self.timestamp + self.duration)
 
     @property
-    def time(self):
-        return csgo_timestamp_to_strftime(self.timestamp, fmt='%H:%M')
+    def time(self) -> str:
+        """
+        Get the human-readable time of the start of the match.
+        """
+        return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%H:%M')
 
     @property
-    def time_end(self):
-        return csgo_timestamp_to_strftime(self.timestamp + self.duration, fmt='%H:%M')
+    def ended_time(self) -> str:
+        """
+        Get the human-readable time of the end of the match.
+        """
+        return csgo_timestamp_to_strftime(self.timestamp + self.duration, fmt = r'%H:%M')
+
+    @property
+    def date(self) -> str:
+        """
+        Get the human-readable date of the start of the match.
+        """
+        return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%b %-d, %Y')
+
+    @property
+    def weekday(self) -> str:
+        """
+        Get the human-readable weekday of the start of the match.
+        """
+        return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%A')
+
+    @property
+    def weekday_short(self) -> str:
+        """
+        Get the human-readable abbreviation of the weekday of the start of the match.
+        """
+        return csgo_timestamp_to_strftime(self.timestamp, fmt = r'%a')
 
     def get_participation(self, player):
         if isinstance(player, str):
@@ -587,31 +626,68 @@ m2m_changed.connect(GamingSession.sessions_changed, sender=Match.sessions.throug
 
 class MatchParticipation(models.Model):
 
-    player = models.ForeignKey(SteamProfile, on_delete=models.PROTECT, verbose_name='Player')
-    pmatch = models.ForeignKey(Match, on_delete=models.CASCADE, verbose_name='Match')
+    player = models.ForeignKey(SteamProfile, on_delete = models.PROTECT, verbose_name = 'Player')
+    """
+    The player who participated in the match.
+    """
 
-    position = models.PositiveSmallIntegerField()  # scoreboard position
-    team     = models.PositiveSmallIntegerField()  # team 1 or team 2
-    result   = models.CharField(blank=False, max_length=1)  # (t) tie, (w) win, (l) loss
+    pmatch = models.ForeignKey(Match, on_delete = models.CASCADE, verbose_name = 'Match')
+    """
+    The match in which the player participated.
+    """
 
-    kills     = models.PositiveSmallIntegerField()  # enemy kills
-    assists   = models.PositiveSmallIntegerField()
-    deaths    = models.PositiveSmallIntegerField()
-    score     = models.PositiveSmallIntegerField()
-    mvps      = models.PositiveSmallIntegerField()
-    headshots = models.PositiveSmallIntegerField()  # enemy headshots
-    adr       = models.FloatField()                 # average damage per round
+    team = models.PositiveSmallIntegerField()
+    """
+    The team in which the player participated (must be either 1 or 2).
+    """
+
+    result = models.CharField(blank = False, max_length = 1)
+    """
+    The result of the match for the player. Must be either 'w' (win), 'l' (loss), or 't' (tie).
+    """
+
+    kills = models.PositiveSmallIntegerField()
+    """
+    The number of enemy kills the player scored in the match.
+    """
+
+    assists = models.PositiveSmallIntegerField()
+    """
+    The number of assists the player scored in the match.
+    """
+
+    deaths = models.PositiveSmallIntegerField()
+    """
+    The number of deaths the player had in the match.
+    """
+
+    score = models.PositiveSmallIntegerField()
+    """
+    The score of the player in the match.
+    """
+
+    mvps = models.PositiveSmallIntegerField()
+    """
+    The number of MVPs the player scored in the match.
+    """
+
+    headshots = models.PositiveSmallIntegerField()
+    """
+    The number of headshots on enemies the player scored in the match.
+    """
+
+    adr = models.FloatField()
+    """
+    The average damage per round the player scored in the match.
+    """
 
     class Meta:
         constraints = [
             models.UniqueConstraint(
                 fields=['player', 'pmatch'], name='unique_player_pmatch'
             ),
-            models.UniqueConstraint(
-                fields=['pmatch', 'team', 'position'], name='unique_pmatch_team_position',
-            ),
         ]
-        ordering = ['-adr'] # in CSGO, this was `position` (corresponding to the score), but in CS2 the ordering is determiend by the ADR
+        ordering = ['-adr']
 
     def clean(self, *args, **kwargs):
         if self.team not in (1, 2):
@@ -636,7 +712,8 @@ class MatchParticipation(models.Model):
         """
         rounds = np.zeros(100, int)
         for kev in self.kill_events.all():
-            if kev.round is None: continue
+            if kev.round is None:
+                continue
             rounds[kev.round] += 1
         return (rounds == n).sum()
 
@@ -659,13 +736,34 @@ def get_or_none(qs, **kwargs):
 
 
 class KillEvent(models.Model):
+    """
+    A kill event in a match.
+    """
 
-    killer = models.ForeignKey(MatchParticipation, related_name= 'kill_events', on_delete=models.CASCADE)
-    victim = models.ForeignKey(MatchParticipation, related_name='death_events', on_delete=models.CASCADE)
+    killer = models.ForeignKey(MatchParticipation, related_name =  'kill_events', on_delete = models.CASCADE)
+    """
+    The player who scored the kill.
+    """
 
-    round = models.PositiveSmallIntegerField(null=True, blank=True)
-    kill_type = models.PositiveSmallIntegerField() # 1 if T kills CT and 2 if CT kills T
-    bomb_planted = models.BooleanField(null=False) # True iff bomb was already planted
+    victim = models.ForeignKey(MatchParticipation, related_name = 'death_events', on_delete = models.CASCADE)
+    """
+    The player who was killed.
+    """
+
+    round = models.PositiveSmallIntegerField(null = True, blank = True)
+    """
+    The round number in which the kill occurred.
+    """
+
+    kill_type = models.PositiveSmallIntegerField()
+    """
+    The type of the kill. Must be either 1 (T kills CT) or 2 (CT kills T).
+    """
+
+    bomb_planted = models.BooleanField(null = False)
+    """
+    Whether the bomb was already planted when the kill occurred.
+    """
 
     killer_x = models.FloatField()
     killer_y = models.FloatField()
@@ -677,42 +775,107 @@ class KillEvent(models.Model):
 
 
 class PlayerOfTheWeek(models.Model):
+    """
+    The outcome of a weekly challenge.
+    """
 
     timestamp = models.PositiveBigIntegerField()
-    player1   = models.ForeignKey(SteamProfile, null=True , on_delete=models.SET_NULL, blank=True, related_name='potw1') # gold
-    player2   = models.ForeignKey(SteamProfile, null=True , on_delete=models.SET_NULL, blank=True, related_name='potw2') # silver
-    player3   = models.ForeignKey(SteamProfile, null=True , on_delete=models.SET_NULL, blank=True, related_name='potw3') # bronze
-    squad     = models.ForeignKey(Squad       , null=False, on_delete=models.CASCADE)
-    mode      = models.CharField(blank=False, max_length=20)
+    """
+    The CSGO timestamp of when the challenge ended or will end.
+    """
+
+    player1 = models.ForeignKey(
+        SteamProfile,
+        null = True ,
+        on_delete = models.SET_NULL,
+        blank = True,
+        related_name = 'potw1',
+    )
+    """
+    The player who won the first place.
+    """
+
+    player2 = models.ForeignKey(
+        SteamProfile,
+        null = True ,
+        on_delete = models.SET_NULL,
+        blank = True,
+        related_name = 'potw2',
+    )
+    """
+    The player who won the second place.
+    """
+
+    player3 = models.ForeignKey(
+        SteamProfile,
+        null = True ,
+        on_delete = models.SET_NULL,
+        blank = True,
+        related_name = 'potw3',
+    )
+    """
+    The player who won the third place.
+    """
+
+    squad = models.ForeignKey(Squad, null = False, on_delete = models.CASCADE)
+    """
+    The squad that this weekly challenge is or was for.
+    """
+
+    mode = models.CharField(blank = False, max_length = 20)
+    """
+    The mode of the challenge.
+    """
 
     @property
-    def competition_start_timestamp(self):
+    def challenge_start_timestamp(self) -> int:
+        """
+        Get the CSGO timestamp of the start of the challenge.
+        """
         date = datetime.fromtimestamp(self.timestamp)
         return round(datetime.timestamp(date - timedelta(days = 7)))
 
     @property
-    def competition_end_timestamp(self):
+    def challenge_end_timestamp(self) -> int:
+        """
+        Get the CSGO timestamp of the end of the challenge.
+        """
         return self.timestamp
 
     @property
-    def competition_start(self):
-        return csgo_timestamp_to_datetime(self.competition_start_timestamp)
+    def challenge_start_datetime(self) -> datetime:
+        """
+        Get the datetime object of the start of the challenge.
+        """
+        return csgo_timestamp_to_datetime(self.challenge_start_timestamp)
 
     @property
-    def competition_end(self):
-        return csgo_timestamp_to_datetime(self.competition_end_timestamp)
+    def challenge_end_datetime(self) -> datetime:
+        """
+        Get the datetime object of the end of the challenge.
+        """
+        return csgo_timestamp_to_datetime(self.challenge_end_timestamp)
 
     @property
-    def competition_end_datetime(self):
-        return csgo_timestamp_to_strftime(self.competition_end_timestamp)
+    def challenge_end_date_and_time(self) -> str:
+        """
+        Get the human-readable date and time of the end of the challenge.
+        """
+        return csgo_timestamp_to_strftime(self.challenge_end_timestamp)
 
     @property
-    def week(self):
-        return self.competition_end.isocalendar()[1]
+    def week(self) -> int:
+        """
+        Get the week number of the challenge.
+        """
+        return self.challenge_end_datetime.isocalendar()[1]
 
     @property
-    def year(self):
-        return self.competition_end.year
+    def year(self) -> int:
+        """
+        Get the year of the challenge.
+        """
+        return self.challenge_end_datetime.year
 
     @staticmethod
     def create_prehistoric_badge(squad):
@@ -721,7 +884,11 @@ class PlayerOfTheWeek(models.Model):
         prehistoric_badge_date = prehistoric_match_date + timedelta(days = -prehistoric_match_date.weekday())
         prehistoric_badge_date = prehistoric_badge_date.replace(hour=4, minute=0)
         prehistoric_timestamp  = round(datetime.timestamp(prehistoric_badge_date))
-        prehistoric_badge = PlayerOfTheWeek(timestamp = prehistoric_timestamp, squad = squad, mode = potw.mode_cycle[-1].id)
+        prehistoric_badge = PlayerOfTheWeek(
+            timestamp = prehistoric_timestamp,
+            squad = squad,
+            mode = potw.mode_cycle[-1].id,
+        )
         return prehistoric_badge
 
     @staticmethod
@@ -768,9 +935,14 @@ class PlayerOfTheWeek(models.Model):
         else:
             next_place = 1
             for steamid in top_steamids:
-                player_data = dict(player = SteamProfile.objects.get(pk = steamid)) | {field: player_stats[steamid][field] for field in stat_fields}
+                player_data = dict(
+                    player = SteamProfile.objects.get(pk = steamid),
+                ) | {
+                    field: player_stats[steamid][field]
+                    for field in stat_fields
+                }
                 fail_requirements = mode.does_fail_requirements(player_stats[steamid])
-                if fail_requirements != None:
+                if fail_requirements is not None:
                     player_data['place_candidate'] = None
                     player_data['unfulfilled_requirement'] = str(fail_requirements)
                 elif next_place <= 3 and len(top_steamids) > next_place:
@@ -780,7 +952,7 @@ class PlayerOfTheWeek(models.Model):
                     player_data['place_candidate'] = None
                 result['leaderboard'].append(player_data)
         draft_badge = PlayerOfTheWeek(timestamp = result['timestamp'], squad = squad, mode = mode.id)
-        result['competition_end'] = draft_badge.competition_end_datetime
+        result['challenge_end'] = draft_badge.challenge_end_date_and_time
         result['week'] = draft_badge.week - 1
         result['year'] = draft_badge.year
         result['mode'] = draft_badge.mode
@@ -788,18 +960,39 @@ class PlayerOfTheWeek(models.Model):
 
     @staticmethod
     def create_badge(badge_data):
-        if datetime.timestamp(csgo_timestamp_to_datetime(badge_data['timestamp'])) > datetime.timestamp(datetime.now()): return None
-        badge = PlayerOfTheWeek(timestamp = badge_data['timestamp'], squad = badge_data['squad'], mode = badge_data['mode'])
+        if (
+            datetime.timestamp(csgo_timestamp_to_datetime(badge_data['timestamp']))
+            >
+            datetime.timestamp(datetime.now())
+        ):
+            return None
+        badge = PlayerOfTheWeek(
+            timestamp = badge_data['timestamp'],
+            squad = badge_data['squad'],
+            mode = badge_data['mode'],
+        )
         for player_data in badge_data['leaderboard']:
-            if   player_data['place_candidate'] == 1: badge.player1 = player_data['player']
-            elif player_data['place_candidate'] == 2: badge.player2 = player_data['player']
-            elif player_data['place_candidate'] == 3: badge.player3 = player_data['player']
+            match player_data['place_candidate']:
+                case 1:
+                    badge.player1 = player_data['player']
+                case 2:
+                    badge.player2 = player_data['player']
+                case 3:
+                    badge.player3 = player_data['player']
         badge.save()
         mode = potw.get_mode_by_id(badge.mode)
-        text = f'Attention now, the results of the *{mode.name}* are in! 🥇 <{badge.player1.steamid}> is the **Player of the Week {badge.week}/{badge.year}**!'
+        text = (
+            f'Attention now, the results of the *{mode.name}* are in! '
+            f'🥇 <{badge.player1.steamid}> is the **Player of the Week {badge.week}/{badge.year}**!'
+        )
         if badge.player2 is not None:
-            if badge.player3 is None: text = f'{text} Second place goes to 🥈 <{badge.player2.steamid}>.'
-            else: text = f'{text} Second and third places go to 🥈 <{badge.player2.steamid}> and 🥉 <{badge.player3.steamid}>, respectively.'
+            if badge.player3 is None:
+                text = f'{text} Second place goes to 🥈 <{badge.player2.steamid}>.'
+            else:
+                text = (
+                    f'{text} Second and third places go to 🥈 <{badge.player2.steamid}> '
+                    f'and 🥉 <{badge.player3.steamid}>, respectively.'
+                )
         badge_data['squad'].notify_on_discord(text)
         return badge
 
@@ -813,7 +1006,8 @@ class PlayerOfTheWeek(models.Model):
                 while True:
                     next_badge_data = PlayerOfTheWeek.get_next_badge_data(squad)
                     next_badge = PlayerOfTheWeek.create_badge(next_badge_data)
-                    if next_badge is None: break
+                    if next_badge is None:
+                        break
             except Match.DoesNotExist:
                 log.error(f'Failed to create missing badges.', exc_info=True)
 
@@ -827,8 +1021,8 @@ class PlayerOfTheWeek(models.Model):
 
 class MatchBadgeType(models.Model):
 
-    slug = models.SlugField(primary_key=True)
-    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(primary_key = True)
+    name = models.CharField(max_length = 100, unique = True)
 
     class Meta:
         verbose_name        = 'Match-based badge type'
@@ -837,9 +1031,9 @@ class MatchBadgeType(models.Model):
 
 class MatchBadge(models.Model):
 
-    participation = models.ForeignKey(MatchParticipation, related_name='badges', on_delete=models.PROTECT)
-    badge_type    = models.ForeignKey(MatchBadgeType, related_name='btype', on_delete=models.PROTECT)
-    frequency     = models.PositiveSmallIntegerField(null=False, default=1)
+    participation = models.ForeignKey(MatchParticipation, related_name = 'badges', on_delete = models.PROTECT)
+    badge_type    = models.ForeignKey(MatchBadgeType, related_name = 'badges', on_delete = models.PROTECT)
+    frequency     = models.PositiveSmallIntegerField(null = False, default = 1)
 
     @staticmethod
     def award(participation, old_participations):
@@ -847,34 +1041,45 @@ class MatchBadge(models.Model):
             MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:])
         MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace')
         MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill')
-        MatchBadge.award_margin_badge(participation, 'carrier', order='-adr', margin=1.8, emoji='🍆')
-        MatchBadge.award_margin_badge(participation, 'peach', order='adr', margin=0.75, emoji='🍑')
+        MatchBadge.award_margin_badge(participation, 'carrier', order = '-adr', margin = 1.8, emoji = '🍆')
+        MatchBadge.award_margin_badge(participation, 'peach', order = 'adr', margin = 0.75, emoji = '🍑')
 
     @staticmethod
     def award_surpass_yourself_badge(participation, old_participations):
-        badge_type = MatchBadgeType.objects.get(slug='surpass-yourself')
-        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
+        badge_type = MatchBadgeType.objects.get(slug = 'surpass-yourself')
+        if MatchBadge.objects.filter(badge_type = badge_type, participation=participation).exists():
+            return
         kd_series = [mp.kd for mp in old_participations]
         kd_mean = np.mean(kd_series)
         kd_std  = np.std (kd_series)
         threshold = kd_mean + 2 * kd_std
         if participation.kd > threshold:
-            log.info(f'Surpass-yourself badge awarded to {participation.player.name} for K/D {participation.kd} whre threshold was {threshold}')
+            log.info(
+                f'Surpass-yourself badge awarded to {participation.player.name} '
+                f'for K/D {participation.kd} where threshold was {threshold}'
+            )
             MatchBadge.objects.create(badge_type=badge_type, participation=participation)
-            text = f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in recognition of their far-above average performance on *{participation.pmatch.map_name}* recently!'
+            text = (
+                f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in recognition '
+                f'of their far-above average performance on *{participation.pmatch.map_name}* recently!'
+            )
             for m in participation.player.squad_memberships.all():
                 m.squad.notify_on_discord(text)
 
     @staticmethod
     def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug):
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
-        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
+        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
+            return
         number = participation.streaks(n = kill_number)
         if number > 0:
             log.info(f'{participation.player.name} achieved {badge_type.name} {number} time(s)')
             MatchBadge.objects.create(badge_type = badge_type, participation = participation, frequency = number)
             frequency = '' if number == 1 else f' {number} times'
-            text = f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on *{participation.pmatch.map_name}* recently!'
+            text = (
+                f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on '
+                f'*{participation.pmatch.map_name}* recently!'
+            )
             for m in participation.player.squad_memberships.all():
                 m.squad.notify_on_discord(text)
 
@@ -882,7 +1087,8 @@ class MatchBadge(models.Model):
     def award_margin_badge(participation, badge_type_slug, order, margin, emoji):
         kpi = order[1:] if order[0] in '+-' else order
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
-        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists(): return
+        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
+            return
         teammates = participation.pmatch.matchparticipation_set.filter(team = participation.team).order_by(order)
 
         awarded = teammates[0].pk == participation.pk and any(
@@ -895,7 +1101,10 @@ class MatchBadge(models.Model):
         if awarded:
             log.info(f'{participation.player.name} received the {badge_type.name}')
             MatchBadge.objects.create(badge_type = badge_type, participation = participation)
-            text = f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** on *{participation.pmatch.map_name}*!'
+            text = (
+                f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** '
+                f'on *{participation.pmatch.map_name}*!'
+            )
             for m in participation.player.squad_memberships.all():
                 m.squad.notify_on_discord(text)
 
@@ -905,49 +1114,104 @@ class MatchBadge(models.Model):
 
         constraints = [
             models.UniqueConstraint(
-                fields=['participation', 'badge_type'], name='unique_participation_badge_type'
+                fields = ['participation', 'badge_type'], name = 'unique_participation_badge_type',
             )
         ]
 
 
 class UpdateTask(models.Model):
+    """
+    A task that fetches new matches for an account and triggers all subsequent updates.
+    """
 
-    account = models.ForeignKey(Account, related_name='update_tasks', on_delete=models.CASCADE)
-    scheduled_timestamp = models.PositiveBigIntegerField(verbose_name='Scheduled')
-    execution_timestamp = models.PositiveBigIntegerField(null=True, blank=True, verbose_name='Execution started') # when the execution started
-    completed_timestamp = models.PositiveBigIntegerField(null=True, blank=True, verbose_name='Completed') # when the execution finished
+    account = models.ForeignKey(Account, related_name = 'update_tasks', on_delete = models.CASCADE)
+    """
+    The account for which to fetch new matches.
+    """
 
-    @property
-    def scheduled(self):
-        return datetime.fromtimestamp(self.scheduled_timestamp)
+    scheduling_timestamp = models.PositiveBigIntegerField(verbose_name = 'Scheduled')
+    """
+    The timestamp when the task was scheduled.
+    """
 
-    @property
-    def execution(self):
-        if self.execution_timestamp is None: return None
-        else: return datetime.fromtimestamp(self.execution_timestamp)
+    execution_timestamp = models.PositiveBigIntegerField(
+        null = True,
+        blank = True,
+        verbose_name = 'Execution started',
+    )
+    """
+    The timestamp when the task started executing.
+    """
 
-    @property
-    def completed(self):
-        if self.completed_timestamp is None: return None
-        else: return datetime.fromtimestamp(self.completed_timestamp)
-
-    @property
-    def scheduled_datetime(self):
-        return self.scheduled.strftime('%-d %b %Y %H:%M')
-
-    @property
-    def execution_datetime(self):
-        if self.execution is None: return None
-        else: return self.execution.strftime('%-d %b %Y %H:%M')
-
-    @property
-    def completed_datetime(self):
-        if self.completed is None: return None
-        else: return self.completed.strftime('%-d %b %Y %H:%M')
+    completion_timestamp = models.PositiveBigIntegerField(
+        null = True,
+        blank = True,
+        verbose_name = 'Completed',
+    )
+    """
+    The timestamp when the task completed.
+    """
 
     @property
-    def is_completed(self):
-        return self.completed_timestamp is not None
+    def scheduling_datetime(self) -> datetime:
+        """
+        Get the datetime object of when the task was scheduled.
+        """
+        return datetime.fromtimestamp(self.scheduling_timestamp)
+
+    @property
+    def execution_datetime(self) -> Optional[datetime]:
+        """
+        Get the datetime object of when the task started executing.
+        """
+        if self.execution_timestamp is None:
+            return None
+        else:
+            return datetime.fromtimestamp(self.execution_timestamp)
+
+    @property
+    def completion_datetime(self) -> Optional[datetime]:
+        """
+        Get the datetime object of when the task completed.
+        """
+        if self.completion_timestamp is None:
+            return None
+        else:
+            return datetime.fromtimestamp(self.completion_timestamp)
+
+    @property
+    def scheduling_date_and_time(self) -> str:
+        """
+        Get the human-readable date and time of when the task was scheduled.
+        """
+        return self.scheduling_datetime.strftime(r'%b %-d, %Y, %H:%M')
+
+    @property
+    def execution_date_and_time(self) -> Optional[str]:
+        """
+        Get the human-readable date and time of when the task started executing.
+        """
+        if self.execution_datetime is None:
+            return None
+        else:
+            return self.execution_datetime.strftime(r'%b %-d, %Y, %H:%M')
+
+    @property
+    def completion_date_and_time(self) -> Optional[str]:
+        """
+        Get the human-readable date and time of when the task completed.
+        """
+        if self.completion_datetime is None:
+            return None
+        else:
+            return self.completion_datetime.strftime(r'%b %-d, %Y, %H:%M')
+
+    @property
+    def is_completed(self) -> bool:
+        """
+        Check if the task has been completed
+        """
+        return self.completion_timestamp is not None
 
     def run(self):
         self.execution_timestamp = datetime.timestamp(datetime.now())
@@ -956,7 +1220,10 @@ class UpdateTask(models.Model):
         if self.account.enabled and settings.CSGO_API_ENABLED:
             try:
                 first_sharecode = self.account.sharecode
-                new_match_data  = api.fetch_matches(first_sharecode, SteamAPIUser(self.account.steamid, self.account.steam_auth))
+                new_match_data = api.fetch_matches(
+                    first_sharecode,
+                    SteamAPIUser(self.account.steamid, self.account.steam_auth),
+                )
 
                 old_participations = list(self.account.match_participations().order_by('pmatch__timestamp'))
                 for match_data in new_match_data:
@@ -968,14 +1235,18 @@ class UpdateTask(models.Model):
                     except FileNotFoundError as ex:
                         if str(ex) == 'JSON path does not exist!':
                             # see: https://github.com/pnxenopoulos/awpy/issues/291
-                            log.error(f'Skipping match with sharecode {match_data["sharecode"]} due to error: https://github.com/pnxenopoulos/awpy/issues/291')
+                            log.error(
+                                f'Skipping match with sharecode {match_data["sharecode"]} due to error: '
+                                f'https://github.com/pnxenopoulos/awpy/issues/291'
+                            )
                             fast_forward = True
                         else:
                             raise
 
                     self.account.last_sharecode = match_data['sharecode']
                     self.account.save()
-                    if fast_forward: continue
+                    if fast_forward:
+                        continue
 
                     participation = pmatch.get_participation(self.account.steam_profile)
                     MatchBadge.award(participation, old_participations)
@@ -986,11 +1257,10 @@ class UpdateTask(models.Model):
                 self.account.enabled = False
                 self.account.save()
 
-        self.completed_timestamp = datetime.timestamp(datetime.now())
+        self.completion_timestamp = datetime.timestamp(datetime.now())
         self.save()
 
         self.account.handle_finished_update()
 
-        kept_tasks = UpdateTask.objects.order_by('-scheduled_timestamp')[:100]
-        UpdateTask.objects.exclude(pk__in=kept_tasks.values_list('pk', flat=True)).delete()
-
+        kept_tasks = UpdateTask.objects.order_by('-scheduling_timestamp')[:100]
+        UpdateTask.objects.exclude(pk__in = kept_tasks.values_list('pk', flat = True)).delete()

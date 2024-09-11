@@ -1,9 +1,8 @@
-from datetime import datetime
 import pathlib
 import re
+from datetime import datetime
 
 import git
-
 
 repo_dir = pathlib.Path(__file__).parent.parent
 base_repo_url = 'https://github.com/kodikit/cs2pb'
@@ -45,7 +44,7 @@ def get_changelog(skip_nochangelog=True):
 
         if skip_nochangelog and ('[no changelog]' in c.message or '[no-changelog]' in c.message):
             continue
-        
+
         # Match pull requests with merge commits
         m = merged_pr_pattern.match(c.message)
         if m is not None:

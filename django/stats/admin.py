@@ -1,13 +1,21 @@
-from django.contrib import admin
-from django.utils.safestring import mark_safe
-from django.urls import reverse
+from stats.models import (
+    GamingSession,
+    Match,
+    MatchBadge,
+    MatchBadgeType,
+    MatchParticipation,
+    PlayerOfTheWeek,
+    UpdateTask,
+)
 
-from stats.models import Match, MatchParticipation, PlayerOfTheWeek, MatchBadge, MatchBadgeType, UpdateTask, GamingSession
+from django.contrib import admin
+from django.urls import reverse
+from django.utils.safestring import mark_safe
 
 
 class MatchParticipationInline(admin.TabularInline):
     model = MatchParticipation
-    ordering = ('team', 'position')
+    ordering = ('team', '-adr')
 
 
 @admin.register(Match)
@@ -15,10 +23,10 @@ class MatchAdmin(admin.ModelAdmin):
 
     model = Match
 
-    def has_add_permission(self, request, obj=None):
+    def has_add_permission(self, request, obj = None):
         return False
 
-    list_display = ('map_name', 'datetime', 'score_team1', 'score_team2', 'session_list')
+    list_display = ('map_name', 'date_and_time', 'score_team1', 'score_team2', 'session_list')
     list_filter = ('map_name',)
 
     search_fields = ('map_name', 'timestamp', 'sharecode')
@@ -32,8 +40,13 @@ class MatchAdmin(admin.ModelAdmin):
     def session_list(self, pmatch):
         sessions = pmatch.sessions.all()
         number = len(sessions)
-        get_url  = lambda session: reverse('admin:stats_gamingsession_change', args=(session.pk,))
-        get_html = lambda session: f'<a href="{get_url(session)}">{session.pk}</a>'
+
+        def get_url(session):
+            return reverse('admin:stats_gamingsession_change', args = (session.pk,))
+
+        def get_html(session):
+            return f'<a href="{get_url(session)}">{session.pk}</a>'
+
         return mark_safe(f'{", ".join([get_html(s) for s in sessions])}' if number > 0 else '&ndash;')
 
 
@@ -42,7 +55,7 @@ class PlayerOfTheWeekAdmin(admin.ModelAdmin):
 
     model = PlayerOfTheWeek
 
-    list_display = ('name', 'competition_end_datetime', 'squad', 'player1', 'player2', 'player3')
+    list_display = ('name', 'challenge_end_datetime', 'squad', 'player1', 'player2', 'player3')
     list_filter = ('squad',)
     readonly_fields = ('timestamp', 'squad')
 
@@ -59,9 +72,11 @@ class MatchBadgeTypeAdmin(admin.ModelAdmin):
 
     readonly_fields = ()
 
-    def get_readonly_fields(self, request, obj=None):
-        if obj: return self.readonly_fields + ('slug',)
-        else: return self.readonly_fields
+    def get_readonly_fields(self, request, obj = None):
+        if obj:
+            return self.readonly_fields + ('slug',)
+        else:
+            return self.readonly_fields
 
 
 @admin.register(MatchBadge)
@@ -88,16 +103,23 @@ class UpdateTaskAdmin(admin.ModelAdmin):
 
     model = UpdateTask
 
-    list_display = ('account', '_is_completed', 'scheduled_datetime', '_execution_datetime', '_completed_datetime', '_actions')
-    list_filter = (('completed_timestamp', admin.EmptyFieldListFilter),)
+    list_display = (
+        'account',
+        '_is_completed',
+        'scheduling_date_and_time',
+        '_execution_datetime',
+        '_completion_datetime',
+        '_actions',
+    )
+    list_filter = (
+        ('completion_timestamp', admin.EmptyFieldListFilter),
+    )
 
     def _execution_datetime(self, task):
-        if task.execution_datetime is None: return 'Pending'
-        else: return task.execution_datetime
+        return task.execution_date_and_time or 'Pending'
 
-    def _completed_datetime(self, task):
-        if task.completed_datetime is None: return 'Pending'
-        else: return task.completed_datetime
+    def _completion_datetime(self, task):
+        return task.completion_date_and_time or 'Pending'
 
     def _is_completed(self, task):
         return task.is_completed
@@ -105,7 +127,7 @@ class UpdateTaskAdmin(admin.ModelAdmin):
     _is_completed.boolean = True
 
     def _actions(self, obj):
-        url = reverse('admin:stats_updatetask_delete', args=(obj.pk,))
+        url = reverse('admin:stats_updatetask_delete', args = (obj.pk,))
         return mark_safe(f'<a class="btn" href="{url}">Delete</a>')
 
 
@@ -120,16 +142,16 @@ class GamingSessionAdmin(admin.ModelAdmin):
 
     model = GamingSession
 
-    list_display = ('id', 'squad', 'participants_list', 'is_closed', 'started_datetime', 'ended_datetime')
+    list_display = ('id', 'squad', 'participants_list', 'is_closed', 'started_date_and_time', 'ended_date_and_time')
     list_filter = ('squad',)
 
     fieldsets = (
-        (None, {'fields': ('squad', 'is_closed', 'started_datetime', 'ended_datetime', 'rising_star')}),
+        (None, {'fields': ('squad', 'is_closed', 'started_date_and_time', 'ended_date_and_time', 'rising_star')}),
     )
     add_fieldsets = (
         (None, {'fields': ('squad', 'rising_star')}),
     )
-    readonly_fields = ('started_datetime', 'ended_datetime')
+    readonly_fields = ('started_date_and_time', 'ended_date_and_time')
 
     actions = [close_session]
 
@@ -137,10 +159,17 @@ class GamingSessionAdmin(admin.ModelAdmin):
     def participants_list(self, gs):
         participants = gs.participants
         number = len(participants)
-        get_url  = lambda player: reverse('admin:accounts_steamprofile_change', args=(player.pk,))
-        get_html = lambda player: f'<a href="{get_url(player)}">{player.name}</a>'
+
+        def get_url(player):
+            return reverse('admin:accounts_steamprofile_change', args = (player.pk,))
+
+        def get_html(player):
+            return f'<a href="{get_url(player)}">{player.name}</a>'
+
         return mark_safe(f'{", ".join([get_html(p) for p in participants])} ({number})' if number > 0 else '&ndash;')
 
-    def get_fieldsets(self, request, obj=None):                                  
-        if not obj: return self.add_fieldsets                                            
-        else: return super().get_fieldsets(request, obj)
+    def get_fieldsets(self, request, obj = None):
+        if not obj:
+            return self.add_fieldsets
+        else:
+            return super().get_fieldsets(request, obj)

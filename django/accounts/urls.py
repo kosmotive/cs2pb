@@ -1,8 +1,7 @@
-from django.urls import path
 from django.contrib.auth.decorators import login_required
+from django.urls import path
 
 from . import views
-
 
 urlpatterns = [
     path('login/', views.login, name='login'),
@@ -13,4 +12,3 @@ urlpatterns = [
     path('csv/<int:steamid>', views.export_csv, name='csv'),
     path('create_notebook/<int:steamid>', views.create_notebook, name='notebook'),
 ]
-

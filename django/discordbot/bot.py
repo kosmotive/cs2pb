@@ -40,7 +40,7 @@ def get_squad(channel_id = None, squad_id = None):
 
 @sync_to_async
 def pop_scheduled_notifications(user_lookup):
-    notifications_qs = ScheduledNotification.objects.order_by('-scheduled_timestamp')
+    notifications_qs = ScheduledNotification.objects.order_by('-scheduling_timestamp')
     notifications = list(notifications_qs)
     result = []
     for n in notifications:

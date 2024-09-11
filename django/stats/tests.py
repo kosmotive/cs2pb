@@ -427,7 +427,6 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
         )
         for uidx, user in enumerate(self.players):
             mp = models.MatchParticipation(player = user, pmatch = m)
-            mp.position  = uidx % 3
             mp.team      = 1 + uidx // 3
             mp.result    = models.get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
             mp.kills     =  20   + uidx
@@ -693,7 +692,6 @@ class matches(TestCase):
         self.participation = models.MatchParticipation.objects.create(
             player = self.player,
             pmatch = self.match,
-            position = 0,
             team = 1,
             result = 'l',
             kills = 20,
@@ -783,10 +781,9 @@ class UpdateTask__run(TestCase):
         self.account = Account.objects.create(steam_profile = self.player, last_sharecode = 'xxx-sharecode-xxx')
         self.task = models.UpdateTask(
             account = self.account,
-            scheduled_timestamp =
-            datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)),
+            scheduling_timestamp = datetime.datetime.timestamp(datetime.datetime(2024, 1, 1, 9, 00, 00)),
         )
-        self.assertFalse(self.task.completed)
+        self.assertFalse(self.task.completion_datetime)
         self.assertTrue(self.account.enabled)
 
     @patch.object(models.settings, 'CSGO_API_ENABLED', True)
@@ -799,7 +796,7 @@ class UpdateTask__run(TestCase):
         self.assertFalse(self.account.enabled)
 
         # Verify that the task was completed (there is no point in repeating it)
-        self.assertTrue(self.task.completed)
+        self.assertTrue(self.task.completion_datetime)
 
     @patch.object(models.settings, 'CSGO_API_ENABLED', True)
     @patch('api.api.fetch_matches', side_effect = ValueError)
@@ -809,7 +806,7 @@ class UpdateTask__run(TestCase):
         self.assertRaises(ValueError, self.task.run)
 
         # Verify that the task is not completed (can be repeated later, usually after a new task is scheduled)
-        self.assertFalse(self.task.completed)
+        self.assertFalse(self.task.completion_datetime)
 
         # Verify that the account is still enabled
         self.assertTrue(self.account.enabled)
@@ -858,10 +855,10 @@ class GamingSession(TestCase):
         self.assertEqual(self.session.ended, 6600)
 
     def test__started_datetime(self):
-        self.assertEqual(self.session.started_datetime, '1 Jan 1970 01:00')
+        self.assertEqual(self.session.started_date_and_time, 'Jan 1, 1970, 01:00')
 
     def test__ended_datetime(self):
-        self.assertEqual(self.session.ended_datetime, '1 Jan 1970 02:50')
+        self.assertEqual(self.session.ended_date_and_time, 'Jan 1, 1970, 02:50')
 
     def test__started_time(self):
         self.assertEqual(self.session.started_time, '01:00')
@@ -898,7 +895,6 @@ class GamingSession__close(TestCase):
         self.participation1 = models.MatchParticipation.objects.create(
             player = self.player1,
             pmatch = self.match1,
-            position = 0,
             team = 1,
             result = 'l',
             kills = 20,
@@ -922,7 +918,6 @@ class GamingSession__close(TestCase):
         self.participation2 = models.MatchParticipation.objects.create(
             player = self.player1,
             pmatch = self.match2,
-            position = 0,
             team = 1,
             result = 'l',
             kills = 20,
@@ -1039,7 +1034,6 @@ class GamingSession__close(TestCase):
         self.participation3 = models.MatchParticipation.objects.create(
             player = self.player2,
             pmatch = self.match2,
-            position = 1,
             team = self.participation2.team,
             result = self.participation2.result,
             kills = 10,
@@ -1062,7 +1056,6 @@ class GamingSession__close(TestCase):
         models.MatchParticipation.objects.create(
             player = self.player1,
             pmatch = match3,
-            position = 0,
             team = 1,
             result = 'w',
             kills = 20,
@@ -1085,7 +1078,6 @@ class GamingSession__close(TestCase):
         models.MatchParticipation.objects.create(
             player = self.player1,
             pmatch = match4,
-            position = 0,
             team = 1,
             result = 't',
             kills = 20,
@@ -1127,7 +1119,6 @@ class GamingSession__close(TestCase):
         self.participation3 = models.MatchParticipation.objects.create(
             player = self.player2,
             pmatch = self.match2,
-            position = 1,
             team = self.participation2.team,
             result = self.participation2.result,
             kills = 10,

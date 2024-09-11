@@ -167,12 +167,12 @@ class Account(AbstractUser):
 
     @property
     def last_queued_update(self):
-        return None if len(self.update_tasks.all()) == 0 else self.update_tasks.latest('scheduled_timestamp')
+        return None if len(self.update_tasks.all()) == 0 else self.update_tasks.latest('scheduling_timestamp')
 
     @property
     def last_completed_update(self):
-        qs = self.update_tasks.exclude(completed_timestamp=None)
-        return None if len(qs) == 0 else qs.latest('scheduled_timestamp')
+        qs = self.update_tasks.exclude(completion_timestamp = None)
+        return None if len(qs) == 0 else qs.latest('scheduling_timestamp')
 
     @property
     def last_match(self):
@@ -182,14 +182,14 @@ class Account(AbstractUser):
     def had_break_after_last_match(self):
         if self.last_completed_update is None or self.last_match is None:
             return False
-        return self.last_completed_update.completed_timestamp - (
+        return self.last_completed_update.completion_timestamp - (
             self.last_match.timestamp + self.last_match.duration
         ) >= MIN_BREAK_TIME
 
     def update_matches(self, force=False):
         last_queued_update = self.last_queued_update
         if last_queued_update is None or force or (
-            datetime.datetime.now() - last_queued_update.scheduled
+            datetime.datetime.now() - last_queued_update.scheduling_datetime
         ).total_seconds() / 60 >= 5:
             return queue_update_task(self)
         else:

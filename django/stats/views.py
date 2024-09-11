@@ -36,6 +36,8 @@ from .features import (
 from .models import (
     GamingSession,
     Match,
+    MatchBadge,
+    MatchBadgeType,
     MatchParticipation,
     PlayerOfTheWeek,
     UpdateTask,
@@ -330,7 +332,7 @@ def matches(request, squad=None, last_timestamp=None):
 
 def add_globals_to_context(context):
     context['version'] = gitinfo.get_head_info()
-    qs = UpdateTask.objects.filter(completed_timestamp = None)
+    qs = UpdateTask.objects.filter(completion_timestamp = None)
     qs = qs.values('account').annotate(count = Count('account'))
     if qs.count() > 0 and qs.latest('count')['count'] > 1:
         msg = 'There is a temporary malfunction of the Steam Client API.'
@@ -370,6 +372,25 @@ def player(request, squad, steamid):
         period_end = accounted_period_end,
         period_average = squad_membership.stats.get('player_value'),
     )
+
+    # Summarize the player's badges
+    context['badges'] = {
+        'potw': list(),
+        'match_badges': dict(),
+        'rising_star': GamingSession.objects.filter(squad = squad, rising_star = player),
+    }
+    for position in (1, 2, 3):
+        for potw_data in PlayerOfTheWeek.objects.filter(**{f'player{position}': player}):
+            context['badges']['potw'].append(dict(potw = potw_data, position = position))
+    context['badges']['potw'].sort(key = lambda badge: str(badge['potw']))
+    for badge_type in MatchBadgeType.objects.all():
+        context['badges']['match_badges'][badge_type.slug] = dict(
+            name = badge_type.name,
+            matches = MatchBadge.objects.filter(
+                participation__player = player,
+                badge_type = badge_type,
+            )
+        )
 
     # Add the global context and render the player page
     add_globals_to_context(context)

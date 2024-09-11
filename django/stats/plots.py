@@ -5,7 +5,10 @@ from numbers import Real
 
 import matplotlib as mpl
 import numpy as np
-from accounts.models import SquadMembership, SteamProfile
+from accounts.models import (
+    SquadMembership,
+    SteamProfile,
+)
 from cs2pb_typing import (
     Dict,
     List,

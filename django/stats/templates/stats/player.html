@@ -8,6 +8,7 @@
 {% block content %}
 
 <link rel="stylesheet" type="text/css" href="{% static 'stats.css' %}?{% now "U" %}">
+<link rel="stylesheet" type="text/css" href="{% static 'profile.css' %}?{% now "U" %}">
 
 <script src="{% static 'plotly-2.35.0.min.js' %}" charset="utf-8"></script>
 <script language="javascript">
@@ -90,6 +91,63 @@ Math.sqrt(({{ mp.kills }} / {{ mp.deaths }}) * (0.01 * {{ mp.adr }})){% if not f
             </div>
 
             <div id="pv-plot" style="width:600px; height: 280px;"></div>
+
+            {% if badges.potw %}
+
+                <h2>Trophy cabinet</h2>
+
+                <ul id="player-of-the-week-list">{% for badge in badges.potw %}
+
+                    <li>
+                        <img src="{% static 'badges' %}/potw-{{ badge.position }}.png" class="badge" />
+
+                        <span class="potw-title">Player of the Week
+                        {% if badge.position == 1 %}
+                            1<span class="sup">st</span>
+                        {% elif badge.position == 2 %}
+                            2<span class="sup">nd</span>
+                        {% elif badge.position == 3 %}
+                            3<span class="sup">rd</span>
+                        {% endif %}
+                        Class</span>
+                        <span class="potw-week-year">{{ badge.potw.week }}/{{ badge.potw.year }}</span>
+                        <span class="potw-mode">{{ badge.potw.mode|potw_mode_name }}</span>
+                    </li>
+            
+                {% endfor %}</ul>
+
+            {% endif %}
+
+            <h2>Further achievements</h2>
+
+            <table id="other-achievements">
+                <tbody>
+                    {% if badges.rising_star %}
+                    <tr>
+                        <td>
+                            <img src="{% static 'badges' %}/rising-star.png" class="badge" />
+                        </td>
+                        <td>
+                            <h3>Rising Star <span class="badge-frequency">({{ badges.rising_star|length }}&times;)</span></h3>
+                            {{ badges.rising_star|list_of_gaming_sessions }}
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% for badge_type, badge in badges.match_badges.items %}
+                        {% if badge.matches %}
+                        <tr>
+                            <td>
+                                <img src="{% static 'badges' %}/{{ badge_type }}.png" class="badge" />
+                            </td>
+                            <td>
+                                <h3>{{ badge.name }} <span class="badge-frequency">({{ badge.matches|match_badge_count }}&times;)</span></h3>
+                                {{ badge.matches|list_of_match_badges }}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
 
         </div>
 

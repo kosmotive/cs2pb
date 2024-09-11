@@ -36,7 +36,7 @@
 
             <div class="match-map-name">{{ m.map_name|map_name }}</div>
 
-            <div class="match-date">{{ m.time }} &ndash; {{ m.time_end }}</div>
+            <div class="match-date">{{ m.time }} &ndash; {{ m.ended_time }}</div>
 
             <div class="match-result match-result-{{ m.result }}"><span>
                 <b>{{ m.score_team1 }}</b>:<b>{{ m.score_team2 }}</b>
@@ -52,7 +52,7 @@
                         <td>D</td>
                         <td>A</td>
                         <td>ADR</td>
-                        <td>&starf;</td>
+                        <td>PV</td>
                         <td>HS</td>
                     </tr>
 
@@ -72,7 +72,7 @@
                         <td>{{ mp.deaths }}</td>
                         <td>{{ mp.assists }}</td>
                         <td>{{ mp.adr|floatformat:1 }}</td>
-                        <td>{{ mp.mvps }}</td>
+                        <td>{{ mp|player_value|stringformat:".2f" }}</td>
                         <td>{{ mp.headshots|divide:mp.kills|stringformat:".1f" }}</td>
                     </tr>
 

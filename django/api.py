@@ -1,25 +1,24 @@
-import ratelimit
-import json
-import awpy, awpy.data.map_data
-import awpy_fork.stats
-import requests
-import tempfile
 import bz2
-import numpy as np
 import logging
-import gevent.exceptions
 import os
 import os.path
-import traceback
+import tempfile
 import time
+import traceback
 
-from steam.steamid  import SteamID
-from steam.client   import SteamClient
-from csgo.client    import CSGOClient
+import awpy
+import awpy.data.map_data
+import awpy_fork.stats
+import gevent.exceptions
+import numpy as np
+import ratelimit
+import requests
+from csgo.client import CSGOClient
 from csgo.sharecode import decode as decode_sharecode
+from steam.client import SteamClient
+from steam.steamid import SteamID
 
 from django.conf import settings
-
 
 STEAM_API_KEY = os.environ['CS2PB_STEAM_API_KEY']
 assert len(STEAM_API_KEY) > 0
@@ -29,17 +28,7 @@ NAV_SUPPORTED_MAPS = frozenset(awpy.data.map_data.MAP_DATA.keys())
 log = logging.getLogger(__name__)
 
 
-def _get_player_stat(stat_df, stat, steam_id):
-    mask = (stat_df['steamid'] == str(steam_id))
-    stat_round, stat_value = -1, None
-    for stat_row in stat_df[mask].to_dict(orient='records'):
-        if int(stat_row['n_rounds']) > stat_round:
-            stat_round = int(stat_row['n_rounds'])
-            stat_value = float(stat_row[stat])
-    return stat_value
-
-
-def fetch_match_details(pmatch, max_retry_count=4):
+def fetch_match_details(pmatch, max_retry_count = 4):
     for retry_idx in range(max_retry_count):
         time.sleep(retry_idx * 10)
         try:
@@ -49,7 +38,7 @@ def fetch_match_details(pmatch, max_retry_count=4):
             # No need to retry (fetch was successful)
             break
 
-        except:
+        except:  # noqa: E722
             log.warning(traceback.format_exc())
             log.warning(f'Failed to fetch match details (attempt: {retry_idx + 1} / {max_retry_count})')
 
@@ -123,7 +112,8 @@ class API:
                 self.csgo.get().request_full_match_info(d['matchid'], d['outcomeid'], d['token'])
                 log.debug('Waiting for match data')
                 response = self.csgo.get().wait_event('full_match_info', 10)
-                if response is not None: break
+                if response is not None:
+                    break
                 log.debug('Waiting for match data timed out, retrying')
             log.debug('Match data completed')
             results.append(response[0].matches[0])
@@ -177,7 +167,10 @@ class SteamAPI:
         sharecode = first_sharecode
         while sharecode is not None:
             yield sharecode
-            url = f'https://api.steampowered.com/ICSGOPlayers_730/GetNextMatchSharingCode/v1?key={STEAM_API_KEY}&steamid={steamuser.steamid}&steamidkey={steamuser.steamid_key}&knowncode={sharecode}'
+            url = (
+                f'https://api.steampowered.com/ICSGOPlayers_730/GetNextMatchSharingCode/v1?key={STEAM_API_KEY}'
+                f'&steamid={steamuser.steamid}&steamidkey={steamuser.steamid_key}&knowncode={sharecode}'
+            )
             log.debug(f'-> {url}')
             try:
 
@@ -192,20 +185,28 @@ class SteamAPI:
                     sharecode = None
 
             except ratelimit.RequestError as ex:
-                # see: https://developer.valvesoftware.com/wiki/Counter-Strike:_Global_Offensive_Access_Match_History#Error_Handling
+                # https://developer.valvesoftware.com/wiki/Counter-Strike:_Global_Offensive_Access_Match_History#Error_Handling
                 if ex.status_code == 412 and sharecode == first_sharecode:
                     raise InvalidSharecodeError(steamuser, sharecode)
 
     def test_steam_auth(self, sharecode, steamuser):
         tmp_http = ratelimit.Ratelimiter('Steam Auth Test', max_trycount=2)
         try:
-            response = tmp_http.request(f'https://api.steampowered.com/ICSGOPlayers_730/GetNextMatchSharingCode/v1?key={STEAM_API_KEY}&steamid={steamuser.steamid}&steamidkey={steamuser.steamid_key}&knowncode={sharecode}', accept=(200, 202))
+            tmp_http.request(
+                (
+                    f'https://api.steampowered.com/ICSGOPlayers_730/GetNextMatchSharingCode/v1?key={STEAM_API_KEY}'
+                    f'&steamid={steamuser.steamid}&steamidkey={steamuser.steamid_key}&knowncode={sharecode}'
+                ),
+                accept=(200, 202),
+            )
             return True
         except ratelimit.RequestError:
             return False
 
     def fetch_profile(self, steamid):
-        response = self.http.request(f'http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={STEAM_API_KEY}&steamids={steamid}')
+        response = self.http.request(
+            f'http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key={STEAM_API_KEY}&steamids={steamid}'
+        )
         try:
             return response.json()['response']['players'][0]
         except IndexError:
@@ -230,8 +231,8 @@ def parse_demo(demofile):
     log.info(f'Parsing demo: {demofile}')
     try:
         assert os.path.isfile(demofile)
-        return awpy.Demo(path=demofile, ticks=False)  ## ticks=False is required to reduce memory consumption
-    except:
+        return awpy.Demo(path=demofile, ticks = False)  # `ticks = False` is required to reduce memory consumption
+    except:  # noqa: E722
         log.critical(f'Failed to parse demo: {demofile}')
         raise
 
@@ -258,24 +259,24 @@ class CSGO:
 
     def _error(self, result):
         log.error('Steam logon error:', repr(result))
-    
+
     def _send_login(self):
         if self.steam.relogin_available:
             self.steam.relogin()
-    
+
     def _handle_reconnect(self, delay):
         log.info(f'Reconnect Steam in {delay}')
-    
+
     def _handle_disconnect(self):
         log.warning('Steam disconnected')
         if self.steam.relogin_available:
             log.info('Reconnecting Steam')
-            self.steam.reconnect(maxdelay=30)
-    
+            self.steam.reconnect(maxdelay = 30)
+
     def _start_csgo(self):
         log.info('Steam logon successful')
         self.csgo.launch()
-    
+
     def _csgo_ready(self):
         log.info('CSGO game coordinator is ready')
 
@@ -315,4 +316,3 @@ class CSGOWrapper:
 
 
 api = API()
-
