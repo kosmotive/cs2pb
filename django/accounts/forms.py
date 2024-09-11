@@ -92,21 +92,23 @@ class JoinForm(UserCreationForm, FormDiscordMixin, FormSteamAuthMixin):
 
 class LoginForm(forms.Form):
 
-    steamid = forms.CharField(label = 'Steam ID', required = False)
-    email_address = forms.EmailField(label = 'Email address', required = False)
+    account = forms.CharField(
+        label = 'Account',
+        required = True,
+        help_text = 'Please enter the email address you used for registration or your Steam ID.',
+    )
     password = forms.CharField(label = 'Password', widget = forms.PasswordInput())
 
     def clean(self):
         data = super().clean()
-        steamid  = data.get('steamid', '')
-        email    = data.get('email_address', '')
+        account = data.get('account', '').strip()
         password = data.get('password', '')
-        if (steamid == '') == (email == ''):
-            raise ValidationError('Please enter either your Email address or your Steam ID.')
+        if account == '':
+            raise ValidationError('Please enter your email address or Steam ID.')
         accounts = Account.objects.filter(
-            steam_profile__steamid = steamid,
+            steam_profile__steamid = account,
         ) | Account.objects.filter(
-            email_address = email,
+            email_address = account,
         )
         if len(accounts) == 0 or not accounts.get().check_password(password):
             raise ValidationError('Credentials not found.')
