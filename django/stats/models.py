@@ -25,6 +25,7 @@ from cs2pb_typing import (
     Tuple,
 )
 
+from django.conf import settings
 from django.core.exceptions import (
     MultipleObjectsReturned,
     ObjectDoesNotExist,
@@ -45,8 +46,6 @@ from .features import (
     FeatureContext,
     Features,
 )
-
-from django.conf import settings
 
 log = logging.getLogger(__name__)
 
