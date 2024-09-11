@@ -45,7 +45,7 @@ def get_changelog(skip_nochangelog=True):
 
         if skip_nochangelog and ('[no changelog]' in c.message or '[no-changelog]' in c.message):
             continue
-        
+
         # Match pull requests with merge commits
         m = merged_pr_pattern.match(c.message)
         if m is not None:

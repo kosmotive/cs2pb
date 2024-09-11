@@ -44,7 +44,6 @@ class get_changelog(unittest.TestCase):
 
     def test_exclude(self):
         changelog = gitinfo.get_changelog()
-        sha_list = [entry['sha'] for entry in changelog]
         self.assertNotIn('ef37efb000f082b1a18e9fd4c1e49344eb6d4f78', changelog)
 
     def test_order(self):

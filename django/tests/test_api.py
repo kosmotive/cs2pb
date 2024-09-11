@@ -36,7 +36,7 @@ class fetch_match_details(unittest.TestCase):
 
     def test(self):
         pmatch = self.pmatch_data[0]
-        fetch_match_details = lambda: api.fetch_match_details(pmatch)
+        fetch_match_details = lambda: api.fetch_match_details(pmatch)  # noqa: E731
         peak_mem_mb = max(memory_usage(proc = fetch_match_details))
 
         # Peak memory usage was ~900 MiB when tested, shouldn't rise too much in the future to avoid memory issues
@@ -89,8 +89,7 @@ class fetch_match_details(unittest.TestCase):
 
     @patch('api.parse_demo', wraps=api.parse_demo)
     def test_corrupted_demo_file(self, mock_parse_demo):
-        pmatch = self.pmatch_data[0]
-        fetch_match_details = lambda: api.fetch_match_details(self.pmatch_data[0])
+        fetch_match_details = lambda: api.fetch_match_details(self.pmatch_data[0])  # noqa: E731
 
         # Inject the error described in https://github.com/kosmotive/cs2pb/issues/23
         def raise_error_on_first_n_calls(n):
@@ -109,19 +108,22 @@ class fetch_match_details(unittest.TestCase):
         # Test ultimate failure (after 4 attempts)
         mock_parse_demo.side_effect = raise_error_on_first_n_calls(4)
         self.assertRaises(api.InvalidDemoError, fetch_match_details)
-        self.assertEqual(mock_parse_demo.call_count, 4) # 4 invocations raising the error
+        # ... 4 invocations raising the error:
+        self.assertEqual(mock_parse_demo.call_count, 4)
 
         # Test success after two failures
         mock_parse_demo.call_count = 0
         mock_parse_demo.side_effect = raise_error_on_first_n_calls(2)
         fetch_match_details()
-        self.assertEqual(mock_parse_demo.call_count, 4) # 2 invocations raising the error + 1 invocation with remote URL + 1 invocation with downloaded file
+        # ... 2 invocations raising the error + 1 invocation with remote URL + 1 invocation with downloaded file:
+        self.assertEqual(mock_parse_demo.call_count, 4)
 
         # Test success after one failure
         mock_parse_demo.call_count = 0
         mock_parse_demo.side_effect = raise_error_on_first_n_calls(1)
         fetch_match_details()
-        self.assertEqual(mock_parse_demo.call_count, 3) # 1 invocations raising the error + 1 invocation with remote URL + 1 invocation with downloaded file
+        # ... 1 invocations raising the error + 1 invocation with remote URL + 1 invocation with downloaded file:
+        self.assertEqual(mock_parse_demo.call_count, 3)
 
 
 class api_csgo(unittest.TestCase):

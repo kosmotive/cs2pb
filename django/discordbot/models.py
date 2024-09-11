@@ -1,14 +1,15 @@
-from django.db import models
-from django.db.models.signals import pre_delete 
-from django.dispatch import receiver
-
-from accounts.models import Squad, Account, SteamProfile
-
+import logging
+import re
 from datetime import datetime
 
-import re
-import logging
+from accounts.models import (
+    Squad,
+    SteamProfile,
+)
 
+from django.db import models
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 
 log = logging.getLogger(__name__)
 
@@ -21,8 +22,8 @@ def timestamp_now():
 
 class InvitationDraft(models.Model):
 
-    steam_profile = models.OneToOneField(SteamProfile, on_delete=models.PROTECT, unique=True)
-    discord_name  = models.CharField(blank=True , max_length=30, unique=True)
+    steam_profile = models.OneToOneField(SteamProfile, on_delete = models.PROTECT, unique = True)
+    discord_name  = models.CharField(blank = True , max_length = 30, unique = True)
 
     def create_invitation(self, squad):
         return self.steam_profile.invite(squad, discord_name = self.discord_name)
@@ -30,17 +31,17 @@ class InvitationDraft(models.Model):
 
 class ScheduledNotification(models.Model):
 
-    scheduling_timestamp = models.PositiveBigIntegerField(verbose_name='Scheduled', default=timestamp_now)
-    squad = models.ForeignKey(Squad, related_name='notifications', on_delete=models.CASCADE)
-    text  = models.TextField(blank=False)
+    scheduling_timestamp = models.PositiveBigIntegerField(verbose_name = 'Scheduled', default = timestamp_now)
+    squad = models.ForeignKey(Squad, related_name = 'notifications', on_delete = models.CASCADE)
+    text  = models.TextField(blank = False)
 
     @property
-    def scheduled(self):
+    def scheduling_datetime(self):
         return datetime.fromtimestamp(self.scheduling_timestamp)
 
     @property
-    def scheduled_datetime(self):
-        return self.scheduled.strftime('%-d %b %Y %H:%M')
+    def scheduling_date_and_time(self):
+        return self.scheduling_datetime.strftime(r'%b %-d, %Y, %H:%M')
 
     def resolve_text(self, lookup):
         steamids = frozenset(steamid_pattern.findall(self.text))
@@ -50,17 +51,20 @@ class ScheduledNotification(models.Model):
             r = None
             if getattr(p, 'account', None) is not None and len(p.account.discord_name) > 0:
                 r = lookup(p.account.discord_name)
-            if r is None: r = p.name
+            if r is None:
+                r = p.name
             text = text.replace(f'<{steamid}>', r)
         return text
 
     def __str__(self):
         from accounts.models import SteamProfile
+
         def lookup(steamid):
             try:
                 return SteamProfile.objects.get(pk = str(steamid)).name
             except SteamProfile.DoesNotExist:
                 log.critical(f'Failed to lookup Steam ID: {steamid}')
+
         return self.resolve_text(lookup)
 
     attachments = dict()
@@ -74,4 +78,3 @@ class ScheduledNotification(models.Model):
     @receiver(pre_delete)
     def remove_attachment(sender, instance, **kwargs):
         ScheduledNotification.attachments.pop(instance.pk, None)
-

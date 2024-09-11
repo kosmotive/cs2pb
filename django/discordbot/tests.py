@@ -1,13 +1,20 @@
-from asgiref.sync import sync_to_async, async_to_sync
-import os
 from types import SimpleNamespace
 
-from django.test import TestCase
-
-from accounts.models import Account, Squad, SteamProfile, SquadMembership
+from accounts.models import (
+    Account,
+    Squad,
+    SquadMembership,
+    SteamProfile,
+)
+from asgiref.sync import (
+    async_to_sync,
+    sync_to_async,
+)
 from discordbot import bot as botimpl
 from discordbot.models import ScheduledNotification
 from tests import testsuite
+
+from django.test import TestCase
 
 
 class Channel:
@@ -56,28 +63,43 @@ class bot(TestCase):
             SteamProfile.objects.create(steamid = '12345678900000003'),
         ]
         self.accounts = [
-            Account.objects.create(steam_profile = self.users[0], email_address = 'user1@test.com', discord_name = 'discordname1'),
+            Account.objects.create(
+                steam_profile = self.users[0],
+                email_address = 'user1@test.com',
+                discord_name  = 'discordname1',
+            ),
             None,
-            Account.objects.create(steam_profile = self.users[2], email_address = 'user3@test.com', discord_name = 'invalid_discordname'),
+            Account.objects.create(
+                steam_profile = self.users[2],
+                email_address = 'user3@test.com',
+                discord_name  = 'invalid_discordname',
+            ),
         ]
-        self.squad = Squad.objects.create(name='squad', discord_channel_id='1234')
+        self.squad = Squad.objects.create(name = 'squad', discord_channel_id = '1234')
         for user in self.users:
             SquadMembership.objects.create(squad = self.squad, player = user)
 
     def test_tick(self):
-        ScheduledNotification.objects.create(squad = self.squad, text = \
-            f'Correct mention: <12345678900000001> '
-            f'No discord name: <12345678900000002> '
-            f'Invalid discord name: <12345678900000003>'
+        ScheduledNotification.objects.create(
+            squad = self.squad,
+            text = (
+                f'Correct mention: <12345678900000001> '
+                f'No discord name: <12345678900000002> '
+                f'Invalid discord name: <12345678900000003>'
+            ),
         )
         async_to_sync(botimpl.tick)()
 
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
-        self.assertEqual(botimpl.bot.channels[1234].sent, [
-            dict(
-                content = \
-                    'Correct mention: <@discordname1> '
-                    'No discord name: name-of-12345678900000002 '
-                    'Invalid discord name: name-of-12345678900000003',
-            )
-        ])
+        self.assertEqual(
+            botimpl.bot.channels[1234].sent,
+            [
+                dict(
+                    content = (
+                        'Correct mention: <@discordname1> '
+                        'No discord name: name-of-12345678900000002 '
+                        'Invalid discord name: name-of-12345678900000003'
+                    ),
+                )
+            ],
+        )

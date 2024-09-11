@@ -19,7 +19,8 @@ def map_name(slug):
 
 @register.filter
 def divide(a, b):
-    if a == 0 and b == 0: b = 1
+    if a == 0 and b == 0:
+        b = 1
     return a / b
 
 
@@ -50,7 +51,7 @@ def match_badge_count(qs):
 
 @register.filter
 def list_of_match_badges(qs):
-    
+
     def format_badge(badge):
         yield '<li>'
         yield f'<span class="match-map">{ badge.participation.pmatch.map_name[3:] }</span>'

@@ -13,4 +13,3 @@ urlpatterns = [
     path('csv/<int:steamid>', views.export_csv, name='csv'),
     path('create_notebook/<int:steamid>', views.create_notebook, name='notebook'),
 ]
-

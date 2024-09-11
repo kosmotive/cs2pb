@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import logout as do_logout, login as do_login
 from django.urls import reverse
 
-from accounts.models import Squad, Invitation, SteamProfile, Account
+from accounts.models import Squad, Invitation, SteamProfile
 from accounts.forms import JoinForm, LoginForm, SettingsForm
 
 
@@ -82,4 +82,3 @@ def create_notebook(request, steamid):
     steam_profile = SteamProfile.objects.get(pk=steamid)
     csv_url = request.build_absolute_uri(reverse('csv', args=(steamid,)))
     return render(request, 'accounts/create-notebook.html', dict(player = steam_profile, csv_url = csv_url))
-

@@ -7,7 +7,7 @@ from discordbot.models import ScheduledNotification, InvitationDraft
 class ScheduledNotificationAdmin(admin.ModelAdmin):
 
     model = ScheduledNotification
-    list_display = ('scheduled_datetime', 'squad', '_text')
+    list_display = ('scheduling_date_and_time', 'squad', '_text')
 
     list_filter = ('squad',)
 
@@ -20,4 +20,3 @@ class InvitationDraftAdmin(admin.ModelAdmin):
 
     model = InvitationDraft
     list_display = ('steam_profile', 'discord_name')
-
