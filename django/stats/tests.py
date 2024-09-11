@@ -1,6 +1,6 @@
 import datetime
 import math
-import os
+import pathlib
 import time
 import uuid
 from types import SimpleNamespace
@@ -588,6 +588,7 @@ class PlayerOfTheWeek__create_badge(TestCase):
         self.assertIn(potw.get_mode_by_id(badge.mode).name, ScheduledNotification.objects.get().text)
 
 
+@patch('accounts.models.SteamProfile.update_cached_avatar')
 class squads(TestCase):
 
     @testsuite.fake_api('accounts.models')
@@ -598,30 +599,34 @@ class squads(TestCase):
         SquadMembership.objects.create(squad = self.squad, player = self.player)
         self.account = Account.objects.create(steam_profile=self.player)
 
-    def test_squads_with_valid_squad(self):
+    def test_squads_with_valid_squad(self, mock__SteamProfile__update_cached_avatar):
         response = self.client.get(reverse('squads', kwargs={'squad': self.squad.uuid}))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['squad'], self.squad)
+        mock__SteamProfile__update_cached_avatar.assert_called_once()
 
-    def test_squads_with_invalid_squad(self):
+    def test_squads_with_invalid_squad(self, mock__SteamProfile__update_cached_avatar):
         invalid_uuid = str(uuid.uuid4())
         response = self.client.get(reverse('squads', kwargs={'squad': invalid_uuid}))
         self.assertIsInstance(response, HttpResponseNotFound)
+        mock__SteamProfile__update_cached_avatar.assert_not_called()
 
-    def test_squads_with_authenticated_user(self):
+    def test_squads_with_authenticated_user(self, mock__SteamProfile__update_cached_avatar):
         self.client.force_login(self.account)
         response = self.client.get(reverse('squads'))
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.context['squads']), 1)
         self.assertEqual(response.context['squads'][0]['name'], self.squad.name)
+        mock__SteamProfile__update_cached_avatar.assert_called_once()
 
-    def test_squads_with_unauthenticated_user(self):
+    def test_squads_with_unauthenticated_user(self, mock__SteamProfile__update_cached_avatar):
         response = self.client.get(reverse('squads'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('login'))
+        mock__SteamProfile__update_cached_avatar.assert_not_called()
 
     @patch('stats.views.PlayerOfTheWeek.get_next_badge_data')
-    def test_squads_with_upcoming_potw(self, mock_get_next_badge_data):
+    def test_squads_with_upcoming_potw(self, mock_get_next_badge_data, mock__SteamProfile__update_cached_avatar):
         mock_get_next_badge_data.return_value = {
             'timestamp': int(time.time()) + 1000,
             'squad': self.squad,
@@ -637,6 +642,7 @@ class squads(TestCase):
         self.assertIsNotNone(response.context['squads'][0]['upcoming_player_of_the_week'])
         self.assertEqual(len(response.context['squads'][0]['upcoming_player_of_the_week']['leaderboard']), 2)
         self.assertEqual(response.context['squads'][0]['upcoming_player_of_the_week_mode'].id, 'k/d')
+        mock__SteamProfile__update_cached_avatar.assert_called_once()
 
 
 class split_into_chunks(TestCase):
@@ -1108,7 +1114,7 @@ class GamingSession__close(TestCase):
             '- *de_dust2*, **12:13** lost 💩',
         )
 
-    def test_rising_star(self):
+    def test_rising_star_without_avatar(self):
         self.squad.update_stats()
 
         # Increase the KPI
@@ -1147,14 +1153,58 @@ class GamingSession__close(TestCase):
         )
 
         # Verify the radar plot
-        import matplotlib.image as mpimg
-        import numpy as np
         attachment = notification.get_attachment()
-        img_actual = mpimg.imread(attachment, format = 'png')
-        img_expected = mpimg.imread('tests/data/radarplot.png')
-        try:
-            self.assertAlmostEqual(np.linalg.norm(img_actual - img_expected), 0, delta = 0.1)
-        except:  # noqa: E722
-            os.makedirs('tests/data/failed.actual', exist_ok = True)
-            mpimg.imsave('tests/data/failed.actual/radarplot.png', img_actual)
-            raise
+        testsuite.assert_image_almost_equal(
+            self,
+            test_id = 'radarplot_without_avatar',
+            actual = attachment,
+            expected = 'tests/data/radarplot_without_avatar.png',
+        )
+
+    @patch('accounts.models.avatar_cache_filepath', pathlib.Path('tests/data/avatars'))
+    def test_rising_star_with_avatar(self):
+        self.squad.update_stats()
+
+        # Increase the KPI
+        self.participation2.adr = 140
+        self.participation2.save()
+
+        # Add a second participant to the current session (teammate)
+        self.participation3 = models.MatchParticipation.objects.create(
+            player = self.player2,
+            pmatch = self.match2,
+            team = self.participation2.team,
+            result = self.participation2.result,
+            kills = 10,
+            assists = 5,
+            deaths = 10,
+            score = 15,
+            mvps = 3,
+            headshots = 10,
+            adr = 90,
+        )
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star
+        self.assertEqual(self.session2.rising_star.pk, self.player1.pk)
+
+        # Verify the scheduled Discord notification for the rising star
+        self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 3)
+        notification = ScheduledNotification.objects.all()[2]
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+        self.assertEqual(
+            notification.text,
+            'And today\'s **rising star** was: 🌟 <12345678900000001>!',
+        )
+
+        # Verify the radar plot
+        attachment = notification.get_attachment()
+        testsuite.assert_image_almost_equal(
+            self,
+            test_id = 'radarplot_with_avatar',
+            actual = attachment,
+            expected = 'tests/data/radarplot_with_avatar.png',
+        )

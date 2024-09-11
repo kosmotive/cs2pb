@@ -103,7 +103,7 @@ class SteamProfile(models.Model):
 
         # Check whether an update is required
         if avatar_cache.get(self.steamid, '') != avatar_url:
-            log.info(f'Updating cached avatar for {self.name}')
+            log.info(f'Updating cached avatar for {self.name}: {avatar_url}')
             urllib.request.urlretrieve(avatar_url, str(self.cached_avatar_filepath))
 
             # Update the avatar cache index
