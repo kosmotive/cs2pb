@@ -119,14 +119,14 @@ class AccountAdmin(UserAdmin):
             return None
         else:
             url = reverse('admin:stats_updatetask_change', args=(account.last_queued_update.pk,))
-            return mark_safe(f'<a href="{url}">{account.last_queued_update.scheduled_date_and_time}</a>')
+            return mark_safe(f'<a href="{url}">{account.last_queued_update.scheduling_date_and_time}</a>')
 
     def _last_completed_update(self, account):
         if account.last_completed_update is None:
             return None
         else:
             url = reverse('admin:stats_updatetask_change', args=(account.last_completed_update.pk,))
-            return mark_safe(f'<a href="{url}">{account.last_completed_update.completed_date_and_time}</a>')
+            return mark_safe(f'<a href="{url}">{account.last_completed_update.completion_date_and_time}</a>')
 
 
 @admin.register(SteamProfile)

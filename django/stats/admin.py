@@ -106,7 +106,7 @@ class UpdateTaskAdmin(admin.ModelAdmin):
     list_display = (
         'account',
         '_is_completed',
-        'scheduling_datetime',
+        'scheduling_date_and_time',
         '_execution_datetime',
         '_completion_datetime',
         '_actions',
