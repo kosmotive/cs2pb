@@ -64,6 +64,9 @@ const matchNumList = [ {% for mp in participations %}{{ forloop.counter }}{% if 
 const pv = [ {% for mp in participations %}
 Math.sqrt(({{ mp.kills }} / {{ mp.deaths }}) * (0.01 * {{ mp.adr }})){% if not forloop.last %},{% endif %}
 {% endfor %} ];
+const matchDateList = [ {% for mp in participations %}
+'{{ mp.pmatch.date_and_time }}'{% if not forloop.last %},{% endif %}
+{% endfor %} ];
 
 </script>
 
@@ -190,7 +193,8 @@ function updatePlot( sigma )
             x: matchNumList,
             y: pv,
             mode: 'markers',
-            name: 'Matches'
+            name: 'Matches',
+            text: matchDateList
         },
         {
             x: [{{ period_start }} + 1, {{ period_end }}],
