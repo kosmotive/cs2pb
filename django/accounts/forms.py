@@ -1,12 +1,21 @@
 import re
 
-from django.contrib.auth.forms import UserCreationForm, UserChangeForm
+from api import (
+    SteamAPIUser,
+    api,
+)
+
 from django import forms
+from django.contrib.auth.forms import (
+    UserChangeForm,
+    UserCreationForm,
+)
 from django.core.exceptions import ValidationError
 
-from .models import Account, SteamProfile
-
-from api import api, SteamAPIUser
+from .models import (
+    Account,
+    SteamProfile,
+)
 
 
 class SteamProfileCreationForm(UserCreationForm):
@@ -44,7 +53,8 @@ class FormDiscordMixin:
         """
         Verify the Discord name.
 
-        The rules are specified in: https://support.discord.com/hc/en-us/articles/12620128861463-New-Usernames-Display-Names#h_01GXPQAGG6W477HSC5SR053QG1
+        The rules are specified in:
+        https://support.discord.com/hc/en-us/articles/12620128861463-New-Usernames-Display-Names#h_01GXPQAGG6W477HSC5SR053QG1
         """
         discord_name = form.cleaned_data['discord_name']
         if len(discord_name) > 0 and not verify_discord_name(discord_name):
@@ -55,7 +65,8 @@ class FormDiscordMixin:
 class FormSteamAuthMixin:
 
     def __init__(self):
-        if not hasattr(self, 'ok'): self.ok = dict()
+        if not hasattr(self, 'ok'):
+            self.ok = dict()
 
     def clean_steam_auth(self):
         steam_auth = self.cleaned_data['steam_auth']
@@ -81,9 +92,9 @@ class JoinForm(UserCreationForm, FormDiscordMixin, FormSteamAuthMixin):
 
 class LoginForm(forms.Form):
 
-    steamid = forms.CharField(label='Steam ID', required=False)
-    email_address = forms.EmailField(label='Email address', required=False)
-    password = forms.CharField(label='Password', widget=forms.PasswordInput())
+    steamid = forms.CharField(label = 'Steam ID', required = False)
+    email_address = forms.EmailField(label = 'Email address', required = False)
+    password = forms.CharField(label = 'Password', widget = forms.PasswordInput())
 
     def clean(self):
         data = super().clean()
@@ -92,7 +103,11 @@ class LoginForm(forms.Form):
         password = data.get('password', '')
         if (steamid == '') == (email == ''):
             raise ValidationError('Please enter either your Email address or your Steam ID.')
-        accounts = Account.objects.filter(steam_profile__steamid = steamid) | Account.objects.filter(email_address = email)
+        accounts = Account.objects.filter(
+            steam_profile__steamid = steamid,
+        ) | Account.objects.filter(
+            email_address = email,
+        )
         if len(accounts) == 0 or not accounts.get().check_password(password):
             raise ValidationError('Credentials not found.')
         else:
@@ -107,12 +122,14 @@ class SettingsForm(UserChangeForm, FormDiscordMixin, FormSteamAuthMixin):
         model = Account
         fields = ('clean_name', 'steam_auth', 'email_address', 'discord_name')
 
-    def __init__(self, instance, data=None, *args, **kwargs):
-        if data is None: data = dict(
-            steam_auth    = instance.steam_auth,
-            email_address = instance.email_address,
-            discord_name  = instance.discord_name,
-            clean_name    = instance.clean_name)
+    def __init__(self, instance, data = None, *args, **kwargs):
+        if data is None:
+            data = dict(
+                steam_auth    = instance.steam_auth,
+                email_address = instance.email_address,
+                discord_name  = instance.discord_name,
+                clean_name    = instance.clean_name,
+            )
         super(UserChangeForm    , self).__init__(data, *args, **kwargs)
         super(FormDiscordMixin  , self).__init__()
         super(FormSteamAuthMixin, self).__init__()
@@ -121,4 +138,3 @@ class SettingsForm(UserChangeForm, FormDiscordMixin, FormSteamAuthMixin):
     @property
     def steam_profile(self):
         return self.instance.steam_profile
-

@@ -380,8 +380,8 @@ def player(request, squad, steamid):
         'rising_star': GamingSession.objects.filter(squad = squad, rising_star = player),
     }
     for position in (1, 2, 3):
-        for potw in PlayerOfTheWeek.objects.filter(**{f'player{position}': player}):
-            context['badges']['potw'].append(dict(potw = potw, position = position))
+        for potw_data in PlayerOfTheWeek.objects.filter(**{f'player{position}': player}):
+            context['badges']['potw'].append(dict(potw = potw_data, position = position))
     context['badges']['potw'].sort(key = lambda badge: str(badge['potw']))
     for badge_type in MatchBadgeType.objects.all():
         context['badges']['match_badges'][badge_type.slug] = dict(

@@ -76,7 +76,14 @@ class StreakChallenge(Mode):
         )
 
     def details(self, stats):
-        return [' + '.join((str(stats[f'{n}-kills']) + f'× <b>{n}-kill</b>' for n in range(2, 6) if stats[f'{n}-kills'] > 0))]
+        return [
+            ' + '.join(
+                (
+                    str(stats[f'{n}-kills']) + f'× <b>{n}-kill</b>'
+                    for n in range(2, 6) if stats[f'{n}-kills'] > 0
+                )
+            )
+        ]
 
     def does_fail_requirements(self, stats):
         super_ret = super().does_fail_requirements(stats)

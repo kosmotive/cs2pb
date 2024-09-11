@@ -73,7 +73,9 @@ class Account__update_matches(TestCase):
             mock_datetime.timestamp = timestamp
             self.account.update_matches()
         self.assertEqual(len(stats.models.UpdateTask.objects.filter(account = self.account)), 1)
-        self.assertEqual(stats.models.UpdateTask.objects.get(account = self.account).scheduling_datetime, update1_datetime)
+        self.assertEqual(
+            stats.models.UpdateTask.objects.get(account = self.account).scheduling_datetime, update1_datetime,
+        )
 
         # [9:06] Try to schedule an update six minutes after the first one (should be accepted)
         update2_datetime = update1_datetime + datetime.timedelta(minutes = 6)
