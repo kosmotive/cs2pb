@@ -1,10 +1,9 @@
-from types import SimpleNamespace
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from memory_profiler import memory_usage
-
 import api
+from memory_profiler import memory_usage
 from tests import testsuite
 
 

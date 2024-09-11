@@ -3,7 +3,6 @@ import importlib
 import pathlib
 import urllib.request
 
-
 file_dir_path = pathlib.Path(__file__).parent
 demo_path = file_dir_path / 'data/demos'
 demo_path.mkdir(parents=True, exist_ok=True)

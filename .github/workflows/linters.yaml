@@ -31,4 +31,3 @@ jobs:
       run: |
         flake8 django
         isort django --check-only --diff
-        isort tests --check-only --diff

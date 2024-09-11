@@ -1,9 +1,8 @@
-from datetime import datetime
 import pathlib
 import re
+from datetime import datetime
 
 import git
-
 
 repo_dir = pathlib.Path(__file__).parent.parent
 base_repo_url = 'https://github.com/kodikit/cs2pb'

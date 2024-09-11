@@ -1,12 +1,11 @@
 import math
 
+import stats.potw
+
 from django import template
 from django.db.models import Sum
 from django.template.defaultfilters import stringfilter
 from django.utils.safestring import mark_safe
-
-import stats.potw
-
 
 register = template.Library()
 

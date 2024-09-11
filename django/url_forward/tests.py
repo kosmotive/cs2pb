@@ -1,8 +1,8 @@
 import base64
 
-from django.test import TestCase
-
 import url_forward
+
+from django.test import TestCase
 
 
 class get_redirect_url_to(TestCase):

@@ -1,6 +1,9 @@
-from django.contrib import admin
+from discordbot.models import (
+    InvitationDraft,
+    ScheduledNotification,
+)
 
-from discordbot.models import ScheduledNotification, InvitationDraft
+from django.contrib import admin
 
 
 @admin.register(ScheduledNotification)
