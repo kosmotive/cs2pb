@@ -15,6 +15,7 @@
 /django/tests/data/demos/*.dem.bz2
 /django/tests/data/failed.actual
 /django/*.sql
+/django/accounts/.avatar-cache
 __pycache__
 *.pyc
 /.no-bootstrap

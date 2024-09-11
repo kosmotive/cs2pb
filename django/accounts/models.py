@@ -1,5 +1,8 @@
 import datetime
+import json
 import logging
+import pathlib
+import urllib.request
 import uuid
 
 from api import api
@@ -21,6 +24,10 @@ log = logging.getLogger(__name__)
 CLEAN_NAME_VALIDATOR = RegexValidator(r'^[0-9a-zA-Z.-_][0-9a-zA-Z.-_ ]+[0-9a-zA-Z.-_]+$')
 
 MIN_BREAK_TIME = 60 * 60 * 2  # 2 hours
+
+avatar_cache_filepath = pathlib.Path(__file__).parent / '.avatar-cache'
+avatar_cache_filepath.mkdir(exist_ok = True, parents = True)
+avatar_cache_index_filepath = avatar_cache_filepath / 'index.json'
 
 
 class SteamProfile(models.Model):
@@ -77,6 +84,32 @@ class SteamProfile(models.Model):
                     setattr(invitation, key, kwargs[key])
                 invitation.save()
             return invitation
+
+    @property
+    def cached_avatar_filepath(self) -> pathlib.Path:
+        return avatar_cache_filepath / f'{self.steamid}.jpg'
+
+    def update_cached_avatar(self):
+        avatar_url = self.avatar_l
+        if not bool(avatar_url):
+            return
+
+        # Read avatar cache index
+        if avatar_cache_index_filepath.is_file():
+            with open(avatar_cache_index_filepath, 'r') as avatar_cache_file:
+                avatar_cache = json.load(avatar_cache_file)
+        else:
+            avatar_cache = dict()
+
+        # Check whether an update is required
+        if avatar_cache.get(self.steamid, '') != avatar_url:
+            log.info(f'Updating cached avatar for {self.name}')
+            urllib.request.urlretrieve(avatar_url, str(self.cached_avatar_filepath))
+
+            # Update the avatar cache index
+            avatar_cache[self.steamid] = avatar_url
+            with open(avatar_cache_index_filepath, 'w') as avatar_cache_file:
+                json.dump(avatar_cache, avatar_cache_file)
 
 
 class AccountManager(BaseUserManager):

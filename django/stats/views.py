@@ -217,10 +217,15 @@ def squads(request, squad = None, expanded_stats = False):
     context['squads'] = list()
     for squad in squad_list:
         squad.update_stats()
+
         for account in Account.objects.filter(
             steam_profile__in = squad.memberships.values_list('player__pk', flat = True)
         ):
             account.update_matches()
+
+        for squad_membership in squad.memberships.all():
+            squad_membership.player.update_cached_avatar()
+
         PlayerOfTheWeek.create_missing_badges(squad)
         cards = [
             compute_card(
