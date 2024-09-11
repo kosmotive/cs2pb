@@ -1,7 +1,11 @@
 import functools
 import importlib
+import os
 import pathlib
 import urllib.request
+
+import matplotlib.image as mpimg
+import numpy as np
 
 file_dir_path = pathlib.Path(__file__).parent
 demo_path = file_dir_path / 'data/demos'
@@ -54,3 +58,16 @@ def fake_api(*modules):
                 _fake_api.restore(*modules)
         return wrapper
     return decorator
+
+
+def assert_image_almost_equal(testcase, test_id, actual, expected, delta = 0.1):
+    if not isinstance(actual, np.ndarray):
+        actual = mpimg.imread(actual, format = 'png')
+    try:
+        if not isinstance(expected, np.ndarray):
+            expected = mpimg.imread(expected)
+        testcase.assertAlmostEqual(np.linalg.norm(actual - expected), 0, delta = delta)
+    except:  # noqa: E722
+        os.makedirs('tests/data/failed.actual', exist_ok = True)
+        mpimg.imsave(f'tests/data/failed.actual/{test_id}.png', actual)
+        raise
