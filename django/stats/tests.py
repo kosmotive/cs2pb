@@ -338,7 +338,7 @@ class Squad__do_changelog_announcements(TestCase):
         squad = Squad.objects.create(name='squad', discord_channel_id='xxx')
         squad.do_changelog_announcements(changelog = Squad__do_changelog_announcements.changelog)
         c = {
-            'message': 'Hotfix: Minor layout improvements',
+            'message': 'Minor layout improvements',
             'url': get_redirect_url_to(
                 'https://github.com/kodikit/cs2pb/commits/9074a7a848a6ac74ba729757e1b2a4a971586190',
             ),

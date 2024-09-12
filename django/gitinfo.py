@@ -67,7 +67,7 @@ def get_changelog(skip_nochangelog=True):
         m = hotfix_pattern.match(c.message)
         if m is not None:
             entry = dict(
-                message = 'Hotfix: ' + m.group(1).split('\n')[0].strip(),
+                message = m.group(1).split('\n')[0].strip(),
                 url = base_repo_url + '/commit/' + c.hexsha,
             )
 
