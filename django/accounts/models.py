@@ -111,6 +111,9 @@ class SteamProfile(models.Model):
             with open(avatar_cache_index_filepath, 'w') as avatar_cache_file:
                 json.dump(avatar_cache, avatar_cache_file)
 
+    def url(self, squad: 'Squad') -> str:
+        return reverse('player', kwargs = dict(squad = squad.uuid, steamid = self.steamid))
+
 
 class AccountManager(BaseUserManager):
 
@@ -283,7 +286,7 @@ class Squad(models.Model):
         )
 
     @property
-    def url(self):
+    def url(self) -> str:
         return reverse('squads', kwargs = dict(squad = self.uuid))
 
     def absolute_url(self, request):
@@ -516,7 +519,7 @@ class Invitation(models.Model):
         ]
 
     @property
-    def url(self):
+    def url(self) -> str:
         return reverse('join', args = (self.pk,))
 
     def absolute_url(self, request):

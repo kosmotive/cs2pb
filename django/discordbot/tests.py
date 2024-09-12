@@ -1,3 +1,4 @@
+import unittest.mock
 from types import SimpleNamespace
 
 from accounts.models import (
@@ -79,13 +80,15 @@ class bot(TestCase):
         for user in self.users:
             SquadMembership.objects.create(squad = self.squad, player = user)
 
+    @unittest.mock.patch('discordbot.bot.settings', dict(base_url = 'https://example.com'))
     def test_tick(self):
         ScheduledNotification.objects.create(
             squad = self.squad,
             text = (
                 f'Correct mention: <12345678900000001> '
                 f'No discord name: <12345678900000002> '
-                f'Invalid discord name: <12345678900000003>'
+                f'Invalid discord name: <12345678900000003> '
+                f'Test URL: </stats/bc29cf56-9415-4864-abc4-d8d7b7e11e53/12345678900000001>'
             ),
         )
         async_to_sync(botimpl.tick)()
@@ -98,7 +101,8 @@ class bot(TestCase):
                     content = (
                         'Correct mention: <@discordname1> '
                         'No discord name: name-of-12345678900000002 '
-                        'Invalid discord name: name-of-12345678900000003'
+                        'Invalid discord name: name-of-12345678900000003 '
+                        'Test URL: https://example.com/stats/bc29cf56-9415-4864-abc4-d8d7b7e11e53/12345678900000001'
                     ),
                 )
             ],

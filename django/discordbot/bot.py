@@ -46,7 +46,7 @@ def pop_scheduled_notifications(user_lookup):
     for n in notifications:
         data = dict(
             channel_id = n.squad.discord_channel_id,
-            text       = n.resolve_text(user_lookup),
+            text       = n.resolve_text(user_lookup, settings),
             attachment = ScheduledNotification.get_attachment(n))
         result.append(data)
         n.delete()
@@ -150,3 +150,4 @@ if os.environ.get('CS2PB_DISCORD_ENABLED', False):
 else:
     log.warning(f'Discord integration disabled')
     enabled = False
+    settings = dict()

@@ -1149,7 +1149,8 @@ class GamingSession__close(TestCase):
         self.assertEqual(notification.squad.pk, self.squad.pk)
         self.assertEqual(
             notification.text,
-            'And today\'s **rising star** was: 🌟 <12345678900000001>!',
+            f'And today\'s **rising star** was: 🌟 <12345678900000001>! '
+            f'</stats/{self.squad.uuid}/12345678900000001>',
         )
 
         # Verify the radar plot
@@ -1197,7 +1198,8 @@ class GamingSession__close(TestCase):
         self.assertEqual(notification.squad.pk, self.squad.pk)
         self.assertEqual(
             notification.text,
-            'And today\'s **rising star** was: 🌟 <12345678900000001>!',
+            f'And today\'s **rising star** was: 🌟 <12345678900000001>! '
+            f'</stats/{self.squad.uuid}/12345678900000001>',
         )
 
         # Verify the radar plot

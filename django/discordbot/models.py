@@ -14,6 +14,7 @@ from django.dispatch import receiver
 log = logging.getLogger(__name__)
 
 steamid_pattern = re.compile(r'<([0-9]+)>')
+url_pattern = re.compile(r'<(/[a-zA-Z0-9-_/%?&\.]+)>')
 
 
 def timestamp_now():
@@ -43,10 +44,13 @@ class ScheduledNotification(models.Model):
     def scheduling_date_and_time(self):
         return self.scheduling_datetime.strftime(r'%b %-d, %Y, %H:%M')
 
-    def resolve_text(self, lookup):
-        steamids = frozenset(steamid_pattern.findall(self.text))
+    def resolve_text(self, lookup, settings):
+        """
+        """
         text = self.text
-        for steamid in steamids:
+
+        # Resolve Steam IDs
+        for steamid in frozenset(steamid_pattern.findall(self.text)):
             p = SteamProfile.objects.get(steamid = steamid)
             r = None
             if getattr(p, 'account', None) is not None and len(p.account.discord_name) > 0:
@@ -54,6 +58,12 @@ class ScheduledNotification(models.Model):
             if r is None:
                 r = p.name
             text = text.replace(f'<{steamid}>', r)
+
+        # Resolve URLs
+        for url in frozenset(url_pattern.findall(self.text)):
+            text = text.replace(f'<{url}>', f'{settings.get("base_url", "")}{url}')
+
+        # Return resolved text
         return text
 
     def __str__(self):
@@ -65,7 +75,7 @@ class ScheduledNotification(models.Model):
             except SteamProfile.DoesNotExist:
                 log.critical(f'Failed to lookup Steam ID: {steamid}')
 
-        return self.resolve_text(lookup)
+        return self.resolve_text(lookup, dict())
 
     attachments = dict()
 
