@@ -84,7 +84,7 @@
         {% elif player.profile.account.last_completed_update %}
 
             <div class="profile-hint">
-                Last updated: {{ player.profile.account.last_completed_update.completed_datetime }}
+                Last updated: {{ player.profile.account.last_completed_update.completion_date_and_time }}
                 [<a href="{% url 'csv' player.profile.steamid %}" target="_blank">csv</a>, <a href="{% url 'notebook' player.profile.steamid %}" target="_blank">ipynb</a>]
             </div>
 
