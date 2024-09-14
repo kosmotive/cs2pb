@@ -132,12 +132,14 @@ def compute_card(
         # Check logics: `max_value` can only be None if `value` is None
         assert value is None or (value is not None and max_value is not None), (feature.slug, value, max_value)
 
-        # Format the trend string
+        # Format the trend string with 2 decimal places
         trend = squad_membership.trends.get(feature.slug)
         trend_str = f'{trend:+.2f}' if trend is not None else ''
         if len(trend_str) > 0 and float(trend_str) == 0:
-            trend_str = ''
-            trend = 0  # pretend that the trend is zero if it is too small
+            trend_str = f'{trend:+.3f}'  # use 1 extra decimal if it would be zero otherwise
+            if float(trend_str) == 0:
+                trend_str = ''
+                trend = 0  # pretend that the trend is zero if three decimals are not sufficient
 
         # Compose and return the full feature information for the squad member
         return {
