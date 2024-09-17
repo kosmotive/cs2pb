@@ -46,7 +46,7 @@ div.squad .squad-sharelink a:hover {
 }
 
 div.squad .squad-members-rows {
-    margin-bottom: 25mm;
+    margin-bottom: 15mm;
 }
 
 div.squad .squad-members {
@@ -685,6 +685,7 @@ div.load-more:hover {
 }
 
 div.squad .squad-members div.squad-member-details {
+    position: relative;
     display: inline-block;
     vertical-align: top;
     margin-left: 10mm;

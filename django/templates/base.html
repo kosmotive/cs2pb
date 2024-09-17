@@ -21,7 +21,7 @@ function autoscale_element(elem) {
     if (zoom > 1) zoom = 1;
     elem.style.transform = "scale(" + zoom + ")";
     elem.style.transformOrigin = "0 0";
-    elem.style.height = elem.actual_height * zoom;
+    elem.style.height = elem.scrollHeight * zoom;
     if (!elem.classList.contains('fixed-margin-top'))
         elem.style.marginTop = elem.actual_marginTop * zoom;
     if (!elem.classList.contains('fixed-margin-bottom'))
@@ -41,7 +41,6 @@ function autoscale() {
     for (var i = 0; i < autoscale_elements.length; ++i) {
         const elem = autoscale_elements[i];
         const style = getComputedStyle(elem);
-        elem.actual_height = parseFloat(style.height);
         elem.actual_marginTop = parseFloat(style.marginTop);
         elem.actual_marginBottom = parseFloat(style.marginBottom);
     }
