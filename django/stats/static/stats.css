@@ -120,6 +120,12 @@ div.profile-card .profile-buddy-name {
     padding-right: 0.4em;
     border-radius: 1em;
     white-space: nowrap;
+    text-decoration: none;
+}
+
+div.profile-card .profile-buddy-name:hover {
+    background-color: #666;
+    text-decoration: none;
 }
 
 div.profile-card .profile-stats {
