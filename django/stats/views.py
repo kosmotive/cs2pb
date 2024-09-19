@@ -168,7 +168,7 @@ def compute_card(
         'best_buddy': best_buddy,
         'worst_buddy': worst_buddy,
         'best_buddy_performance_increase': 100 * (buddy_performances[best_buddy] - 1),
-        'worst_buddy_performance_decrease': 100 * (1 / buddy_performances[worst_buddy] - 1),
+        'worst_buddy_performance_decrease': 100 * (1 - buddy_performances[worst_buddy]),
     }
     if getattr(squad_membership.player, 'account', None) is None and squad_membership.squad is not None:
         card_data['invite_url'] = reverse(
@@ -388,7 +388,7 @@ def player(request, squad, steamid):
         period_end = accounted_period_end,
         period_average = squad_membership.stats.get('player_value'),
         squad_buddy_performances = sorted(
-            (bp for bp in squad_membership.squad_buddy_performances.items()),
+            (bp for bp in squad_membership.squad_buddy_performances.items() if abs(bp[1] - 1) > 0.0005),
             key = lambda bp: bp[1], reverse = True,
         ),
     )

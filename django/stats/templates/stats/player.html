@@ -112,15 +112,15 @@ const matchDateList = [ {% for mp in participations %}
                     {% for buddy in squad_buddy_performances %}
                         <div class="squad-buddies-plot-row">
 
-                            {% if buddy.1 <= 0.99 %}
+                            {% if buddy.1 < 1 %}
 
-                                <div class="squad-buddies-plot-bar squad-buddies-plot-bar-negative" style="right: 50%; width: {{ 1|divide:buddy.1|addf:'-1'|multiply:50 }}%;"></div>
+                                <div class="squad-buddies-plot-bar squad-buddies-plot-bar-negative" style="right: 50%; width: {{ 1|subtractf:buddy.1|multiply:50 }}%;"></div>
 
-                                <div class="squad-buddies-plot-label squad-buddies-plot-label-negative" style="right: calc(50% + {{ 1|divide:buddy.1|addf:'-1'|multiply:50 }}%);">
-                                    -{{ 1|divide:buddy.1|addf:'-1'|multiply:100|floatformat:1 }}%
+                                <div class="squad-buddies-plot-label squad-buddies-plot-label-negative" style="right: calc(50% + {{ 1|subtractf:buddy.1|multiply:50 }}%);">
+                                    -{{ 1|subtractf:buddy.1|multiply:100|floatformat:1 }}%
                                 </div>
 
-                            {% elif buddy.1 >= 1.01 %}
+                            {% else %}
 
                                 <div class="squad-buddies-plot-bar squad-buddies-plot-bar-positive" style="left: 50%; width: {{ buddy.1|addf:'-1'|multiply:50 }}%;"></div>
 
