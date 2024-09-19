@@ -128,8 +128,8 @@ h2 {
     padding-right: 0.5em;
 }
 
-#squad-buddies-plot .squad-buddies-plot-row:hover {
-    background-color: #f9f9f9;
+#squad-buddies-plot .squad-buddies-plot-names .squad-buddies-plot-row:hover {
+    background-color: #f2f2f2;
 }
 
 #squad-buddies-plot .squad-buddies-plot-names,
@@ -138,7 +138,7 @@ h2 {
 }
 
 #squad-buddies-plot .squad-buddies-plot-surface {
-    background-color: #f9f9f9;
+    background-color: #f2f2f2;
     flex: 1;
 }
 
@@ -163,7 +163,7 @@ h2 {
 
 #squad-buddies-plot .squad-buddies-plot-bar {
     position: absolute;
-    background-color: #999;
+    background-color: #ff6699;
     top: 1em;
     bottom: 1em;
 }
@@ -189,7 +189,7 @@ h2 {
 }
 
 #squad-buddies-plot .squad-buddies-plot-baseline {
-    background-color: #ccc;
+    background-color: #999999;
     position: absolute;
     left: 50%;
     width: 1px;
