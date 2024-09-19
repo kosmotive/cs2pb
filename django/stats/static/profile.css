@@ -140,6 +140,7 @@ h2 {
 #squad-buddies-plot .squad-buddies-plot-surface {
     background-color: #f2f2f2;
     flex: 1;
+    position: relative;
 }
 
 #squad-buddies-plot .squad-buddies-plot-avatar {
@@ -191,8 +192,8 @@ h2 {
 #squad-buddies-plot .squad-buddies-plot-baseline {
     background-color: #999999;
     position: absolute;
-    left: 50%;
+    right: 50%;
     width: 1px;
-    top: 0;
+    top: 2px;
     bottom: 0;
 }
