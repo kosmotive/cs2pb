@@ -27,6 +27,7 @@ function load_more(button, last_timestamp) {
         const parser = new DOMParser();
         const dom = parser.parseFromString(text, 'text/html');
         button.replaceWith(...dom.body.children);
+        update_autoscale();
     });
 }
 </script>

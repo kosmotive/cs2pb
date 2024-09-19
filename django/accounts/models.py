@@ -73,6 +73,11 @@ class SteamProfile(models.Model):
         assert len(matches_played) > 0
         return matches_played.earliest('timestamp').sharecode
 
+    def find_newest_sharecode(self):
+        matches_played = self.matches()
+        assert len(matches_played) > 0
+        return matches_played.latest('timestamp').sharecode
+
     def invite(self, squad, **kwargs):
         invitations = Invitation.objects.filter(steam_profile = self, squad = squad)
         if len(invitations) == 0:

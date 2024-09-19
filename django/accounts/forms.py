@@ -40,7 +40,7 @@ class AccountChangeForm(UserChangeForm):
 
 
 def test_steam_auth(steam_profile, steam_auth):
-    return api.test_steam_auth(steam_profile.find_oldest_sharecode(), SteamAPIUser(steam_profile.steamid, steam_auth))
+    return api.test_steam_auth(steam_profile.find_newest_sharecode(), SteamAPIUser(steam_profile.steamid, steam_auth))
 
 
 def verify_discord_name(discord_name):
