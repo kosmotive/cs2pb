@@ -168,7 +168,7 @@ def compute_card(
         'best_buddy': best_buddy,
         'worst_buddy': worst_buddy,
         'best_buddy_performance_increase': 100 * (buddy_performances[best_buddy] - 1),
-        'worst_buddy_performance_decrease': 100 * (1 / buddy_performances[worst_buddy] - 1),
+        'worst_buddy_performance_decrease': 100 * (1 - buddy_performances[worst_buddy]),
     }
     if getattr(squad_membership.player, 'account', None) is None and squad_membership.squad is not None:
         card_data['invite_url'] = reverse(
