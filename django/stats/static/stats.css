@@ -70,6 +70,7 @@ div.profile-card {
     padding: 5mm;
     position: relative;
     margin-bottom: 5mm;
+    max-width: fit-content;
 }
 
 div.profile-card .expand-profile-button {
@@ -93,8 +94,35 @@ div.profile-card .profile-name {
     text-overflow: ellipsis;
 }
 
+div.profile-card .profile-buddies {
+    font-size: 70%;
+    color: #999;
+    white-space: wrap;
+    font-style: italic;
+    position: absolute;
+    left: 5mm;
+    right: 5mm;
+    padding: 0.5em 0 0.3em 0;
+    margin-top: 8mm;
+    line-height: 1.2em;
+}
+
+div.profile-card .profile-buddy-performance {
+    font-weight: bold;
+}
+
+div.profile-card .profile-buddy-name {
+    font-style: normal;
+    background-color: #999;
+    color: white;
+    padding-left: 0.4em;
+    padding-right: 0.4em;
+    border-radius: 1em;
+    white-space: nowrap;
+}
+
 div.profile-card .profile-stats {
-    margin-top: 12mm;
+    margin-top: 22mm;
 }
 
 div.profile-card .profile-stat {

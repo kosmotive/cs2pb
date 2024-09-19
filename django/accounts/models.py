@@ -503,6 +503,22 @@ class SquadMembership(models.Model):
         # Save the updated data
         self.save()
 
+    @property
+    def squad_buddy_performances(self):
+        """
+        Returns the player value with and without other squad members.
+        """
+        buddy_performances = dict()
+        for buddy_membership in self.squad.memberships.exclude(pk = self.pk):
+            buddy_matches = buddy_membership.player.matches()
+            participations_with_buddy = self.accounted_match_participations.filter(pmatch__in = buddy_matches)
+            participations_without_buddy = self.accounted_match_participations.exclude(pmatch__in = buddy_matches)
+            pv_with_buddy = Features.player_value(FeatureContext(participations_with_buddy, self.player))
+            pv_without_buddy = Features.player_value(FeatureContext(participations_without_buddy, self.player))
+            if pv_with_buddy is not None and pv_without_buddy is not None:
+                buddy_performances[buddy_membership.player] = pv_with_buddy / pv_without_buddy
+        return buddy_performances
+
 
 class Invitation(models.Model):
 

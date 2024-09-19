@@ -6,6 +6,19 @@
 
     <div class="profile-name">{{ player.profile.name }}</div>
 
+    <div class="profile-buddies">
+        {% if player.best_buddy_performance_increase >= 1 %}
+
+            Performs <span class="profile-buddy-performance">{{ player.best_buddy_performance_increase|floatformat:0 }}%</span> better with <span class="profile-buddy-name">{{ player.best_buddy.name }}</span>.
+
+        {% endif %}
+        {% if player.worst_buddy_performance_decrease >= 1 %}
+
+            Performs <span class="profile-buddy-performance">{{ player.worst_buddy_performance_decrease|floatformat:0 }}%</span> worse with <span class="profile-buddy-name">{{ player.worst_buddy.name }}</span>.
+
+        {% endif %}
+    </div>
+
     <div class="profile-stats">{% for stat in player.stats %}
 
         <div class="profile-stat profile-stat-order{{ stat.order }}">
