@@ -387,6 +387,10 @@ def player(request, squad, steamid):
         period_start = accounted_period_start,
         period_end = accounted_period_end,
         period_average = squad_membership.stats.get('player_value'),
+        squad_buddy_performances = sorted(
+            (bp for bp in squad_membership.squad_buddy_performances.items()),
+            key = lambda bp: bp[1], reverse = True,
+        ),
     )
 
     # Summarize the player's badges

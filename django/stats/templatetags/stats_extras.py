@@ -29,6 +29,11 @@ def multiply(a, b):
 
 
 @register.filter
+def addf(a, b):
+    return float(a) + float(b)
+
+
+@register.filter
 def player_value(match_participation):
     return math.sqrt((match_participation.kills / match_participation.deaths) * match_participation.adr / 100)
 

@@ -95,6 +95,49 @@ const matchDateList = [ {% for mp in participations %}
 
             <div id="pv-plot" style="width:600px; height: 280px;"></div>
 
+            <h2>Performance with squad buddies</h2>
+            
+            <div id="squad-buddies-plot">
+
+                <div class="squad-buddies-plot-names">
+                    {% for buddy in squad_buddy_performances %}
+                        <a href="{% url 'player' squad.uuid buddy.0.steamid %}" class="squad-buddies-plot-row">
+                            <img src="{{ buddy.0.avatar_s }}" class="squad-buddies-plot-avatar" />
+                            <div class="squad-buddies-plot-name">{{ buddy.0.name }}</div>
+                        </a>
+                    {% endfor %}
+                </div>
+
+                <div class="squad-buddies-plot-surface">
+                    {% for buddy in squad_buddy_performances %}
+                        <div class="squad-buddies-plot-row">
+
+                            {% if buddy.1 <= 0.99 %}
+
+                                <div class="squad-buddies-plot-bar squad-buddies-plot-bar-negative" style="right: 50%; width: {{ 1|divide:buddy.1|addf:'-1'|multiply:50 }}%;"></div>
+
+                                <div class="squad-buddies-plot-label squad-buddies-plot-label-negative" style="right: calc(50% + {{ 1|divide:buddy.1|addf:'-1'|multiply:50 }}%);">
+                                    -{{ 1|divide:buddy.1|addf:'-1'|multiply:100|floatformat:1 }}%
+                                </div>
+
+                            {% elif buddy.1 >= 1.01 %}
+
+                                <div class="squad-buddies-plot-bar squad-buddies-plot-bar-positive" style="left: 50%; width: {{ buddy.1|addf:'-1'|multiply:50 }}%;"></div>
+
+                                <div class="squad-buddies-plot-label squad-buddies-plot-label-positive" style="left: calc(50% + {{ buddy.1|addf:'-1'|multiply:50 }}%);">
+                                    +{{ buddy.1|addf:'-1'|multiply:100|floatformat:1 }}%
+                                </div>
+
+                            {% endif %}
+
+                            <div class="squad-buddies-plot-baseline"></div>
+
+                        </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+
             {% if badges.potw %}
 
                 <h2>Trophy cabinet</h2>

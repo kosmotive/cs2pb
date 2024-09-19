@@ -104,7 +104,7 @@ div.profile-card .profile-buddies {
     right: 5mm;
     padding: 0.5em 0 0.3em 0;
     margin-top: 8mm;
-    line-height: 1.2em;
+    line-height: 1.25em;
     font-family: Arial;
 }
 
@@ -129,7 +129,7 @@ div.profile-card .profile-buddy-name:hover {
 }
 
 div.profile-card .profile-stats {
-    margin-top: 22mm;
+    margin-top: 22.5mm;
 }
 
 div.profile-card .profile-stat {

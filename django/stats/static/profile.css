@@ -111,3 +111,88 @@ h2 {
     left: 25em;
     padding-top: 0.1em;
 }
+
+#squad-buddies-plot {
+    display: flex;
+    width: 790px;
+    margin-top: 1em;
+}
+
+#squad-buddies-plot .squad-buddies-plot-row {
+    height: 3em;
+    border-top: 2px solid white;
+    border-right: 2px solid white;
+    display: block;
+    color: black;
+    text-decoration: none;
+    padding-right: 0.5em;
+}
+
+#squad-buddies-plot .squad-buddies-plot-row:hover {
+    background-color: #f9f9f9;
+}
+
+#squad-buddies-plot .squad-buddies-plot-names,
+#squad-buddies-plot .squad-buddies-plot-surface {
+    display: inline-block;
+}
+
+#squad-buddies-plot .squad-buddies-plot-surface {
+    background-color: #f9f9f9;
+    flex: 1;
+}
+
+#squad-buddies-plot .squad-buddies-plot-avatar {
+    display: inline;
+    vertical-align: middle;
+    box-shadow: 0 0 1mm #999;
+}
+
+#squad-buddies-plot .squad-buddies-plot-name {
+    display: inline;
+    vertical-align: middle;
+}
+
+#squad-buddies-plot .squad-buddies-plot-names .squad-buddies-plot-row {
+    line-height: 3em;
+}
+
+#squad-buddies-plot .squad-buddies-plot-surface .squad-buddies-plot-row {
+    position: relative;
+}
+
+#squad-buddies-plot .squad-buddies-plot-bar {
+    position: absolute;
+    background-color: #999;
+    top: 1em;
+    bottom: 1em;
+}
+
+#squad-buddies-plot .squad-buddies-plot-label {
+    font-size: 80%;
+    position: absolute;
+    top: 1.25em;
+    bottom: 1.25em;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    line-height: 1.25em;
+}
+
+#squad-buddies-plot .squad-buddies-plot-bar-positive {
+    border-top-right-radius: 0.5em;
+    border-bottom-right-radius: 0.5em;
+}
+
+#squad-buddies-plot .squad-buddies-plot-bar-negative {
+    border-top-left-radius: 0.5em;
+    border-bottom-left-radius: 0.5em;
+}
+
+#squad-buddies-plot .squad-buddies-plot-baseline {
+    background-color: #ccc;
+    position: absolute;
+    left: 50%;
+    width: 1px;
+    top: 0;
+    bottom: 0;
+}
