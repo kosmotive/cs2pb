@@ -460,18 +460,25 @@ class SquadMembership(models.Model):
     @property
     def accounted_match_participations(self):
         """
-        Return the match participations of the squad member that are relevant for the stats computation
+        Return the match participations of the squad member for the computation of their performance within the last 30
+        days (all match participations corresponding to sessions started and ended within the last 30 days).
         """
-        return self.squad.match_participations(
-            pmatch__timestamp__gte = datetime.datetime.timestamp(
+        sessions = self.squad.sessions.filter(
+            is_closed = True,  # Exclude matches from sessions that did not end yet
+        ).annotate(
+            timestamp = models.Min('matches__timestamp'),
+        ).filter(
+            timestamp__gte = datetime.datetime.timestamp(
                 datetime.datetime.now()
-            ) - 30 * 24 * 60 * 60,  # 30 days ago
-            pmatch__sessions__is_closed = True,  # Exclude matches from sessions that did not end yet
+            ) - 30 * 24 * 60 * 60,  # Filter matches which started 30 days ago or earlier
+        )
+        return self.squad.match_participations(
+            pmatch__sessions__in = sessions,
         )
 
     def update_stats(self):
         """
-        Update the stats and trends of the squad member based on their performance in the last 30 days.
+        Update the stats and trends of the squad member based on their performance within the last 30 days.
         """
 
         # Store the current stats for later comparison
