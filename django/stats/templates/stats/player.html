@@ -86,7 +86,7 @@ const matchDateList = [ {% for mp in participations %}
 
             <div class="pv-plot-controls">
 
-                Smoothing:
+                Form smoothing:
                 <input type="number" id="pv-plot-smooth" step="0.1" value="2.0" min="0.0" />
                 <input type="checkbox" id="pv-plot-rescale" checked />
                 <label for="pv-plot-rescale">Rescale</label>
@@ -228,6 +228,7 @@ function updatePlot( sigma )
             y: pv_smooth,
             mode: 'lines',
             name: 'Form',
+            legendrank: 11,
             line: {
                 shape: 'spline'
             }
@@ -237,6 +238,7 @@ function updatePlot( sigma )
             y: pv,
             mode: 'markers',
             name: 'Matches',
+            legendrank: 12,
             text: matchDateList
         },
         {
@@ -245,6 +247,7 @@ function updatePlot( sigma )
             mode: 'lines',
             name: '30-days average',
             hoverinfo: 'skip',
+            legendrank: 1,
             line: {
                 width: 2,
                 dash: 'dot',
@@ -281,6 +284,7 @@ function updatePlot( sigma )
                 mode: 'none',
                 stackgroup: 'confidences',
                 hoverinfo: 'skip',
+                showlegend: false,
                 line: {
                     shape: 'spline'
                 }
@@ -295,6 +299,8 @@ function updatePlot( sigma )
                 mode: 'none',
                 stackgroup: 'confidences',
                 hoverinfo: 'skip',
+                name: 'Uncertainty',
+                legendrank: 10,
                 line: {
                     shape: 'spline'
                 }
@@ -307,7 +313,8 @@ function updatePlot( sigma )
             xaxis: { title: { text: 'Match count' } },
             yaxis: config_yaxis,
             margin: { t: 45, l: 50, b: 50, r: 10 },
-            showlegend: false,
+            showlegend: true,
+            legend: { orientation: 'h', x: 0, y: 1.17 },
             width: 800,
             shapes: [
                 {
@@ -315,7 +322,7 @@ function updatePlot( sigma )
                     x0: {{ period_start }} + 1,
                     x1: {{ period_start }} + 1,
                     y0: 0,
-                    y1: 1.08,
+                    y1: 1.01,
                     yref: 'paper',
                     line: {
                         width: 1,
@@ -327,7 +334,7 @@ function updatePlot( sigma )
                     x0: {{ period_end }},
                     x1: {{ period_end }},
                     y0: 0,
-                    y1: 1.08,
+                    y1: 1.01,
                     yref: 'paper',
                     line: {
                         width: 1,
@@ -338,22 +345,16 @@ function updatePlot( sigma )
                     type: 'rect',
                     x0: {{ period_start }} + 1,
                     x1: {{ period_end }},
-                    y0: 0.96,
-                    y1: 1.08,
+                    y0: 0.98,
+                    y1: 1.01,
                     yref: 'paper',
                     fillcolor: '#ff6699',
                     line: {
                         width: 0
                     },
-                    label: {
-                        text: '⇦ 30-days average ⇨',
-                        textposition: 'top center',
-                        font: {
-                            size: 12,
-                            weight: 'bold',
-                            color: 'white'
-                        },
-                    },
+                    showlegend: true,
+                    legendrank: 2,
+                    name: '30-days period'
                 }
             ]
         },
