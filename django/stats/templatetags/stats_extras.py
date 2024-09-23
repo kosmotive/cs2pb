@@ -40,7 +40,10 @@ def subtractf(a, b):
 
 @register.filter
 def player_value(match_participation):
-    return math.sqrt((match_participation.kills / match_participation.deaths) * match_participation.adr / 100)
+    if match_participation.deaths == 0:
+        return match_participation.adr / 100
+    else:
+        return math.sqrt((match_participation.kills / match_participation.deaths) * match_participation.adr / 100)
 
 
 @register.filter
