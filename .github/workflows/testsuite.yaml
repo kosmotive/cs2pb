@@ -11,6 +11,7 @@ jobs:
     name: Tests
     uses: BMCV/github-workflows/.github/workflows/coverage-run.yml@main
     with:
+      fetch-depth: 0
       main_branch: master
       python_versions: '["3.10"]'
       main_python_version: "3.10"
