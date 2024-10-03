@@ -23,10 +23,10 @@ jobs:
           python -m coverage json --omit "tests/*.py,*/tests.py,*/migrations/*.py,manage.py"
       env: |
         {
-          "CS2PB_ADMIN_MAIL_ADDRESS": ${{ vars.CS2PB_ADMIN_MAIL_ADDRESS }},
-          "CS2PB_STEAM_API_KEY": ${{ vars.CS2PB_STEAM_API_KEY }},
-          "CS2PB_STEAM_USERNAME": ${{ vars.CS2PB_STEAM_USERNAME }},
-          "CS2PB_STEAM_PASSWORD": ${{ vars.CS2PB_STEAM_PASSWORD }}
+          "CS2PB_ADMIN_MAIL_ADDRESS": "${{ vars.CS2PB_ADMIN_MAIL_ADDRESS }}",
+          "CS2PB_STEAM_API_KEY": "${{ vars.CS2PB_STEAM_API_KEY }}",
+          "CS2PB_STEAM_USERNAME": "${{ vars.CS2PB_STEAM_USERNAME }}",
+          "CS2PB_STEAM_PASSWORD": "${{ vars.CS2PB_STEAM_PASSWORD }}"
         }
     secrets:
       gist-auth: ${{ secrets.GIST_SECRET }}
