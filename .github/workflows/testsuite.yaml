@@ -1,0 +1,32 @@
+name: Test suite
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches: ['master']
+
+jobs:
+  run_testsuite:
+    name: Tests
+    uses: BMCV/github-workflows/.github/workflows/coverage-run.yml@main
+    with:
+      main_branch: master
+      python_versions: '["3.10"]'
+      main_python_version: "3.10"
+      pip_install: -r requirements.txt
+      working-directory: django
+      gist-id: 48d2e30f4e914519ccb60090cf2ee742
+      gist-filename: cs2pb.json
+      run: |
+        overage run --source='.' manage.py test --failfast
+          python -m coverage json --omit "tests/*.py,*/tests.py,*/migrations/*.py,manage.py"
+      env: |
+        {
+          "CS2PB_ADMIN_MAIL_ADDRESS": ${{ vars.CS2PB_ADMIN_MAIL_ADDRESS }},
+          "CS2PB_STEAM_API_KEY": ${{ vars.CS2PB_STEAM_API_KEY }},
+          "CS2PB_STEAM_USERNAME": ${{ vars.CS2PB_STEAM_USERNAME }},
+          "CS2PB_STEAM_PASSWORD": ${{ vars.CS2PB_STEAM_PASSWORD }}
+        }
+    secrets:
+      gist-auth: ${{ secrets.GIST_SECRET }}
