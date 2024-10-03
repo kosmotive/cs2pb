@@ -19,8 +19,8 @@ jobs:
       gist-id: 48d2e30f4e914519ccb60090cf2ee742
       gist-filename: cs2pb.json
       run: |
-        overage run --source='.' manage.py test --failfast
-          python -m coverage json --omit "tests/*.py,*/tests.py,*/migrations/*.py,manage.py"
+        coverage run --source='.' manage.py test --failfast
+        python -m coverage json --omit "tests/*.py,*/tests.py,*/migrations/*.py,manage.py"
       env: |
         {
           "CS2PB_ADMIN_MAIL_ADDRESS": "${{ vars.CS2PB_ADMIN_MAIL_ADDRESS }}",
