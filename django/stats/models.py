@@ -1142,6 +1142,15 @@ class MatchBadge(models.Model):
             and self.badge_type.pk == other.badge_type.pk
         )
 
+    def __hash__(self):
+        return hash(
+            (
+                self.participation.pk,
+                self.badge_type.pk,
+                self.frequency,
+            )
+        )
+
 
 class UpdateTask(models.Model):
     """

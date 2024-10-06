@@ -24,6 +24,17 @@ def award_missing_badges(modeladmin, request, queryset):
         pmatch.award_badges()
 
 
+@admin.action(description='Re-award badges')
+def reaward_badges(modeladmin, request, queryset):
+    for pmatch in queryset.all():
+        MatchBadge.objects.filter(
+            participation__pmatch = pmatch,
+        ).exclude(
+            badge_type__slug = 'surpass-yourself',
+        ).delete()
+        pmatch.award_badges()
+
+
 @admin.register(Match)
 class MatchAdmin(admin.ModelAdmin):
 
@@ -42,7 +53,10 @@ class MatchAdmin(admin.ModelAdmin):
         MatchParticipationInline,
     ]
 
-    actions = [award_missing_badges]
+    actions = [
+        award_missing_badges,
+        reaward_badges,
+    ]
 
     @admin.display(description='Session')
     def session_list(self, pmatch):
