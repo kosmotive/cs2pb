@@ -550,7 +550,17 @@ class Match(models.Model):
                 squad = Squad.objects.get(uuid = squad_id)
                 squad.handle_new_match(m)
 
+            m.award_badges()
             return m
+
+    def award_badges(self):
+        """
+        Award the badges for all who participated in this match.
+
+        This does not include badges which require the previous match history.
+        """
+        for mp in self.matchparticipation_set.all():
+            MatchBadge.award(mp)
 
     def __str__(self):
         return f'{self.map_name} ({self.date_and_time})'
@@ -1033,13 +1043,16 @@ class MatchBadge(models.Model):
     frequency     = models.PositiveSmallIntegerField(null = False, default = 1)
 
     @staticmethod
-    def award(participation, old_participations):
-        if len(old_participations) >= 10:
-            MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:])
+    def award(participation):
         MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace')
         MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill')
         MatchBadge.award_margin_badge(participation, 'carrier', order = '-adr', margin = 1.8, emoji = '🍆')
         MatchBadge.award_margin_badge(participation, 'peach', order = 'adr', margin = 0.75, emoji = '🍑')
+
+    @staticmethod
+    def award_with_history(participation, old_participations):
+        if len(old_participations) >= 10:
+            MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:])
 
     @staticmethod
     def award_surpass_yourself_badge(participation, old_participations):
@@ -1246,7 +1259,7 @@ class UpdateTask(models.Model):
                         continue
 
                     participation = pmatch.get_participation(self.account.steam_profile)
-                    MatchBadge.award(participation, old_participations)
+                    MatchBadge.award_with_history(participation, old_participations)
 
                     old_participations.append(participation)
 
