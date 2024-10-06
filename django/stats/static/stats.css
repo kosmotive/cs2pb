@@ -665,12 +665,20 @@ div.session .match-scoreboard table tr td .player-name {
     margin-left: 1mm;
 }
 
-div.session .match-scoreboard table tr td .badge-list {
+div.session .match-scoreboard table tr.is-not-squad-member td {
+    opacity: 0.5;
+}
+
+div.session .match-scoreboard table tr.is-squad-member td .badge-list {
     display: inline-block;
     height: 0;
     overflow: visible;
     transform: translate(0px, -1.05em);
     filter: drop-shadow(0 0 1mm #ccc);
+}
+
+div.session .match-scoreboard table tr.is-not-squad-member td .badge-list {
+    display: none;
 }
 
 div.session .match-scoreboard table tr td .badge {
