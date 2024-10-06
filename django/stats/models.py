@@ -1047,7 +1047,9 @@ class MatchBadge(models.Model):
         MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace', **kwargs)
         MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill', **kwargs)
         MatchBadge.award_margin_badge(participation, 'carrier', order = '-adr', margin = 1.8, emoji = '🍆', **kwargs)
-        MatchBadge.award_margin_badge(participation, 'peach', order = 'adr', margin = 0.667, emoji = '🍑', **kwargs)
+        MatchBadge.award_margin_badge(
+            participation, 'peach', order = 'adr', margin = 0.67, emoji = '🍑', max_adr = 50, max_kd = 0.5, **kwargs,
+        )
 
     @staticmethod
     def award_with_history(participation, old_participations):
@@ -1095,21 +1097,41 @@ class MatchBadge(models.Model):
                     m.squad.notify_on_discord(text)
 
     @staticmethod
-    def award_margin_badge(participation, badge_type_slug, order, margin, emoji, mute_discord = False):
+    def award_margin_badge(participation, badge_type_slug, order, margin, emoji, mute_discord = False, **bounds):
         kpi = order[1:] if order[0] in '+-' else order
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
         if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
             return
         teammates = participation.pmatch.matchparticipation_set.filter(team = participation.team).order_by(order)
 
-        awarded = teammates[0].pk == participation.pk and any(
-            (
-                order[0] == '-' and getattr(teammates[0], kpi) > margin * getattr(teammates[1], kpi),
-                order[0] != '-' and getattr(teammates[0], kpi) < margin * getattr(teammates[1], kpi),
-            )
-        )
+        # Define the requirements for the badge
+        requirements = [
+            teammates[0].pk == participation.pk,
+            any(
+                (
+                    order[0] == '-' and getattr(teammates[0], kpi) > margin * getattr(teammates[1], kpi),
+                    order[0] != '-' and getattr(teammates[0], kpi) < margin * getattr(teammates[1], kpi),
+                )
+            ),
+        ]
 
-        if awarded:
+        # Add the bound checks to the requirements
+        req_bounds = list()
+        for bound_key, bound_val in bounds.items():
+            func_name, attr_name = bound_key.split('_')
+            attr = getattr(participation, attr_name)
+            match func_name:
+                case 'min':
+                    req_bounds.append(attr >= bound_val)
+                case 'max':
+                    req_bounds.append(attr <= bound_val)
+                case _:
+                    raise ValueError(f'Invalid function name: "{func_name}"')
+        if req_bounds:
+            requirements.append(any(req_bounds))
+
+        # Check the requirements and award the badge
+        if all(requirements):
             log.info(f'{participation.player.name} received the {badge_type.name}')
             MatchBadge.objects.create(badge_type = badge_type, participation = participation)
             text = (
