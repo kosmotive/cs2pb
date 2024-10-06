@@ -729,10 +729,6 @@ def get_or_none(qs, **kwargs):
     except ObjectDoesNotExist:
         return None
     except MultipleObjectsReturned:
-        print('-' * 10)
-        for obj in qs.filter(**kwargs).all():
-            print(obj)
-        print('-' * 10)
         raise
 
 
