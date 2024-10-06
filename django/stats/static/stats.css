@@ -301,8 +301,8 @@ div.squad-members-appendix .legend-item {
     vertical-align: middle;
     margin-left: 5mm;
     position: relative;
-    width: 70mm;
-    height: 3.5em;
+    width: 85mm;
+    height: 3.1em;
     margin-top: 2mm;
     margin-bottom: 2mm;
 }
@@ -314,7 +314,7 @@ div.squad-members-appendix .legend-item .badge {
     left: 0;
     top: 0;
     border-right: 1px solid #ccc;
-    padding-right: 2mm;
+    padding-right: 3mm;
     height: 100%;
     background-size: 85%;
     background-repeat: no-repeat;
@@ -326,7 +326,7 @@ div.squad-members-appendix .legend-item .legend-item-label {
     vertical-align: middle;
     font-size: 100%;
     position: absolute;
-    left: 10mm;
+    left: 12mm;
     white-space: nowrap;
 }
 
@@ -334,7 +334,7 @@ div.squad-members-appendix .legend-item .legend-item-description {
     display: block;
     font-size: 77%;
     position: absolute;
-    left: 10mm;
+    left: 12mm;
     top: 1.8em;
 }
 
@@ -665,12 +665,20 @@ div.session .match-scoreboard table tr td .player-name {
     margin-left: 1mm;
 }
 
-div.session .match-scoreboard table tr td .badge-list {
+div.session .match-scoreboard table tr.is-not-squad-member td {
+    opacity: 0.5;
+}
+
+div.session .match-scoreboard table tr.is-squad-member td .badge-list {
     display: inline-block;
     height: 0;
     overflow: visible;
     transform: translate(0px, -1.05em);
     filter: drop-shadow(0 0 1mm #ccc);
+}
+
+div.session .match-scoreboard table tr.is-not-squad-member td .badge-list {
+    display: none;
 }
 
 div.session .match-scoreboard table tr td .badge {

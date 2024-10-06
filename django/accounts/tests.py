@@ -215,9 +215,6 @@ class Squad__update_stats(TestCase):
 
         self.assertEqual(len(ScheduledNotification.objects.all()), 1)
         notification_text = ScheduledNotification.objects.get().text
-        print('-' * 80)
-        print(notification_text)
-        print('-' * 80)
         self.assertEqual(
             notification_text,
             'We have changes in the 30-days leaderboard! 🎆' '\n'

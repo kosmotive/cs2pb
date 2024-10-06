@@ -58,7 +58,7 @@
 
                     {% for mp in m.matchparticipation_set.all %}{% if mp.team == team_idx|add:"0" %}
 
-                    <tr>
+                    <tr class="{% if mp.player.steamid in session.participated_squad_members_steamids %}is-squad-member{% else %}is-not-squad-member{% endif %}">
                         <td>
                             <div class="first-item">
                                 <img src="{{ mp.player.avatar_s }}" class="avatar">

@@ -1,3 +1,7 @@
+.nowrap {
+    white-space: nowrap;
+}
+
 a:link, a:visited, a:active, a:hover {
     color: #3633fb;
     text-decoration: underline;

@@ -550,7 +550,17 @@ class Match(models.Model):
                 squad = Squad.objects.get(uuid = squad_id)
                 squad.handle_new_match(m)
 
+            m.award_badges()
             return m
+
+    def award_badges(self, mute_discord = False):
+        """
+        Award the badges for all who participated in this match.
+
+        This does not include badges which require the previous match history.
+        """
+        for mp in self.matchparticipation_set.all():
+            MatchBadge.award(mp, mute_discord = mute_discord)
 
     def __str__(self):
         return f'{self.map_name} ({self.date_and_time})'
@@ -729,10 +739,6 @@ def get_or_none(qs, **kwargs):
     except ObjectDoesNotExist:
         return None
     except MultipleObjectsReturned:
-        print('-' * 10)
-        for obj in qs.filter(**kwargs).all():
-            print(obj)
-        print('-' * 10)
         raise
 
 
@@ -1037,13 +1043,18 @@ class MatchBadge(models.Model):
     frequency     = models.PositiveSmallIntegerField(null = False, default = 1)
 
     @staticmethod
-    def award(participation, old_participations):
+    def award(participation, **kwargs):
+        MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace', **kwargs)
+        MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill', **kwargs)
+        MatchBadge.award_margin_badge(participation, 'carrier', order = '-adr', margin = 1.8, emoji = '🍆', **kwargs)
+        MatchBadge.award_margin_badge(
+            participation, 'peach', order = 'adr', margin = 0.67, emoji = '🍑', max_adr = 50, max_kd = 0.5, **kwargs,
+        )
+
+    @staticmethod
+    def award_with_history(participation, old_participations):
         if len(old_participations) >= 10:
             MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:])
-        MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace')
-        MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill')
-        MatchBadge.award_margin_badge(participation, 'carrier', order = '-adr', margin = 1.8, emoji = '🍆')
-        MatchBadge.award_margin_badge(participation, 'peach', order = 'adr', margin = 0.75, emoji = '🍑')
 
     @staticmethod
     def award_surpass_yourself_badge(participation, old_participations):
@@ -1068,7 +1079,7 @@ class MatchBadge(models.Model):
                 m.squad.notify_on_discord(text)
 
     @staticmethod
-    def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug):
+    def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug, mute_discord = False):
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
         if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
             return
@@ -1081,33 +1092,55 @@ class MatchBadge(models.Model):
                 f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on '
                 f'*{participation.pmatch.map_name}* recently!'
             )
-            for m in participation.player.squad_memberships.all():
-                m.squad.notify_on_discord(text)
+            if not mute_discord:
+                for m in participation.player.squad_memberships.all():
+                    m.squad.notify_on_discord(text)
 
     @staticmethod
-    def award_margin_badge(participation, badge_type_slug, order, margin, emoji):
+    def award_margin_badge(participation, badge_type_slug, order, margin, emoji, mute_discord = False, **bounds):
         kpi = order[1:] if order[0] in '+-' else order
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
         if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
             return
         teammates = participation.pmatch.matchparticipation_set.filter(team = participation.team).order_by(order)
 
-        awarded = teammates[0].pk == participation.pk and any(
-            (
-                order[0] == '-' and getattr(teammates[0], kpi) > margin * getattr(teammates[1], kpi),
-                order[0] != '-' and getattr(teammates[0], kpi) < margin * getattr(teammates[1], kpi),
-            )
-        )
+        # Define the requirements for the badge
+        requirements = [
+            teammates[0].pk == participation.pk,
+            any(
+                (
+                    order[0] == '-' and getattr(teammates[0], kpi) > margin * getattr(teammates[1], kpi),
+                    order[0] != '-' and getattr(teammates[0], kpi) < margin * getattr(teammates[1], kpi),
+                )
+            ),
+        ]
 
-        if awarded:
+        # Add the bound checks to the requirements
+        req_bounds = list()
+        for bound_key, bound_val in bounds.items():
+            func_name, attr_name = bound_key.split('_')
+            attr = getattr(participation, attr_name)
+            match func_name:
+                case 'min':
+                    req_bounds.append(attr >= bound_val)
+                case 'max':
+                    req_bounds.append(attr <= bound_val)
+                case _:
+                    raise ValueError(f'Invalid function name: "{func_name}"')
+        if req_bounds:
+            requirements.append(any(req_bounds))
+
+        # Check the requirements and award the badge
+        if all(requirements):
             log.info(f'{participation.player.name} received the {badge_type.name}')
             MatchBadge.objects.create(badge_type = badge_type, participation = participation)
             text = (
                 f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** '
                 f'on *{participation.pmatch.map_name}*!'
             )
-            for m in participation.player.squad_memberships.all():
-                m.squad.notify_on_discord(text)
+            if not mute_discord:
+                for m in participation.player.squad_memberships.all():
+                    m.squad.notify_on_discord(text)
 
     class Meta:
         verbose_name        = 'Match-based badge'
@@ -1118,6 +1151,29 @@ class MatchBadge(models.Model):
                 fields = ['participation', 'badge_type'], name = 'unique_participation_badge_type',
             )
         ]
+
+    def __str__(self):
+        return (
+            f'{self.frequency}x '
+            f'{self.badge_type.name} for {self.participation.player.name} '
+            f'({self.participation.player.steamid})'
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, MatchBadge)
+            and self.participation.pk == other.participation.pk
+            and self.badge_type.pk == other.badge_type.pk
+        )
+
+    def __hash__(self):
+        return hash(
+            (
+                self.participation.pk,
+                self.badge_type.pk,
+                self.frequency,
+            )
+        )
 
 
 class UpdateTask(models.Model):
@@ -1250,7 +1306,7 @@ class UpdateTask(models.Model):
                         continue
 
                     participation = pmatch.get_participation(self.account.steam_profile)
-                    MatchBadge.award(participation, old_participations)
+                    MatchBadge.award_with_history(participation, old_participations)
 
                     old_participations.append(participation)
 

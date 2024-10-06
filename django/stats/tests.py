@@ -181,18 +181,76 @@ class Match__create_from_data(TestCase):
         return pmatch
 
 
+class Match__award_badges(TestCase):
+
+    def test(self):
+        pmatch = Match__create_from_data().test()
+        self.assertEqual(
+            list(
+                models.MatchBadge.objects.filter(
+                    participation = pmatch.get_participation('76561199034015511'),
+                )
+            ),
+            [
+                models.MatchBadge(
+                    badge_type = models.MatchBadgeType.objects.get(pk = 'quad-kill'),
+                    participation = pmatch.get_participation('76561199034015511'),
+                    frequency = 1,
+                )
+            ]
+        )
+        self.assertEqual(
+            list(
+                models.MatchBadge.objects.filter(
+                    participation = pmatch.get_participation('76561198298259382'),
+                )
+            ),
+            [
+                models.MatchBadge(
+                    badge_type = models.MatchBadgeType.objects.get(pk = 'quad-kill'),
+                    participation = pmatch.get_participation('76561198298259382'),
+                    frequency = 1,
+                )
+            ]
+        )
+        self.assertEqual(
+            list(
+                models.MatchBadge.objects.filter(
+                    participation = pmatch.get_participation('76561197962477966'),
+                )
+            ),
+            [
+                models.MatchBadge(
+                    badge_type = models.MatchBadgeType.objects.get(pk = 'peach'),
+                    participation = pmatch.get_participation('76561197962477966'),
+                    frequency = 1,
+                )
+            ]
+        )
+
+
 class MatchBadge__award(TestCase):
 
+    def setUp(self):
+        with patch('stats.models.Match.award_badges'):
+            self.pmatch = Match__create_from_data().test()
+        self.mp5 = self.pmatch.get_participation('76561197962477966')
+        self.teammates = list(
+            self.mp5.pmatch.matchparticipation_set.filter(
+                team = self.mp5.team,
+            ).exclude(
+                pk = self.mp5.pk,
+            ).order_by('-adr')
+        )
+
     def test_no_awards(self):
-        pmatch = Match__create_from_data().test()
-        participation = pmatch.get_participation('76561197967680028')
-        models.MatchBadge.award(participation, list())
+        participation = self.pmatch.get_participation('76561197967680028')
+        models.MatchBadge.award(participation)
         self.assertEqual(len(models.MatchBadge.objects.filter(participation = participation)), 0)
 
     def test_quad_kill(self):
-        pmatch = Match__create_from_data().test()
-        mp1 = pmatch.get_participation('76561197967680028')
-        mp2 = pmatch.get_participation('76561197961345487')
+        mp1 = self.pmatch.get_participation('76561197967680028')
+        mp2 = self.pmatch.get_participation('76561197961345487')
         models.KillEvent.objects.all().delete()
         models.KillEvent.objects.bulk_create(
             [
@@ -202,16 +260,18 @@ class MatchBadge__award(TestCase):
                 create_kill_event(mp1, mp2, round = 1),
             ]
         )
-        models.MatchBadge.award(mp1, list())
-        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'quad-kill')), 1)
-        badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
-        self.assertEqual(badge.participation.pk, mp1.pk)
-        self.assertEqual(badge.frequency, 1)
+        # Test twice. The badge should be awarded only once.
+        for itr in range(2):
+            with self.subTest(itr = itr):
+                models.MatchBadge.award(mp1)
+                self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'quad-kill')), 1)
+                badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
+                self.assertEqual(badge.participation.pk, mp1.pk)
+                self.assertEqual(badge.frequency, 1)
 
     def test_quad_kill_twice(self):
-        pmatch = Match__create_from_data().test()
-        mp1 = pmatch.get_participation('76561197967680028')
-        mp2 = pmatch.get_participation('76561197961345487')
+        mp1 = self.pmatch.get_participation('76561197967680028')
+        mp2 = self.pmatch.get_participation('76561197961345487')
         models.KillEvent.objects.all().delete()
         models.KillEvent.objects.bulk_create(
             [
@@ -225,16 +285,15 @@ class MatchBadge__award(TestCase):
                 create_kill_event(mp1, mp2, round = 2),
             ]
         )
-        models.MatchBadge.award(mp1, list())
+        models.MatchBadge.award(mp1)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'quad-kill')), 1)
         badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
 
     def test_ace(self):
-        pmatch = Match__create_from_data().test()
-        mp1 = pmatch.get_participation('76561197967680028')
-        mp2 = pmatch.get_participation('76561197961345487')
+        mp1 = self.pmatch.get_participation('76561197967680028')
+        mp2 = self.pmatch.get_participation('76561197961345487')
         models.KillEvent.objects.all().delete()
         models.KillEvent.objects.bulk_create(
             [
@@ -245,16 +304,15 @@ class MatchBadge__award(TestCase):
                 create_kill_event(mp1, mp2, round = 1),
             ]
         )
-        models.MatchBadge.award(mp1, list())
+        models.MatchBadge.award(mp1)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'ace')), 1)
         badge = models.MatchBadge.objects.filter(badge_type = 'ace').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 1)
 
     def test_ace_twice(self):
-        pmatch = Match__create_from_data().test()
-        mp1 = pmatch.get_participation('76561197967680028')
-        mp2 = pmatch.get_participation('76561197961345487')
+        mp1 = self.pmatch.get_participation('76561197967680028')
+        mp2 = self.pmatch.get_participation('76561197961345487')
         models.KillEvent.objects.all().delete()
         models.KillEvent.objects.bulk_create(
             [
@@ -270,45 +328,112 @@ class MatchBadge__award(TestCase):
                 create_kill_event(mp1, mp2, round = 2),
             ]
         )
-        models.MatchBadge.award(mp1, list())
+        models.MatchBadge.award(mp1)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'ace')), 1)
         badge = models.MatchBadge.objects.filter(badge_type = 'ace').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
 
     def test_carrier_badge(self):
-        pmatch = Match__create_from_data().test()
-        mp1 = pmatch.get_participation('76561197967680028')
-        mp2 = pmatch.get_participation('76561197961345487')
+        mp1 = self.pmatch.get_participation('76561197967680028')
+        mp2 = self.pmatch.get_participation('76561197961345487')
 
         # Test with ADR right below the threshold
         mp1.adr = 1.79 * mp2.adr
         mp1.save()
-        models.MatchBadge.award(mp1, list())
+        models.MatchBadge.award(mp1)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'carrier', participation = mp1)), 0)
 
         # Test with ADR right above the threshold
         mp1.adr = 1.81 * mp2.adr
         mp1.save()
-        models.MatchBadge.award(mp1, list())
-        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'carrier', participation = mp1)), 1)
+        for itr in range(2):  # Test twice, the badge should be awarded only once
+            with self.subTest(itr = itr):
+                models.MatchBadge.award(mp1)
+                self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'carrier', participation = mp1)), 1)
 
-    def test_peach_price(self):
-        pmatch = Match__create_from_data().test()
-        mp4 = pmatch.get_participation('76561198067716219')
-        mp5 = pmatch.get_participation('76561197962477966')
-
-        # Test with ADR right below the threshold
-        mp5.adr = 0.76 * mp4.adr
-        mp5.save()
-        models.MatchBadge.award(mp5, list())
-        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = mp5)), 0)
+    def test_peach_price__within_bounds(self):
+        """
+        Test the 🍑 Peach Price when the constraints ✅ "ADR <50" and ✅ "K/D <0.5" are met.
+        """
+        for mp in self.teammates:
+            mp.adr = 50
+            mp.save()
+        self.mp5.kills = 1
+        self.mp5.deaths = 3
 
         # Test with ADR right above the threshold
-        mp5.adr = 0.74 * mp4.adr
-        mp5.save()
-        models.MatchBadge.award(mp5, list())
-        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = mp5)), 1)
+        self.mp5.adr = 0.68 * self.teammates[-1].adr
+        self.mp5.save()
+        models.MatchBadge.award(self.mp5)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 0)
+
+        # Test with ADR right below the threshold
+        self.mp5.adr = 0.66 * self.teammates[-1].adr
+        self.mp5.save()
+        for itr in range(2):  # Test twice, the badge should be awarded only once
+            with self.subTest(itr = itr):
+                models.MatchBadge.award(self.mp5)
+                self.assertEqual(
+                    len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 1,
+                )
+
+    def test_peach_price__kd_too_high(self):
+        """
+        Test the 🍑 Peach Price when the constraint ✅ "ADR <50" is met but ❌ "K/D <0.5" is not.
+        """
+        for mp in self.teammates:
+            mp.adr = 50
+            mp.save()
+        self.mp5.kills = 2
+        self.mp5.deaths = 3
+
+        # Test with ADR right below the threshold
+        self.mp5.adr = 0.66 * self.teammates[-1].adr
+        self.mp5.save()
+        models.MatchBadge.award(self.mp5)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 1)
+
+    def test_peach_price__adr_too_high(self):
+        """
+        Test the 🍑 Peach Price when the constraint ✅ "K/D <0.5" is met but ❌ "ADR <50" is not.
+        """
+        for mp in self.teammates:
+            mp.adr = 100
+            mp.save()
+        self.mp5.kills = 1
+        self.mp5.deaths = 3
+
+        # Test with ADR right below the threshold
+        self.mp5.adr = 0.66 * self.teammates[-1].adr
+        self.mp5.save()
+        models.MatchBadge.award(self.mp5)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 1)
+
+    def test_peach_price__kd_and_adr_too_high(self):
+        """
+        Test the 🍑 Peach Price when the constraint ❌ "ADR <50" and ❌ "K/D <0.5" both are not met.
+        """
+        for mp in self.teammates:
+            mp.adr = 100
+            mp.save()
+        self.mp5.kills = 2
+        self.mp5.deaths = 3
+
+        # Test with ADR right below the threshold
+        self.mp5.adr = 0.66 * self.teammates[-1].adr
+        self.mp5.save()
+        models.MatchBadge.award(self.mp5)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 0)
+
+
+class MatchBadge__award_with_history(TestCase):
+
+    def test_no_awards(self):
+        pmatch = Match__create_from_data().test()
+        participation = pmatch.get_participation('76561197967680028')
+        models.MatchBadge.award_with_history(participation, list())
+        self.assertEqual(len(models.MatchBadge.objects.filter(participation = participation)), 0)
 
 
 class Squad__do_changelog_announcements(TestCase):
