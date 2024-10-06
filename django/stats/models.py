@@ -1128,6 +1128,20 @@ class MatchBadge(models.Model):
             )
         ]
 
+    def __str__(self):
+        return (
+            f'{self.frequency}x '
+            f'{self.badge_type.name} for {self.participation.player.name} '
+            f'({self.participation.player.steamid})'
+        )
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, MatchBadge)
+            and self.participation.pk == other.participation.pk
+            and self.badge_type.pk == other.badge_type.pk
+        )
+
 
 class UpdateTask(models.Model):
     """

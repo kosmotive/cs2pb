@@ -181,15 +181,64 @@ class Match__create_from_data(TestCase):
         return pmatch
 
 
+class Match__award_badges(TestCase):
+
+    def test(self):
+        pmatch = Match__create_from_data().test()
+        self.assertEqual(
+            list(
+                models.MatchBadge.objects.filter(
+                    participation = pmatch.get_participation('76561199034015511'),
+                )
+            ),
+            [
+                models.MatchBadge(
+                    badge_type = models.MatchBadgeType.objects.get(pk = 'quad-kill'),
+                    participation = pmatch.get_participation('76561199034015511'),
+                    frequency = 1,
+                )
+            ]
+        )
+        self.assertEqual(
+            list(
+                models.MatchBadge.objects.filter(
+                    participation = pmatch.get_participation('76561198298259382'),
+                )
+            ),
+            [
+                models.MatchBadge(
+                    badge_type = models.MatchBadgeType.objects.get(pk = 'quad-kill'),
+                    participation = pmatch.get_participation('76561198298259382'),
+                    frequency = 1,
+                )
+            ]
+        )
+        self.assertEqual(
+            list(
+                models.MatchBadge.objects.filter(
+                    participation = pmatch.get_participation('76561197962477966'),
+                )
+            ),
+            [
+                models.MatchBadge(
+                    badge_type = models.MatchBadgeType.objects.get(pk = 'peach'),
+                    participation = pmatch.get_participation('76561197962477966'),
+                    frequency = 1,
+                )
+            ]
+        )
+
+
+@patch('stats.models.Match.award_badges')
 class MatchBadge__award(TestCase):
 
-    def test_no_awards(self):
+    def test_no_awards(self, mock__Match__award_badges):
         pmatch = Match__create_from_data().test()
         participation = pmatch.get_participation('76561197967680028')
         models.MatchBadge.award(participation)
         self.assertEqual(len(models.MatchBadge.objects.filter(participation = participation)), 0)
 
-    def test_quad_kill(self):
+    def test_quad_kill(self, mock__Match__award_badges):
         pmatch = Match__create_from_data().test()
         mp1 = pmatch.get_participation('76561197967680028')
         mp2 = pmatch.get_participation('76561197961345487')
@@ -211,7 +260,7 @@ class MatchBadge__award(TestCase):
                 self.assertEqual(badge.participation.pk, mp1.pk)
                 self.assertEqual(badge.frequency, 1)
 
-    def test_quad_kill_twice(self):
+    def test_quad_kill_twice(self, mock__Match__award_badges):
         pmatch = Match__create_from_data().test()
         mp1 = pmatch.get_participation('76561197967680028')
         mp2 = pmatch.get_participation('76561197961345487')
@@ -234,7 +283,7 @@ class MatchBadge__award(TestCase):
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
 
-    def test_ace(self):
+    def test_ace(self, mock__Match__award_badges):
         pmatch = Match__create_from_data().test()
         mp1 = pmatch.get_participation('76561197967680028')
         mp2 = pmatch.get_participation('76561197961345487')
@@ -254,7 +303,7 @@ class MatchBadge__award(TestCase):
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 1)
 
-    def test_ace_twice(self):
+    def test_ace_twice(self, mock__Match__award_badges):
         pmatch = Match__create_from_data().test()
         mp1 = pmatch.get_participation('76561197967680028')
         mp2 = pmatch.get_participation('76561197961345487')
@@ -279,7 +328,7 @@ class MatchBadge__award(TestCase):
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
 
-    def test_carrier_badge(self):
+    def test_carrier_badge(self, mock__Match__award_badges):
         pmatch = Match__create_from_data().test()
         mp1 = pmatch.get_participation('76561197967680028')
         mp2 = pmatch.get_participation('76561197961345487')
@@ -298,7 +347,7 @@ class MatchBadge__award(TestCase):
                 models.MatchBadge.award(mp1)
                 self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'carrier', participation = mp1)), 1)
 
-    def test_peach_price(self):
+    def test_peach_price(self, mock__Match__award_badges):
         pmatch = Match__create_from_data().test()
         mp4 = pmatch.get_participation('76561198067716219')
         mp5 = pmatch.get_participation('76561197962477966')
