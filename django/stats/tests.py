@@ -202,11 +202,14 @@ class MatchBadge__award(TestCase):
                 create_kill_event(mp1, mp2, round = 1),
             ]
         )
-        models.MatchBadge.award(mp1, list())
-        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'quad-kill')), 1)
-        badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
-        self.assertEqual(badge.participation.pk, mp1.pk)
-        self.assertEqual(badge.frequency, 1)
+        # Test twice. The badge should be awarded only once.
+        for itr in range(2):
+            with self.subTest(itr = itr):
+                models.MatchBadge.award(mp1, list())
+                self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'quad-kill')), 1)
+                badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
+                self.assertEqual(badge.participation.pk, mp1.pk)
+                self.assertEqual(badge.frequency, 1)
 
     def test_quad_kill_twice(self):
         pmatch = Match__create_from_data().test()
@@ -290,8 +293,10 @@ class MatchBadge__award(TestCase):
         # Test with ADR right above the threshold
         mp1.adr = 1.81 * mp2.adr
         mp1.save()
-        models.MatchBadge.award(mp1, list())
-        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'carrier', participation = mp1)), 1)
+        for itr in range(2):  # Test twice, the badge should be awarded only once
+            with self.subTest(itr = itr):
+                models.MatchBadge.award(mp1, list())
+                self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'carrier', participation = mp1)), 1)
 
     def test_peach_price(self):
         pmatch = Match__create_from_data().test()
@@ -307,8 +312,10 @@ class MatchBadge__award(TestCase):
         # Test with ADR right above the threshold
         mp5.adr = 0.74 * mp4.adr
         mp5.save()
-        models.MatchBadge.award(mp5, list())
-        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = mp5)), 1)
+        for itr in range(2):  # Test twice, the badge should be awarded only once
+            with self.subTest(itr = itr):
+                models.MatchBadge.award(mp5, list())
+                self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = mp5)), 1)
 
 
 class Squad__do_changelog_announcements(TestCase):
