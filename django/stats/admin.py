@@ -32,7 +32,7 @@ def reaward_badges(modeladmin, request, queryset):
         ).exclude(
             badge_type__slug = 'surpass-yourself',
         ).delete()
-        pmatch.award_badges()
+        pmatch.award_badges(mute_discord = True)
 
 
 @admin.register(Match)
@@ -57,6 +57,8 @@ class MatchAdmin(admin.ModelAdmin):
         award_missing_badges,
         reaward_badges,
     ]
+
+    list_max_show_all = 1000
 
     @admin.display(description='Session')
     def session_list(self, pmatch):

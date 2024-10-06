@@ -553,14 +553,14 @@ class Match(models.Model):
             m.award_badges()
             return m
 
-    def award_badges(self):
+    def award_badges(self, mute_discord = False):
         """
         Award the badges for all who participated in this match.
 
         This does not include badges which require the previous match history.
         """
         for mp in self.matchparticipation_set.all():
-            MatchBadge.award(mp)
+            MatchBadge.award(mp, mute_discord = mute_discord)
 
     def __str__(self):
         return f'{self.map_name} ({self.date_and_time})'
@@ -1043,11 +1043,11 @@ class MatchBadge(models.Model):
     frequency     = models.PositiveSmallIntegerField(null = False, default = 1)
 
     @staticmethod
-    def award(participation):
-        MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace')
-        MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill')
-        MatchBadge.award_margin_badge(participation, 'carrier', order = '-adr', margin = 1.8, emoji = '🍆')
-        MatchBadge.award_margin_badge(participation, 'peach', order = 'adr', margin = 0.667, emoji = '🍑')
+    def award(participation, **kwargs):
+        MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace', **kwargs)
+        MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill', **kwargs)
+        MatchBadge.award_margin_badge(participation, 'carrier', order = '-adr', margin = 1.8, emoji = '🍆', **kwargs)
+        MatchBadge.award_margin_badge(participation, 'peach', order = 'adr', margin = 0.667, emoji = '🍑', **kwargs)
 
     @staticmethod
     def award_with_history(participation, old_participations):
@@ -1077,7 +1077,7 @@ class MatchBadge(models.Model):
                 m.squad.notify_on_discord(text)
 
     @staticmethod
-    def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug):
+    def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug, mute_discord = False):
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
         if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
             return
@@ -1090,11 +1090,12 @@ class MatchBadge(models.Model):
                 f'<{participation.player.steamid}> has achieved **{badge_type.name}**{frequency} on '
                 f'*{participation.pmatch.map_name}* recently!'
             )
-            for m in participation.player.squad_memberships.all():
-                m.squad.notify_on_discord(text)
+            if not mute_discord:
+                for m in participation.player.squad_memberships.all():
+                    m.squad.notify_on_discord(text)
 
     @staticmethod
-    def award_margin_badge(participation, badge_type_slug, order, margin, emoji):
+    def award_margin_badge(participation, badge_type_slug, order, margin, emoji, mute_discord = False):
         kpi = order[1:] if order[0] in '+-' else order
         badge_type = MatchBadgeType.objects.get(slug = badge_type_slug)
         if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
@@ -1115,8 +1116,9 @@ class MatchBadge(models.Model):
                 f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** '
                 f'on *{participation.pmatch.map_name}*!'
             )
-            for m in participation.player.squad_memberships.all():
-                m.squad.notify_on_discord(text)
+            if not mute_discord:
+                for m in participation.player.squad_memberships.all():
+                    m.squad.notify_on_discord(text)
 
     class Meta:
         verbose_name        = 'Match-based badge'
