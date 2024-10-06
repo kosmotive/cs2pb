@@ -18,6 +18,12 @@ class MatchParticipationInline(admin.TabularInline):
     ordering = ('team', '-adr')
 
 
+@admin.action(description='Award missing badges')
+def award_missing_badges(modeladmin, request, queryset):
+    for pmatch in queryset.all():
+        pmatch.award_badges()
+
+
 @admin.register(Match)
 class MatchAdmin(admin.ModelAdmin):
 
@@ -35,6 +41,8 @@ class MatchAdmin(admin.ModelAdmin):
     inlines = [
         MatchParticipationInline,
     ]
+
+    actions = [award_missing_badges]
 
     @admin.display(description='Session')
     def session_list(self, pmatch):
