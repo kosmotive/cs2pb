@@ -42,13 +42,14 @@ requests==2.28.1
 scipy==1.14.0
 six==1.16.0
 sqlparse==0.5.1
-steam==1.4.4
+steam @ git+https://github.com/njbooher/steam.git@e5b73f9
 tqdm==4.66.4
 typing_extensions==4.12.2
 tzdata==2024.1
 urllib3==1.26.12
 usd-core==24.8
 vdf==3.4
+wsproto==1.2.0
 yarl==1.9.4
 zipp==3.19.2
 zope.event==5.0

@@ -16,6 +16,7 @@ import requests
 from csgo.client import CSGOClient
 from csgo.sharecode import decode as decode_sharecode
 from steam.client import SteamClient
+from steam.core.connection import WebsocketConnection
 from steam.steamid import SteamID
 
 from django.conf import settings
@@ -247,6 +248,7 @@ class CSGO:
         self.steam_started = False
 
         self.steam = SteamClient()
+        self.steam.connection = WebsocketConnection()
         self.csgo  = CSGOClient(self.steam)
 
         self.steam.on('error', self._error)
