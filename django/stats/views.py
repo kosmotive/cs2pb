@@ -55,9 +55,9 @@ badge_order = [
     'potw-2',
     'potw-3',
     'carrier',
-    'rising-star',
     'surpass-yourself',
     'peach',
+    'rising-star',
     'ace',
     'quad-kill',
 ]
