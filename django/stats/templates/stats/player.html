@@ -95,6 +95,7 @@ const matchDateList = [ {% for mp in participations %}
 
             <div id="pv-plot" style="width:600px; height: 280px;"></div>
 
+            {% if squad_buddy_performances %}
             <h2>Performance with squad buddies</h2>
             
             <div id="squad-buddies-plot">
@@ -136,6 +137,7 @@ const matchDateList = [ {% for mp in participations %}
                 </div>
 
             </div>
+            {% endif %}
 
             {% if badges.potw %}
 
