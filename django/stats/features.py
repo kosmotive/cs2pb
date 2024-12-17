@@ -98,7 +98,7 @@ class PeachRate(Feature):
     def __init__(self):
         super().__init__(
             'Peach rate',
-            'The empircal probability of qualifying for the Peach Price.',
+            'The empirical probability of qualifying for the Peach Price.',
         )
 
     def __call__(self, ctx: FeatureContext) -> Optional[float]:
