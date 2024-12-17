@@ -71,7 +71,7 @@ class ParticipationEffect(Feature):
     def __init__(self, min_datapoints = 2):
         super().__init__(
             'Participation effect',
-            'The expected causal effect of particpating in a squad match towards winning that match (aka treatment '
+            'The expected causal effect of participating in a squad match towards winning that match (aka treatment '
             'effect) based on Judea Pearl\'s causality calculus, which he received the Turing award for in 2011.',
         )
         self.min_datapoints = min_datapoints
@@ -91,6 +91,26 @@ class ParticipationEffect(Feature):
             victory_chance_without_participation = victories_without_participation / matches_without_participation
             expected_causal_effect = victory_chance_with_participation - victory_chance_without_participation
             return (1 + expected_causal_effect) / 2
+
+
+class PeachRate(Feature):
+
+    def __init__(self):
+        super().__init__(
+            'Peach rate',
+            'The empirical probability of qualifying for the Peach Price.',
+        )
+
+    def __call__(self, ctx: FeatureContext) -> Optional[float]:
+        from .models import MatchBadge
+        if ctx.match_participations_of_player.count() > 0:
+            match_participations_with_peach = MatchBadge.objects.filter(
+                badge_type = 'peach',
+                participation__in = ctx.match_participations_of_player.values_list('pk', flat = True),
+            )
+            return match_participations_with_peach.count() / ctx.match_participations_of_player.count()
+        else:
+            return None
 
 
 class Features:
@@ -127,6 +147,8 @@ class Features:
         'Player value',
         'Geometric mean of kills per death ration and the average damage per round (divided by 100).',
     )
+
+    peach_rate = PeachRate()
 
     all: List[Feature] = []  # Filled automatically
 

@@ -67,6 +67,7 @@ all_features_collapsed = [
     Features.player_value,
     Features.participation_effect,
     Features.headshot_rate,
+    Features.peach_rate,
 ]
 
 
@@ -112,7 +113,7 @@ def get_badges(squad, player):
 def compute_card(
         squad_membership: SquadMembership,
         features: List[Feature],
-        orders: List[numbers.Real] = [2, 3, np.inf],
+        orders: List[numbers.Real] = [2, len(all_features_collapsed), np.inf],
     ):
 
     # Compute the best/worst squad buddy
