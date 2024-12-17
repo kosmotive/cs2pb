@@ -71,7 +71,7 @@ class ParticipationEffect(Feature):
     def __init__(self, min_datapoints = 2):
         super().__init__(
             'Participation effect',
-            'The expected causal effect of particpating in a squad match towards winning that match (aka treatment '
+            'The expected causal effect of participating in a squad match towards winning that match (aka treatment '
             'effect) based on Judea Pearl\'s causality calculus, which he received the Turing award for in 2011.',
         )
         self.min_datapoints = min_datapoints
