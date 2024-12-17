@@ -93,6 +93,26 @@ class ParticipationEffect(Feature):
             return (1 + expected_causal_effect) / 2
 
 
+class PeachRate(Feature):
+
+    def __init__(self):
+        super().__init__(
+            'Peach rate',
+            'The empircal probability of qualifying for the Peach Price.',
+        )
+
+    def __call__(self, ctx: FeatureContext) -> Optional[float]:
+        from .models import MatchBadge
+        if ctx.match_participations_of_player.count() > 0:
+            match_participations_with_peach = MatchBadge.objects.filter(
+                badge_type = 'peach',
+                participation__in = ctx.match_participations_of_player.values_list('pk', flat = True),
+            )
+            return match_participations_with_peach.count() / ctx.match_participations_of_player.count()
+        else:
+            return None
+
+
 class Features:
 
     damage_per_round = ExpressionFeature(
@@ -127,6 +147,8 @@ class Features:
         'Player value',
         'Geometric mean of kills per death ration and the average damage per round (divided by 100).',
     )
+
+    peach_rate = PeachRate()
 
     all: List[Feature] = []  # Filled automatically
 
