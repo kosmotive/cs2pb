@@ -31,16 +31,16 @@
 
         {% for m in session.matches_list %}
         <div class="match">
-    
-            <div style="background-image: url('{% static 'maps/'|add:m.map_name|add:'.jpg' %}')" class="match-map"></div>
-
-            <div class="match-map-name">{{ m.map_name|map_name }}</div>
+   
+            <a href="{{ m|replay_url }}">
+                <div style="background-image: url('{% static 'maps/'|add:m.map_name|add:'.jpg' %}')" class="match-map"></div>
+                <div class="match-map-name">{{ m.map_name|map_name }}</div>
+                <div class="match-result match-result-{{ m.result }}"><span>
+                    <b>{{ m.score_team1 }}</b>:<b>{{ m.score_team2 }}</b>
+                </span></div>
+            </a>
 
             <div class="match-date">{{ m.time }} &ndash; {{ m.ended_time }}</div>
-
-            <div class="match-result match-result-{{ m.result }}"><span>
-                <b>{{ m.score_team1 }}</b>:<b>{{ m.score_team2 }}</b>
-            </span></div>
 
             {% for team_idx in "12" %}
 

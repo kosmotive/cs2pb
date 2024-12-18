@@ -17,6 +17,12 @@ def map_name(slug):
 
 
 @register.filter
+def replay_url(pmatch):
+    steamid = pmatch.matchparticipation_set.first().player.steamid
+    return f'steam://rungame/730/{ steamid }/+csgo_download_match%20{ pmatch.sharecode }'
+
+
+@register.filter
 def divide(a, b):
     if a == 0 and b == 0:
         b = 1
