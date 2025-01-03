@@ -1050,6 +1050,7 @@ class MatchBadge(models.Model):
         MatchBadge.award_margin_badge(
             participation, 'peach', order = 'adr', margin = 0.67, emoji = '🍑', max_adr = 50, max_kd = 0.5, **kwargs,
         )
+        MatchBadge.award_john_wick_award(participation, **kwargs)
 
     @staticmethod
     def award_with_history(participation, old_participations):
@@ -1136,6 +1137,22 @@ class MatchBadge(models.Model):
             MatchBadge.objects.create(badge_type = badge_type, participation = participation)
             text = (
                 f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** '
+                f'on *{participation.pmatch.map_name}*!'
+            )
+            if not mute_discord:
+                for m in participation.player.squad_memberships.all():
+                    m.squad.notify_on_discord(text)
+
+    @staticmethod
+    def award_john_wick_award(participation, mute_discord = False):
+        badge_type = MatchBadgeType.objects.get(slug = 'john-wick-award')
+        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
+            return
+        if participation.kd > 2 * participation.adr / 100:
+            log.info(f'{participation.player.name} received the {badge_type.name}')
+            MatchBadge.objects.create(badge_type = badge_type, participation = participation)
+            text = (
+                f'🏅 <{participation.player.steamid}> has qualified for the **{badge_type.name}** '
                 f'on *{participation.pmatch.map_name}*!'
             )
             if not mute_discord:
