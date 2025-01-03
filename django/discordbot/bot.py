@@ -63,6 +63,14 @@ def create_invitation(squad, discord_name):
         return None
 
 
+@sync_to_async
+def calculate_preview_player_value(squad):
+    current_session = squad.sessions.filter(is_closed = False).order_by('-id').first()
+    if current_session:
+        return current_session.calculate_preview_player_value()
+    return None
+
+
 class BotError(Exception):
 
     def __init__(self, msg):
@@ -132,6 +140,19 @@ async def join(ctx):
 @bot.tree.command(description='Credits')
 async def who_is_your_creator(ctx):
     await ctx.response.send_message('The only and almighty, *TEH VOID OF THE AETHER!!1*'.upper())
+
+
+@bot.tree.command(description='Preview your updated 30-days average player value based on current session.')
+async def preview(ctx):
+    squad = await get_squad(channel_id = ctx.channel_id)
+    if squad is None:
+        await ctx.response.send_message(f'No squad registered for this Discord channel')
+    else:
+        preview_value = await calculate_preview_player_value(squad)
+        if preview_value is None:
+            await ctx.response.send_message(f'No active session found or unable to calculate preview value.')
+        else:
+            await ctx.response.send_message(f'The preview of the updated 30-days average player value is: {preview_value:.2f}')
 
 
 if os.environ.get('CS2PB_DISCORD_ENABLED', False):
