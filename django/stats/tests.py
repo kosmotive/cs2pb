@@ -426,6 +426,30 @@ class MatchBadge__award(TestCase):
         models.MatchBadge.award(self.mp5)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 0)
 
+    def test_john_wick_award(self):
+        """
+        Test the 🏅 John Wick Award when the constraint ✅ "K/D > 2 * ADR / 100" is met.
+        """
+        mp1 = self.pmatch.get_participation('76561197967680028')
+        mp1.kills = 10
+        mp1.deaths = 1
+        mp1.adr = 400
+        mp1.save()
+        models.MatchBadge.award(mp1)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'john-wick-award', participation = mp1)), 1)
+
+    def test_john_wick_award_not_met(self):
+        """
+        Test the 🏅 John Wick Award when the constraint ❌ "K/D > 2 * ADR / 100" is not met.
+        """
+        mp1 = self.pmatch.get_participation('76561197967680028')
+        mp1.kills = 10
+        mp1.deaths = 1
+        mp1.adr = 600
+        mp1.save()
+        models.MatchBadge.award(mp1)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'john-wick-award', participation = mp1)), 0)
+
 
 class MatchBadge__award_with_history(TestCase):
 
