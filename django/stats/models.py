@@ -1152,7 +1152,7 @@ class MatchBadge(models.Model):
             log.info(f'{participation.player.name} received the {badge_type.name}')
             MatchBadge.objects.create(badge_type = badge_type, participation = participation)
             text = (
-                f'🏅 <{participation.player.steamid}> has qualified for the **{badge_type.name}** '
+                f'☠️ <{participation.player.steamid}> bagged the **{badge_type.name}** '
                 f'on *{participation.pmatch.map_name}*!'
             )
             if not mute_discord:
