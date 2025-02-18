@@ -9,7 +9,7 @@ certifi==2024.7.4
 charset-normalizer==2.1.1
 click==8.1.7
 contourpy==1.2.1
-csgo @ git+https://github.com/SyberiaK/csgo@4a60581
+csgo @ git+https://github.com/kosmotive/csgo@4a60581
 cycler==0.12.1
 demoparser2==0.31.0
 discord.py==2.0.1
