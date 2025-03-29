@@ -13,8 +13,6 @@ from discordbot.models import (
     ScheduledNotification,
 )
 
-from django.core.exceptions import ObjectDoesNotExist
-
 log = logging.getLogger(__name__)
 
 intents = discord.Intents.default()
