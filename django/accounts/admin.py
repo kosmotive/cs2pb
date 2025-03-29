@@ -80,6 +80,7 @@ class AccountAdmin(UserAdmin):
                     'email_address',
                     'discord_name',
                     'last_sharecode',
+                    'sharecode',
                     'enabled',
                 )
             },
@@ -90,6 +91,10 @@ class AccountAdmin(UserAdmin):
                 'fields': ('is_staff', 'is_active')
             },
         ),
+    )
+
+    readonly_fields = (
+        'sharecode',
     )
 
     add_fieldsets = (
@@ -127,6 +132,9 @@ class AccountAdmin(UserAdmin):
         else:
             url = reverse('admin:stats_updatetask_change', args=(account.last_completed_update.pk,))
             return mark_safe(f'<a href="{url}">{account.last_completed_update.completion_date_and_time}</a>')
+
+    def _sharecode(self, account):
+        return 'asdf'
 
 
 @admin.register(SteamProfile)
