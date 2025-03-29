@@ -58,7 +58,7 @@ def create_invitation(squad, discord_name):
     try:
         draft = InvitationDraft.objects.get(discord_name = discord_name)
         return draft.steam_profile.invite(squad, discord_name = discord_name)
-    except ObjectDoesNotExist:
+    except InvitationDraft.ObjectDoesNotExist:
         log.info(f'No invitation draft for {discord_name}')
         return None
 

@@ -12,6 +12,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# The CSGO API should be disabled in production to ensure that a development instance won't interfer with a production instance
+# The CSGO API should only be enabled in production to ensure that a development instance won't interfer with a production instance
 CSGO_API_ENABLED = False
 
