@@ -918,7 +918,10 @@ class UpdateTask__run(TestCase):
         self.assertTrue(self.account.enabled)
 
     @patch.object(models.settings, 'CSGO_API_ENABLED', True)
-    @patch('cs2_client.fetch_matches', side_effect = cs2_client.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'))
+    @patch(
+        'cs2_client.fetch_matches',
+        side_effect = cs2_client.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'),
+    )
     def test_invalid_sharecode_error(self, mock_api_fetch_matches):
         self.task.run()
 
