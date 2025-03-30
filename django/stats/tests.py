@@ -918,7 +918,7 @@ class UpdateTask__run(TestCase):
         self.assertTrue(self.account.enabled)
 
     @patch.object(models.settings, 'CSGO_API_ENABLED', True)
-    @patch('api.api.fetch_matches', side_effect = api.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'))
+    @patch('api.fetch_matches', side_effect = api.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'))
     def test_invalid_sharecode_error(self, mock_api_fetch_matches):
         self.task.run()
 
@@ -930,7 +930,7 @@ class UpdateTask__run(TestCase):
         self.assertTrue(self.task.completion_datetime)
 
     @patch.object(models.settings, 'CSGO_API_ENABLED', True)
-    @patch('api.api.fetch_matches', side_effect = ValueError)
+    @patch('api.fetch_matches', side_effect = ValueError)
     def test_fetch_matches_error(self, mock_api_fetch_matches):
         # Verify that the error is passed through (so it can be handled by `run_pending_tasks`, see the
         # `run_pending_tasks` test)
@@ -942,7 +942,7 @@ class UpdateTask__run(TestCase):
         # Verify that the account is still enabled
         self.assertTrue(self.account.enabled)
 
-    @patch('api.api.fetch_matches', side_effect = ValueError)
+    @patch('api.fetch_matches', side_effect = ValueError)
     def test_disabled_account(self, mock_api_fetch_matches):
         self.account.enabled = False
         self.account.save()
