@@ -129,7 +129,7 @@ class fetch_match_details(unittest.TestCase):
 class Client(unittest.TestCase):
 
     def setUp(self):
-        self.client = api.Client()
+        self.client = api.Client(api.api)
 
     @patch('django.conf.settings.CSGO_API_ENABLED', True)
     def test(self):

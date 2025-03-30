@@ -82,7 +82,7 @@ def fetch_matches(first_sharecode, steamuser):
         newpid = os.fork()
         if newpid == 0:
             # Execution inside the forked process
-            matches = Client().fetch_matches(first_sharecode, steamuser)
+            matches = Client(api).fetch_matches(first_sharecode, steamuser)
             try:
                 dill.dump(matches, ret_file)
                 os._exit(0)
@@ -101,12 +101,13 @@ def fetch_matches(first_sharecode, steamuser):
 
 class Client:
 
-    def __init__(self):
+    def __init__(self, api):
+        self.api = api
         self.csgo = CSGOWrapper()
 
     def fetch_matches(self, first_sharecode, steamuser):
         log.debug(f'Fetching sharecodes (for Steam ID: {steamuser.steamid})')
-        sharecodes = self._fetch_sharecodes(first_sharecode, steamuser)
+        sharecodes = list(self.api.fetch_sharecodes(first_sharecode, steamuser))
         log.debug(f'Fetched: {first_sharecode} -> {sharecodes}')
         log.debug('Resolving sharecodes (fetching match data)')
         matches = self._resolve_sharecodes(sharecodes)
@@ -143,9 +144,6 @@ class Client:
 
     def _resolve_account_ids(self, account_ids):
         return [SteamID(int(account_id)).as_64 for account_id in account_ids]
-
-    def _fetch_sharecodes(self, first_sharecode, steamuser):
-        return list(self.steam_api.fetch_sharecodes(first_sharecode, steamuser))
 
 
 class SteamAPIUser:
