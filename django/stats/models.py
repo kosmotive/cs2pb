@@ -471,20 +471,20 @@ class Match(models.Model):
             m = Match()
             m.sharecode = data['sharecode']
             m.timestamp = data['timestamp']
-            m.score_team1 = data['summary'].team_scores[0]
-            m.score_team2 = data['summary'].team_scores[1]
-            m.duration = data['summary'].match_duration
+            m.score_team1 = data['summary']['team_scores'][0]
+            m.score_team2 = data['summary']['team_scores'][1]
+            m.duration = data['summary']['match_duration']
             m.map_name = data['map']
             m.save()
 
             slices = [
                 data['steam_ids'],
-                data['summary'].enemy_kills,
-                data['summary'].assists,
-                data['summary'].deaths,
-                data['summary'].scores,
-                data['summary'].mvps,
-                data['summary'].enemy_headshots,
+                data['summary']['enemy_kills'],
+                data['summary']['assists'],
+                data['summary']['deaths'],
+                data['summary']['scores'],
+                data['summary']['mvps'],
+                data['summary']['enemy_headshots'],
             ]
             players = list()
             for pos, (steamid, kills, assists, deaths, score, mvps, headshots) in enumerate(zip(*slices)):

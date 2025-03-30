@@ -33,7 +33,7 @@ def fetch_match_details(pmatch, max_retry_count = 4):
     for retry_idx in range(max_retry_count):
         time.sleep(retry_idx * 10)
         try:
-            demo_url = pmatch['summary'].map
+            demo_url = pmatch['summary']['map']
             demo = parse_demo(demo_url)
 
             # No need to retry (fetch was successful)
@@ -63,7 +63,7 @@ def fetch_match_details(pmatch, max_retry_count = 4):
     pmatch['dmg'] = {str(steam_id): get_damage(steam_id) for steam_id in pmatch['steam_ids']}
 
     # We avoid using `awpy.stats.adr` because this requires `ticks=True` for Demo parsing
-    num_rounds = sum(pmatch['summary'].team_scores)
+    num_rounds = sum(pmatch['summary']['team_scores'])
     pmatch['adr'] = {str(steam_id): get_damage(steam_id) / num_rounds for steam_id in pmatch['steam_ids']}
 
 
