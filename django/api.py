@@ -78,16 +78,16 @@ def _is_wingman_match(pmatch):
 
 
 def fetch_matches(first_sharecode, steamuser):
-    with tempfile.NamedTemporaryFile() as ret_file:
+    with tempfile.NamedTemporaryFile(delete=False) as ret_file:
         newpid = os.fork()
         if newpid == 0:
             # Execution inside the forked process
-            matches = Client(api).fetch_matches(first_sharecode, steamuser)
             try:
+                matches = Client(api).fetch_matches(first_sharecode, steamuser)
                 dill.dump(matches, ret_file)
                 ret_file.flush()
                 os._exit(0)
-            except Exception as error:
+            except BaseException as error:
                 dill.dump(error, ret_file)
                 ret_file.flush()
                 os._exit(1)

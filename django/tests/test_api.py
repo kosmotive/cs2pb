@@ -140,14 +140,39 @@ class Client(unittest.TestCase):
         self.assertEqual(type(response[0]).__name__, 'CMsgGCCStrike15_v2_MatchList')
 
 
+def create_mocked_client_class(fetch_matches):
+    """
+    Helper function that creates a class that mocks the Client class.
+
+    This is necessary because dill does not support MagicMock objects.
+    """
+
+    class MockedClient:
+
+        def __init__(self, *_):
+            self.fetch_matches = fetch_matches
+
+    return MockedClient
+
+
 class fetch_matches(unittest.TestCase):
+
+    def raise_value_error(s):
+        raise ValueError(s)
 
     @patch.object(api.Client, 'fetch_matches', return_value='mocked ret')
     def test_return_value(self, mock_api_fetch_matches):
         ret = api.fetch_matches(first_sharecode='', steamuser=None)
         self.assertEqual(ret, 'mocked ret')
 
-    @patch.object(api.Client, 'fetch_matches', side_effect_func=lambda: os.getpid())
-    def test_subprocessing(self, mock_api_fetch_matches):
+    @patch('api.Client', create_mocked_client_class(fetch_matches=lambda *_: os.getpid()))
+    def test_subprocessing(self):
         pid = api.fetch_matches(first_sharecode='', steamuser=None)
         self.assertNotEqual(pid, os.getpid())
+
+    @patch('api.Client', create_mocked_client_class(fetch_matches=lambda *_: fetch_matches.raise_value_error('error')))
+    def test_error_handling(self):
+        with self.assertRaises(api.ClientError) as error:
+            api.fetch_matches(first_sharecode='', steamuser=None)
+        self.assertIsInstance(error.exception.__cause__, ValueError)
+        self.assertEqual(str(error.exception.__cause__), 'error')
