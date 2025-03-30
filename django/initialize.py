@@ -83,7 +83,7 @@ for steamid in {extra_steamid_list}:
 
 squad = Squad.objects.create(name='{squadname}', discord_channel_id='{discord_channel}')
 for member in users:
-    SquadMembership.objects.create(squad=squad, member=member)
+    SquadMembership.objects.create(squad=squad, player=member)
 squad.save()
 
 '''], stdout = sys.stdout, stderr = sys.stderr)
