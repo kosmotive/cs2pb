@@ -13,8 +13,8 @@ from accounts.models import (
 from api import (
     InvalidSharecodeError,
     SteamAPIUser,
-    fetch_matches,
     fetch_match_details,
+    fetch_matches,
 )
 from cs2pb_typing import (
     FrozenSet,
