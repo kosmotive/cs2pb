@@ -335,5 +335,4 @@ class CSGOWrapper:
             return self.csgo.csgo
 
 
-client = Client()
 api = SteamAPI()
