@@ -4,6 +4,7 @@ from datetime import (
     timedelta,
 )
 
+import cs2_client
 import numpy as np
 from accounts.models import (
     Account,
@@ -35,7 +36,6 @@ from django.db.models import (
 )
 from django.db.models.signals import m2m_changed
 
-import api
 from . import potw
 from .features import (
     FeatureContext,
@@ -465,7 +465,7 @@ class Match(models.Model):
             return existing_matches.get()
 
         # Fetch the match details (download and parse the demo file)
-        api.fetch_match_details(data)
+        cs2_client.fetch_match_details(data)
 
         with transaction.atomic():
             m = Match()
@@ -1272,9 +1272,9 @@ class UpdateTask(models.Model):
         if self.account.enabled and settings.CSGO_API_ENABLED:
             try:
                 first_sharecode = self.account.sharecode
-                new_match_data = api.fetch_matches(
+                new_match_data = cs2_client.fetch_matches(
                     first_sharecode,
-                    api.SteamAPIUser(self.account.steamid, self.account.steam_auth),
+                    cs2_client.SteamAPIUser(self.account.steamid, self.account.steam_auth),
                 )
 
                 old_participations = list(self.account.match_participations().order_by('pmatch__timestamp'))
@@ -1305,7 +1305,7 @@ class UpdateTask(models.Model):
 
                     old_participations.append(participation)
 
-            except api.InvalidSharecodeError:
+            except cs2_client.InvalidSharecodeError:
                 self.account.enabled = False
                 self.account.save()
 

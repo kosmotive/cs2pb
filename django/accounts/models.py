@@ -5,7 +5,7 @@ import pathlib
 import urllib.request
 import uuid
 
-from api import api
+from cs2_client import api
 from stats.features import (
     FeatureContext,
     Features,

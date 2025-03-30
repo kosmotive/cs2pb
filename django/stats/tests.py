@@ -6,7 +6,7 @@ import uuid
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import api
+import cs2_client
 from accounts.models import (
     Account,
     Squad,
@@ -888,7 +888,7 @@ class run_pending_tasks(TestCase):
             Account__update_matches__testcase.test()
 
             # Let each task fail
-            with patch.object(models.UpdateTask, 'run', side_effect = api.ClientError) as mock_update_task_run:
+            with patch.object(models.UpdateTask, 'run', side_effect = cs2_client.ClientError) as mock_update_task_run:
                 with self.assertLogs(updater.log, level='CRITICAL') as cm:
                     updater.run_pending_tasks()
 
@@ -918,7 +918,7 @@ class UpdateTask__run(TestCase):
         self.assertTrue(self.account.enabled)
 
     @patch.object(models.settings, 'CSGO_API_ENABLED', True)
-    @patch('api.fetch_matches', side_effect = api.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'))
+    @patch('cs2_client.fetch_matches', side_effect = cs2_client.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'))
     def test_invalid_sharecode_error(self, mock_api_fetch_matches):
         self.task.run()
 
@@ -930,11 +930,11 @@ class UpdateTask__run(TestCase):
         self.assertTrue(self.task.completion_datetime)
 
     @patch.object(models.settings, 'CSGO_API_ENABLED', True)
-    @patch('api.fetch_matches', side_effect = api.ClientError)
+    @patch('cs2_client.fetch_matches', side_effect = cs2_client.ClientError)
     def test_fetch_matches_error(self, mock_api_fetch_matches):
         # Verify that the error is passed through (so it can be handled by `run_pending_tasks`, see the
         # `run_pending_tasks` test)
-        with self.assertRaises(api.ClientError):
+        with self.assertRaises(cs2_client.ClientError):
             self.task.run()
 
         # Verify that the task is not completed (can be repeated later, usually after a new task is scheduled)
@@ -943,7 +943,7 @@ class UpdateTask__run(TestCase):
         # Verify that the account is still enabled
         self.assertTrue(self.account.enabled)
 
-    @patch('api.fetch_matches')
+    @patch('cs2_client.fetch_matches')
     def test_disabled_account(self, mock_api_fetch_matches):
         self.account.enabled = False
         self.account.save()

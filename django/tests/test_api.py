@@ -3,7 +3,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import api
+import cs2_client
 from memory_profiler import memory_usage
 from tests import testsuite
 
@@ -36,7 +36,7 @@ class fetch_match_details(unittest.TestCase):
 
     def test(self):
         pmatch = self.pmatch_data[0]
-        fetch_match_details = lambda: api.fetch_match_details(pmatch)  # noqa: E731
+        fetch_match_details = lambda: cs2_client.fetch_match_details(pmatch)  # noqa: E731
         peak_mem_mb = max(memory_usage(proc = fetch_match_details))
 
         # Peak memory usage was ~900 MiB when tested, shouldn't rise too much in the future to avoid memory issues
@@ -75,9 +75,9 @@ class fetch_match_details(unittest.TestCase):
 
         # Parse the demo file
         try:
-            api.fetch_match_details(pmatch)
+            cs2_client.fetch_match_details(pmatch)
 
-        except api.InvalidDemoError as err:
+        except cs2_client.InvalidDemoError as err:
             self.fail(
                 f'Parsing demo file has failed with error {str(err)}. '
                 'This indicates that an old version of awpy is being used, '
@@ -87,9 +87,9 @@ class fetch_match_details(unittest.TestCase):
         # If parsing succeeds, perform some checks to make sure that the data is correct
         self.assertEqual(pmatch['map'], 'de_vertigo')
 
-    @patch('api.parse_demo', wraps=api.parse_demo)
+    @patch('cs2_client.parse_demo', wraps=cs2_client.parse_demo)
     def test_corrupted_demo_file(self, mock_parse_demo):
-        fetch_match_details = lambda: api.fetch_match_details(self.pmatch_data[0])  # noqa: E731
+        fetch_match_details = lambda: cs2_client.fetch_match_details(self.pmatch_data[0])  # noqa: E731
 
         # Inject the error described in https://github.com/kosmotive/cs2pb/issues/23
         def raise_error_on_first_n_calls(n):
@@ -107,7 +107,7 @@ class fetch_match_details(unittest.TestCase):
 
         # Test ultimate failure (after 4 attempts)
         mock_parse_demo.side_effect = raise_error_on_first_n_calls(4)
-        self.assertRaises(api.InvalidDemoError, fetch_match_details)
+        self.assertRaises(cs2_client.InvalidDemoError, fetch_match_details)
         # ... 4 invocations raising the error:
         self.assertEqual(mock_parse_demo.call_count, 4)
 
@@ -129,7 +129,7 @@ class fetch_match_details(unittest.TestCase):
 class Client(unittest.TestCase):
 
     def setUp(self):
-        self.client = api.Client(api.api)
+        self.client = cs2_client.Client(cs2_client.api)
 
     @patch('django.conf.settings.CSGO_API_ENABLED', True)
     def test(self):
@@ -160,34 +160,34 @@ class fetch_matches(unittest.TestCase):
     def raise_error(error):
         raise error
 
-    @patch.object(api.Client, 'fetch_matches', return_value='mocked ret')
+    @patch.object(cs2_client.Client, 'fetch_matches', return_value='mocked ret')
     def test_return_value(self, mock_api_fetch_matches):
-        ret = api.fetch_matches(first_sharecode='', steamuser=None)
+        ret = cs2_client.fetch_matches(first_sharecode='', steamuser=None)
         self.assertEqual(ret, 'mocked ret')
 
-    @patch('api.Client', create_mocked_client_class(fetch_matches=lambda *_: os.getpid()))
+    @patch('cs2_client.Client', create_mocked_client_class(fetch_matches=lambda *_: os.getpid()))
     def test_subprocessing(self):
-        pid = api.fetch_matches(first_sharecode='', steamuser=None)
+        pid = cs2_client.fetch_matches(first_sharecode='', steamuser=None)
         self.assertNotEqual(pid, os.getpid())
 
     def test_error_handling(self):
         with patch(
-            'api.Client',
+            'cs2_client.Client',
             create_mocked_client_class(
                 fetch_matches=lambda *_: fetch_matches.raise_error(ValueError('error')),
             ),
         ):
-            with self.assertRaises(api.ClientError) as error:
-                api.fetch_matches(first_sharecode='', steamuser=None)
+            with self.assertRaises(cs2_client.ClientError) as error:
+                cs2_client.fetch_matches(first_sharecode='', steamuser=None)
             self.assertIsInstance(error.exception.__cause__, ValueError)
             self.assertEqual(str(error.exception.__cause__), 'error')
         with patch(
-            'api.Client',
+            'cs2_client.Client',
             create_mocked_client_class(
-                fetch_matches=lambda *_: fetch_matches.raise_error(api.InvalidSharecodeError(None, 'xxx')),
+                fetch_matches=lambda *_: fetch_matches.raise_error(cs2_client.InvalidSharecodeError(None, 'xxx')),
             ),
         ):
-            with self.assertRaises(api.InvalidSharecodeError) as error:
-                api.fetch_matches(first_sharecode='', steamuser=None)
+            with self.assertRaises(cs2_client.InvalidSharecodeError) as error:
+                cs2_client.fetch_matches(first_sharecode='', steamuser=None)
             self.assertIsNone(error.exception.steamuser)
             self.assertEqual(error.exception.sharecode, 'xxx')

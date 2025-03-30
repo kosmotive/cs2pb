@@ -77,7 +77,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'api': {
+        'cs2_client': {
             'handlers': ['console'],
             'level': 'DEBUG',
         },

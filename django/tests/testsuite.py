@@ -41,7 +41,7 @@ class _fake_api:
 
     @staticmethod
     def restore(*modules):
-        from api import api
+        from cs2_client import api
         for module_name in modules:
             m = importlib.import_module(module_name)
             setattr(m, 'api', api)

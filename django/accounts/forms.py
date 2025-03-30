@@ -1,6 +1,6 @@
 import re
 
-from api import (
+from cs2_client import (
     SteamAPIUser,
     api,
 )
