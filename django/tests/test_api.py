@@ -125,12 +125,15 @@ class fetch_match_details(unittest.TestCase):
         self.assertEqual(mock_parse_demo.call_count, 3)
 
 
-class api_csgo(unittest.TestCase):
+class Client(unittest.TestCase):
+
+    def setUp(self):
+        self.client = api.Client()
 
     @patch('django.conf.settings.CSGO_API_ENABLED', True)
     def test(self):
-        api.api.csgo.get().request_full_match_info(0, 0, 0)
-        response = api.api.csgo.get().wait_event('full_match_info', 10)
+        self.client.csgo.get().request_full_match_info(0, 0, 0)
+        response = self.client.csgo.get().wait_event('full_match_info', 10)
         self.assertIsInstance(response, tuple)
         self.assertEqual(len(response), 1)
         self.assertEqual(type(response[0]).__name__, 'CMsgGCCStrike15_v2_MatchList')
