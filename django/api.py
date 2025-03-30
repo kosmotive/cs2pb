@@ -78,21 +78,25 @@ def _is_wingman_match(pmatch):
 
 
 def fetch_matches(first_sharecode, steamuser):
-    with tempfile.TemporaryFile() as ret_file:
+    with tempfile.NamedTemporaryFile() as ret_file:
         newpid = os.fork()
         if newpid == 0:
             # Execution inside the forked process
             matches = Client(api).fetch_matches(first_sharecode, steamuser)
             try:
                 dill.dump(matches, ret_file)
+                ret_file.flush()
                 os._exit(0)
             except Exception as error:
                 dill.dump(error, ret_file)
+                ret_file.flush()
                 os._exit(1)
         else:
             # Execution inside the parent process
+            exit_code = os.waitpid(newpid, 0)[1]
+            ret_file.seek(0)
             ret = dill.load(ret_file)
-            if os.waitpid(newpid, 0)[1] != 0:
+            if exit_code != 0:
                 log.error(f'An error occurred while fetching matches')
                 raise ClientError() from ret
             else:
