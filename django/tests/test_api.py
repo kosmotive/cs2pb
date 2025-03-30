@@ -157,8 +157,8 @@ def create_mocked_client_class(fetch_matches):
 
 class fetch_matches(unittest.TestCase):
 
-    def raise_value_error(s):
-        raise ValueError(s)
+    def raise_error(error):
+        raise error
 
     @patch.object(api.Client, 'fetch_matches', return_value='mocked ret')
     def test_return_value(self, mock_api_fetch_matches):
@@ -170,9 +170,20 @@ class fetch_matches(unittest.TestCase):
         pid = api.fetch_matches(first_sharecode='', steamuser=None)
         self.assertNotEqual(pid, os.getpid())
 
-    @patch('api.Client', create_mocked_client_class(fetch_matches=lambda *_: fetch_matches.raise_value_error('error')))
     def test_error_handling(self):
-        with self.assertRaises(api.ClientError) as error:
-            api.fetch_matches(first_sharecode='', steamuser=None)
-        self.assertIsInstance(error.exception.__cause__, ValueError)
-        self.assertEqual(str(error.exception.__cause__), 'error')
+        with patch(
+            'api.Client',
+            create_mocked_client_class(fetch_matches=lambda *_: fetch_matches.raise_error(ValueError('error'))),
+        ):
+            with self.assertRaises(api.ClientError) as error:
+                api.fetch_matches(first_sharecode='', steamuser=None)
+            self.assertIsInstance(error.exception.__cause__, ValueError)
+            self.assertEqual(str(error.exception.__cause__), 'error')
+        with patch(
+            'api.Client',
+            create_mocked_client_class(fetch_matches=lambda *_: fetch_matches.raise_error(api.InvalidSharecodeError(None, 'xxx'))),
+        ):
+            with self.assertRaises(api.InvalidSharecodeError) as error:
+                api.fetch_matches(first_sharecode='', steamuser=None)
+            self.assertIsNone(error.exception.steamuser)
+            self.assertEqual(error.exception.sharecode, 'xxx')

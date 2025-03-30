@@ -80,27 +80,38 @@ def _is_wingman_match(pmatch):
 def fetch_matches(first_sharecode, steamuser):
     with tempfile.NamedTemporaryFile(delete=False) as ret_file:
         newpid = os.fork()
+
+        # Execution inside the forked process
         if newpid == 0:
-            # Execution inside the forked process
+
+            # Fetch matches and handle errors
+            success = False
             try:
-                matches = Client(api).fetch_matches(first_sharecode, steamuser)
-                dill.dump(matches, ret_file)
-                ret_file.flush()
-                os._exit(0)
+                ret = Client(api).fetch_matches(first_sharecode, steamuser)
+                success = True
+            except ClientError as error:
+                ret = dict(error=error, cause=None)
             except BaseException as error:
-                dill.dump(error, ret_file)
-                ret_file.flush()
-                os._exit(1)
+                ret = dict(error=ClientError(), cause=error)
+
+            # Serialize the result and exit the subprocess
+            dill.dump(ret, ret_file)
+            ret_file.flush()
+            os._exit(0 if success else 1)
+
+        # Execution inside the parent process
         else:
-            # Execution inside the parent process
             exit_code = os.waitpid(newpid, 0)[1]
             ret_file.seek(0)
             ret = dill.load(ret_file)
-            if exit_code != 0:
-                log.error(f'An error occurred while fetching matches')
-                raise ClientError() from ret
-            else:
+            if exit_code == 0:
                 return ret
+            else:
+                log.error(f'An error occurred while fetching matches')
+                if ret['cause'] is None:
+                    raise ret['error']
+                else:
+                    raise ret['error'] from ret['cause']
 
 
 class Client:
@@ -157,7 +168,14 @@ class SteamAPIUser:
         self.steamid_key = steamid_key
 
 
-class InvalidSharecodeError(Exception):
+class ClientError(Exception):
+    """
+    Raised when a client operation fails.
+    """
+    pass
+
+
+class InvalidSharecodeError(ClientError):
     """
     Raised when a sharecode is wrongly associated with a user.
     """
@@ -167,14 +185,7 @@ class InvalidSharecodeError(Exception):
         self.sharecode = sharecode
 
 
-class ClientError(Exception):
-    """
-    Raised when a Steam client operation fails.
-    """
-    pass
-
-
-class InvalidDemoError(Exception):
+class InvalidDemoError(ClientError):
     """
     Raised when a corrupted demo is faced.
     """
