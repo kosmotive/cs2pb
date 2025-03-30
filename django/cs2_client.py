@@ -95,7 +95,7 @@ def fetch_matches(first_sharecode, steamuser):
                 ret = dict(error=ClientError(), cause=error)
 
             # Serialize the result and exit the subprocess
-            dill.dump(ret, ret_file)
+            dill.dump(ret, ret_file, byref=True)
             ret_file.flush()
             os._exit(0 if success else 1)
 
@@ -131,8 +131,8 @@ class Client:
                 dict(
                     sharecode = sharecode,
                     timestamp = pmatch.matchtime,
-                    summary   = pmatch.roundstatsall[-1],
-                    steam_ids = self._resolve_account_ids(pmatch.roundstatsall[-1].reservation.account_ids)
+                    summary   = self._unfold_summary(pmatch.roundstatsall[-1]),
+                    steam_ids = self._resolve_account_ids(pmatch.roundstatsall[-1].reservation.account_ids),
                 )
                 for sharecode, pmatch in zip(sharecodes, matches)
             ]
@@ -140,6 +140,27 @@ class Client:
         matches = [pmatch for pmatch in matches if not _is_wingman_match(pmatch)]
         log.debug(f'All matches fetched ({len(matches)})')
         return matches
+    
+    def _unfold_summary(self, summary):
+        """
+        Unfold the protobuf object into a simple dictionary, that can easily be pickled.
+        """
+        return {
+            key: getattr(summary, key) for key in [
+                'map',
+                'match_duration',
+            ]
+        } | {
+            key: list(getattr(summary, key)) for key in [
+                'team_scores',
+                'enemy_kills',
+                'enemy_headshots',
+                'assists',
+                'deaths',
+                'scores',
+                'mvps',
+            ]
+        }
 
     def _resolve_sharecodes(self, sharecodes):
         results = list()
