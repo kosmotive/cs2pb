@@ -140,7 +140,7 @@ class Client:
         matches = [pmatch for pmatch in matches if not _is_wingman_match(pmatch)]
         log.debug(f'All matches fetched ({len(matches)})')
         return matches
-    
+
     def _unfold_summary(self, summary):
         """
         Unfold the protobuf object into a simple dictionary, that can easily be pickled.
