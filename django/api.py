@@ -85,17 +85,17 @@ class API:
 
     def fetch_matches(self, first_sharecode, steamuser):
         log.debug(f'Fetching sharecodes (for Steam ID: {steamuser.steamid})')
-        sharecodes = self.fetch_sharecodes(first_sharecode, steamuser)
+        sharecodes = self._fetch_sharecodes(first_sharecode, steamuser)
         log.debug(f'Fetched: {first_sharecode} -> {sharecodes}')
         log.debug('Resolving sharecodes (fetching match data)')
-        matches = self.resolve_sharecodes(sharecodes)
+        matches = self._resolve_sharecodes(sharecodes)
         log.debug('Resolving Steam IDs')
         matches = [
                 dict(
                     sharecode = sharecode,
                     timestamp = pmatch.matchtime,
                     summary   = pmatch.roundstatsall[-1],
-                    steam_ids = self.resolve_account_ids(pmatch.roundstatsall[-1].reservation.account_ids)
+                    steam_ids = self._resolve_account_ids(pmatch.roundstatsall[-1].reservation.account_ids)
                 )
                 for sharecode, pmatch in zip(sharecodes, matches)
             ]
@@ -104,7 +104,14 @@ class API:
         log.debug(f'All matches fetched ({len(matches)})')
         return matches
 
-    def resolve_sharecodes(self, sharecodes):
+    def fetch_profile(self, steamid):
+        return self.steam_api.fetch_profile(steamid)
+
+    def test_steam_auth(self, sharecode, steamuser):
+        log.debug('Testing Steam Auth')
+        return self.steam_api.test_steam_auth(sharecode, steamuser)
+
+    def _resolve_sharecodes(self, sharecodes):
         results = list()
         for sharecode in sharecodes:
             d = decode_sharecode(sharecode)
@@ -120,18 +127,11 @@ class API:
             results.append(response[0].matches[0])
         return results
 
-    def resolve_account_ids(self, account_ids):
+    def _resolve_account_ids(self, account_ids):
         return [SteamID(int(account_id)).as_64 for account_id in account_ids]
 
-    def test_steam_auth(self, sharecode, steamuser):
-        log.debug('Testing Steam Auth')
-        return self.steam_api.test_steam_auth(sharecode, steamuser)
-
-    def fetch_sharecodes(self, first_sharecode, steamuser):
+    def _fetch_sharecodes(self, first_sharecode, steamuser):
         return list(self.steam_api.fetch_sharecodes(first_sharecode, steamuser))
-
-    def fetch_profile(self, steamid):
-        return self.steam_api.fetch_profile(steamid)
 
 
 class SteamAPIUser:
