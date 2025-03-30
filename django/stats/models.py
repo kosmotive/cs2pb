@@ -13,7 +13,7 @@ from accounts.models import (
 from api import (
     InvalidSharecodeError,
     SteamAPIUser,
-    api,
+    fetch_matches,
     fetch_match_details,
 )
 from cs2pb_typing import (
@@ -1277,7 +1277,7 @@ class UpdateTask(models.Model):
         if self.account.enabled and settings.CSGO_API_ENABLED:
             try:
                 first_sharecode = self.account.sharecode
-                new_match_data = api.fetch_matches(
+                new_match_data = fetch_matches(
                     first_sharecode,
                     SteamAPIUser(self.account.steamid, self.account.steam_auth),
                 )
