@@ -1,7 +1,6 @@
 import bz2
 import logging
 import os
-import os.path
 import tempfile
 import time
 import traceback
@@ -9,6 +8,7 @@ import traceback
 import awpy
 import awpy.data.map_data
 import awpy_fork.stats
+import dill
 import gevent.exceptions
 import numpy as np
 import ratelimit
@@ -77,11 +77,27 @@ def _is_wingman_match(pmatch):
     return (np.asarray(pmatch['steam_ids']) == 0).sum() == 6
 
 
-class API:
+def fetch_matches(self, first_sharecode, steamuser):
+    with tempfile.TemporaryFile() as ret_file:
+        newpid = os.fork()
+        if newpid == 0:
+            # Execution inside the forked process
+            matches = Client().fetch_matches(first_sharecode, steamuser)
+            dill.dump(matches, ret_file)
+            os._exit(0)
+        else:
+            # Execution inside the parent process
+            if os.waitpid(newpid, 0)[1] != 0:
+                log.error(f'An error occurred while fetching matches')
+                raise ClientError()
+            else:
+                return dill.load(ret_file)
 
-    def __init__(self, **steam_api):
+
+class Client:
+
+    def __init__(self):
         self.csgo = CSGOWrapper()
-        self.steam_api = SteamAPI(**steam_api)
 
     def fetch_matches(self, first_sharecode, steamuser):
         log.debug(f'Fetching sharecodes (for Steam ID: {steamuser.steamid})')
@@ -103,13 +119,6 @@ class API:
         matches = [pmatch for pmatch in matches if not _is_wingman_match(pmatch)]
         log.debug(f'All matches fetched ({len(matches)})')
         return matches
-
-    def fetch_profile(self, steamid):
-        return self.steam_api.fetch_profile(steamid)
-
-    def test_steam_auth(self, sharecode, steamuser):
-        log.debug('Testing Steam Auth')
-        return self.steam_api.test_steam_auth(sharecode, steamuser)
 
     def _resolve_sharecodes(self, sharecodes):
         results = list()
@@ -142,7 +151,8 @@ class SteamAPIUser:
 
 
 class InvalidSharecodeError(Exception):
-    """Raised when a sharecode is wrongly associated with a user.
+    """
+    Raised when a sharecode is wrongly associated with a user.
     """
 
     def __init__(self, steamuser, sharecode):
@@ -150,8 +160,16 @@ class InvalidSharecodeError(Exception):
         self.sharecode = sharecode
 
 
+class ClientError(Exception):
+    """
+    Raised when a Steam client operation fails.
+    """
+    pass
+
+
 class InvalidDemoError(Exception):
-    """Raised when a corrupted demo is faced.
+    """
+    Raised when a corrupted demo is faced.
     """
 
     def __init__(self, sharecode, demo_url):
@@ -317,4 +335,5 @@ class CSGOWrapper:
             return self.csgo.csgo
 
 
-api = API()
+client = Client()
+api = SteamAPI()
