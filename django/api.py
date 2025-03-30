@@ -77,7 +77,7 @@ def _is_wingman_match(pmatch):
     return (np.asarray(pmatch['steam_ids']) == 0).sum() == 6
 
 
-def fetch_matches(self, first_sharecode, steamuser):
+def fetch_matches(first_sharecode, steamuser):
     with tempfile.TemporaryFile() as ret_file:
         newpid = os.fork()
         if newpid == 0:

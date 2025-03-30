@@ -137,3 +137,13 @@ class Client(unittest.TestCase):
         self.assertIsInstance(response, tuple)
         self.assertEqual(len(response), 1)
         self.assertEqual(type(response[0]).__name__, 'CMsgGCCStrike15_v2_MatchList')
+
+
+class fetch_matches(unittest.TestCase):
+
+    @patch.object(models.settings, 'CSGO_API_ENABLED', True)
+    @patch.object('api.Client', 'fetch_matches', return_value='mocked ret')
+    def test_invalid_sharecode_error(self, mock_api_fetch_matches):
+        with self.assertRaises(api.InvalidSharecodeError):
+            ret = api.fetch_matches(first_sharecode='', steamuser=None)
+        self.assertEqual(ret, 'mocked ret')
