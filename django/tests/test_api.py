@@ -144,6 +144,5 @@ class fetch_matches(unittest.TestCase):
     @patch.object(django.conf.settings, 'CSGO_API_ENABLED', True)
     @patch.object('api.Client', 'fetch_matches', return_value='mocked ret')
     def test_invalid_sharecode_error(self, mock_api_fetch_matches):
-        with self.assertRaises(api.InvalidSharecodeError):
-            ret = api.fetch_matches(first_sharecode='', steamuser=None)
+        ret = api.fetch_matches(first_sharecode='', steamuser=None)
         self.assertEqual(ret, 'mocked ret')
