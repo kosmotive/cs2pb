@@ -83,15 +83,20 @@ def fetch_matches(first_sharecode, steamuser):
         if newpid == 0:
             # Execution inside the forked process
             matches = Client().fetch_matches(first_sharecode, steamuser)
-            dill.dump(matches, ret_file)
-            os._exit(0)
+            try:
+                dill.dump(matches, ret_file)
+                os._exit(0)
+            except Exception as error:
+                dill.dump(error, ret_file)
+                os._exit(1)
         else:
             # Execution inside the parent process
+            ret = dill.load(ret_file)
             if os.waitpid(newpid, 0)[1] != 0:
                 log.error(f'An error occurred while fetching matches')
-                raise ClientError()
+                raise ClientError() from ret
             else:
-                return dill.load(ret_file)
+                return ret
 
 
 class Client:
