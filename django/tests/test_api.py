@@ -173,7 +173,9 @@ class fetch_matches(unittest.TestCase):
     def test_error_handling(self):
         with patch(
             'api.Client',
-            create_mocked_client_class(fetch_matches=lambda *_: fetch_matches.raise_error(ValueError('error'))),
+            create_mocked_client_class(
+                fetch_matches=lambda *_: fetch_matches.raise_error(ValueError('error')),
+            ),
         ):
             with self.assertRaises(api.ClientError) as error:
                 api.fetch_matches(first_sharecode='', steamuser=None)
@@ -181,7 +183,9 @@ class fetch_matches(unittest.TestCase):
             self.assertEqual(str(error.exception.__cause__), 'error')
         with patch(
             'api.Client',
-            create_mocked_client_class(fetch_matches=lambda *_: fetch_matches.raise_error(api.InvalidSharecodeError(None, 'xxx'))),
+            create_mocked_client_class(
+                fetch_matches=lambda *_: fetch_matches.raise_error(api.InvalidSharecodeError(None, 'xxx')),
+            ),
         ):
             with self.assertRaises(api.InvalidSharecodeError) as error:
                 api.fetch_matches(first_sharecode='', steamuser=None)
