@@ -10,12 +10,6 @@ from accounts.models import (
     Squad,
     SteamProfile,
 )
-from api import (
-    InvalidSharecodeError,
-    SteamAPIUser,
-    fetch_match_details,
-    fetch_matches,
-)
 from cs2pb_typing import (
     FrozenSet,
     List,
@@ -41,6 +35,7 @@ from django.db.models import (
 )
 from django.db.models.signals import m2m_changed
 
+import api
 from . import potw
 from .features import (
     FeatureContext,
@@ -470,7 +465,7 @@ class Match(models.Model):
             return existing_matches.get()
 
         # Fetch the match details (download and parse the demo file)
-        fetch_match_details(data)
+        api.fetch_match_details(data)
 
         with transaction.atomic():
             m = Match()
@@ -1277,9 +1272,9 @@ class UpdateTask(models.Model):
         if self.account.enabled and settings.CSGO_API_ENABLED:
             try:
                 first_sharecode = self.account.sharecode
-                new_match_data = fetch_matches(
+                new_match_data = api.fetch_matches(
                     first_sharecode,
-                    SteamAPIUser(self.account.steamid, self.account.steam_auth),
+                    api.SteamAPIUser(self.account.steamid, self.account.steam_auth),
                 )
 
                 old_participations = list(self.account.match_participations().order_by('pmatch__timestamp'))
@@ -1310,7 +1305,7 @@ class UpdateTask(models.Model):
 
                     old_participations.append(participation)
 
-            except InvalidSharecodeError:
+            except api.InvalidSharecodeError:
                 self.account.enabled = False
                 self.account.save()
 
