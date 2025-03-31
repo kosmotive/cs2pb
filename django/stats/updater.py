@@ -2,7 +2,6 @@ import datetime
 import logging
 import threading
 
-
 log = logging.getLogger(__name__)
 
 update_thread = None
