@@ -1335,3 +1335,140 @@ class GamingSession__close(TestCase):
             actual = attachment,
             expected = 'tests/data/radarplot_with_avatar.png',
         )
+
+
+class GamingSession__calculate_preview_player_value(TestCase):
+
+    @testsuite.fake_api('accounts.models')
+    def setUp(self):
+        self.player1 = SteamProfile.objects.create(steamid = '12345678900000001')
+        self.player2 = SteamProfile.objects.create(steamid = '12345678900000002')
+        self.squad = Squad.objects.create(name = 'Test Squad', discord_channel_id = '1234')
+        SquadMembership.objects.create(squad = self.squad, player = self.player1)
+        SquadMembership.objects.create(squad = self.squad, player = self.player2)
+
+        # Create a currently played session
+        self.session = models.GamingSession.objects.create(squad = self.squad)
+        self.match = models.Match.objects.create(
+            timestamp = int(time.time()),
+            score_team1 = 12, score_team2 = 13,
+            duration = 1653,
+            map_name = 'de_dust2',
+        )
+        self.match.sessions.add(self.session)
+        self.participation1 = models.MatchParticipation.objects.create(
+            player = self.player1,
+            pmatch = self.match,
+            team = 1,
+            result = 'l',
+            kills = 20,
+            assists = 10,
+            deaths = 15,
+            score = 30,
+            mvps = 5,
+            headshots = 15,
+            adr = 120.5,
+        )
+        self.participation2 = models.MatchParticipation.objects.create(
+            player = self.player2,
+            pmatch = self.match,
+            team = 1,
+            result = 'l',
+            kills = 10,
+            assists = 5,
+            deaths = 10,
+            score = 15,
+            mvps = 3,
+            headshots = 10,
+            adr = 90,
+        )
+
+    def test_calculate_preview_player_value(self):
+        preview_value = self.session.calculate_preview_player_value()
+        expected_value = (math.sqrt((20 / 15) * 120.5 / 100) + math.sqrt((10 / 10) * 90 / 100)) / 2
+        self.assertAlmostEqual(preview_value, expected_value, places=2)
+
+    def test_calculate_preview_player_value_closed_session(self):
+        self.session.is_closed = True
+        self.session.save()
+        preview_value = self.session.calculate_preview_player_value()
+        self.assertIsNone(preview_value)
+
+    def test_calculate_preview_player_value_no_participation(self):
+        self.participation1.delete()
+        self.participation2.delete()
+        preview_value = self.session.calculate_preview_player_value()
+        self.assertIsNone(preview_value)
+
+
+class DiscordBotPreviewCommandTest(TestCase):
+
+    @testsuite.fake_api('accounts.models')
+    def setUp(self):
+        self.player1 = SteamProfile.objects.create(steamid = '12345678900000001')
+        self.player2 = SteamProfile.objects.create(steamid = '12345678900000002')
+        self.squad = Squad.objects.create(name = 'Test Squad', discord_channel_id = '1234')
+        SquadMembership.objects.create(squad = self.squad, player = self.player1)
+        SquadMembership.objects.create(squad = self.squad, player = self.player2)
+
+        # Create a currently played session
+        self.session = models.GamingSession.objects.create(squad = self.squad)
+        self.match = models.Match.objects.create(
+            timestamp = int(time.time()),
+            score_team1 = 12, score_team2 = 13,
+            duration = 1653,
+            map_name = 'de_dust2',
+        )
+        self.match.sessions.add(self.session)
+        self.participation1 = models.MatchParticipation.objects.create(
+            player = self.player1,
+            pmatch = self.match,
+            team = 1,
+            result = 'l',
+            kills = 20,
+            assists = 10,
+            deaths = 15,
+            score = 30,
+            mvps = 5,
+            headshots = 15,
+            adr = 120.5,
+        )
+        self.participation2 = models.MatchParticipation.objects.create(
+            player = self.player2,
+            pmatch = self.match,
+            team = 1,
+            result = 'l',
+            kills = 10,
+            assists = 5,
+            deaths = 10,
+            score = 15,
+            mvps = 3,
+            headshots = 10,
+            adr = 90,
+        )
+
+    @patch('discordbot.bot.get_squad')
+    @patch('discordbot.bot.calculate_preview_player_value')
+    @patch('discordbot.bot.ctx')
+    async def test_preview_command(self, mock_ctx, mock_calculate_preview_player_value, mock_get_squad):
+        mock_get_squad.return_value = self.squad
+        mock_calculate_preview_player_value.return_value = 1.23
+
+        await discordbot.bot.preview(mock_ctx)
+
+        mock_ctx.response.send_message.assert_called_once_with(
+            f'The preview of the updated 30-days average player value is: 1.23'
+        )
+
+    @patch('discordbot.bot.get_squad')
+    @patch('discordbot.bot.calculate_preview_player_value')
+    @patch('discordbot.bot.ctx')
+    async def test_preview_command_no_active_session(self, mock_ctx, mock_calculate_preview_player_value, mock_get_squad):
+        mock_get_squad.return_value = self.squad
+        mock_calculate_preview_player_value.return_value = None
+
+        await discordbot.bot.preview(mock_ctx)
+
+        mock_ctx.response.send_message.assert_called_once_with(
+            f'No active session found or unable to calculate preview value.'
+        )

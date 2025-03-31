@@ -201,6 +201,29 @@ class GamingSession(models.Model):
             self.rising_star = top_player
             self.save()
 
+    def calculate_preview_player_value(self) -> Optional[float]:
+        """
+        Calculate the preview of the updated 30-days average player value.
+        """
+        if self.is_closed:
+            return None
+
+        # Calculate the player value for each participant in the current session
+        player_values = []
+        for m in self.squad.memberships.all():
+            ctx = FeatureContext(
+                MatchParticipation.objects.filter(player = m.player, pmatch__sessions = self),
+                m.player,
+            )
+            pv_today = Features.player_value(ctx)
+            if pv_today is not None:
+                player_values.append(pv_today)
+
+        # Calculate the average player value
+        if player_values:
+            return sum(player_values) / len(player_values)
+        return None
+
     @staticmethod
     def sessions_changed(sender, action, pk_set, instance, **kwargs):
         if action == 'pre_add':
