@@ -3,7 +3,6 @@ import math
 import pathlib
 import time
 import uuid
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import cs2_client
@@ -76,7 +75,7 @@ class Match__create_from_data(TestCase):
         pmatch_data = {
             'sharecode': 'CSGO-a622L-DjJDC-5zwn4-Gx2tf-YYmQD',
             'timestamp': 1720469310,
-            'summary': SimpleNamespace(
+            'summary': dict(
                 map = testsuite.get_demo_path('003694683536926703955_1352610665'),
                 team_scores = (4, 13),
                 match_duration = 1653,
@@ -170,9 +169,9 @@ class Match__create_from_data(TestCase):
 
         self.assertEqual(pmatch.sharecode, pmatch_data['sharecode'])
         self.assertEqual(pmatch.timestamp, pmatch_data['timestamp'])
-        self.assertEqual(pmatch.score_team1, pmatch_data['summary'].team_scores[0])
-        self.assertEqual(pmatch.score_team2, pmatch_data['summary'].team_scores[1])
-        self.assertEqual(pmatch.duration, pmatch_data['summary'].match_duration)
+        self.assertEqual(pmatch.score_team1, pmatch_data['summary']['team_scores'][0])
+        self.assertEqual(pmatch.score_team2, pmatch_data['summary']['team_scores'][1])
+        self.assertEqual(pmatch.duration, pmatch_data['summary']['match_duration'])
         self.assertEqual(pmatch.map_name, 'de_vertigo')
         self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').kills, 17)
         self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').deaths, 15)

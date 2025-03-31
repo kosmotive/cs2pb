@@ -1,6 +1,5 @@
 import os
 import unittest
-from types import SimpleNamespace
 from unittest.mock import patch
 
 import cs2_client
@@ -15,7 +14,7 @@ class fetch_match_details(unittest.TestCase):
             {
                 'sharecode': 'CSGO-a622L-DjJDC-5zwn4-Gx2tf-YYmQD',
                 'timestamp': 1720469310,
-                'summary': SimpleNamespace(
+                'summary': dict(
                     map = testsuite.get_demo_path('003694683536926703955_1352610665'),
                     team_scores = (4, 13),
                 ),
@@ -59,7 +58,7 @@ class fetch_match_details(unittest.TestCase):
         pmatch = {
             'sharecode': 'CSGO-aKe8R-YPeR3-vjBdp-oBGxh-Z5O3A',
             'timestamp': 1722455585,
-            'summary': SimpleNamespace(
+            'summary': dict(
                 map = testsuite.get_demo_path('003698946311295336822_1609103086'),
                 team_scores = (9, 0),
             ),
