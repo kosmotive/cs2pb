@@ -1273,11 +1273,20 @@ class UpdateTask(models.Model):
 
         if self.account.enabled and settings.CSGO_API_ENABLED:
             try:
+
+                # Determine the first sharecode to fetch the match for
                 first_sharecode = self.account.sharecode
+
+                # Determine if this is the inital update for the user
+                is_initial_update = (first_sharecode == self.account.last_sharecode)
+
                 new_match_data: list[dict | Match] = cs2_client.fetch_matches(
                     first_sharecode,
                     cs2_client.SteamAPIUser(self.account.steamid, self.account.steam_auth),
                     recent_matches,
+
+                    # Only process the match for `first_sharecode` if this is the inital update for the user
+                    skip_first = not is_initial_update,
                 )
 
                 old_participations = list(self.account.match_participations().order_by('pmatch__timestamp'))

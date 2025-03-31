@@ -141,7 +141,22 @@ class Client(TestCase):
         self.assertEqual(len(response), 1)
         self.assertEqual(type(response[0]).__name__, 'CMsgGCCStrike15_v2_MatchList')
 
-    def test_fetch_matches(self):
+    def _mock_client_internals(self, fetch_sharecodes_return_value):
+        def decorator(func):
+            @patch.object(self.client.api, 'fetch_sharecodes', return_value = fetch_sharecodes_return_value)
+            @patch.object(
+                self.client,
+                '_resolve_sharecode',
+                side_effect = lambda sharecode: dict(sharecode = sharecode),
+            )
+            @patch.object(self.client, '_resolve_protobuf', side_effect = lambda param: param)
+            @patch('cs2_client._is_wingman_match', return_value = False)
+            def wrapper(*args, **kwargs):
+                return func(*args, **kwargs)
+            return wrapper
+        return decorator
+
+    def test_fetch_matches_with_recent_matches(self):
         recent_matches = [
             Match.objects.create(
                 sharecode = 'xxx-1',
@@ -154,15 +169,13 @@ class Client(TestCase):
         ]
         steamuser = cs2_client.SteamAPIUser('1234567890', 'steam_auth')
 
-        @patch.object(self.client.api, 'fetch_sharecodes', return_value = ['xxx-1', 'xxx-2'])
-        @patch.object(self.client, '_resolve_sharecode', side_effect = lambda sharecode: dict(sharecode = sharecode))
-        @patch.object(self.client, '_resolve_protobuf', side_effect = lambda param: param)
-        @patch('cs2_client._is_wingman_match', return_value = False)
+        @self._mock_client_internals(fetch_sharecodes_return_value = ['xxx-1', 'xxx-2'])
         def __test(mock_is_wingman_match, mock_resolve_protobuf, mock_resolve_sharecode, mock_fetch_sharecodes):
             ret = self.client.fetch_matches(
                 first_sharecode = 'xxx-1',
                 steamuser = steamuser,
                 recent_matches = recent_matches,
+                skip_first = False,
             )
             self.assertEqual(ret, [recent_matches[0].pk, dict(sharecode = 'xxx-2')])
             mock_fetch_sharecodes.assert_called_once_with('xxx-1', steamuser)
@@ -170,6 +183,39 @@ class Client(TestCase):
             mock_resolve_protobuf.assert_called_once()
 
         __test()
+
+    def test_fetch_matches_with_skip_first(self):
+        steamuser = cs2_client.SteamAPIUser('1234567890', 'steam_auth')
+
+        @self._mock_client_internals(fetch_sharecodes_return_value = ['xxx-1'])
+        def __test_0_new(mock_is_wingman_match, mock_resolve_protobuf, mock_resolve_sharecode, mock_fetch_sharecodes):
+            ret = self.client.fetch_matches(
+                first_sharecode = 'xxx-1',
+                steamuser = steamuser,
+                recent_matches = list(),
+                skip_first = True,
+            )
+            self.assertEqual(ret, list())
+            mock_fetch_sharecodes.assert_called_once_with('xxx-1', steamuser)
+            mock_resolve_sharecode.assert_not_called()
+            mock_resolve_protobuf.assert_not_called()
+
+        @self._mock_client_internals(fetch_sharecodes_return_value = ['xxx-1', 'xxx-2'])
+        def __test_1_new(mock_is_wingman_match, mock_resolve_protobuf, mock_resolve_sharecode, mock_fetch_sharecodes):
+            ret = self.client.fetch_matches(
+                first_sharecode = 'xxx-1',
+                steamuser = steamuser,
+                recent_matches = list(),
+                skip_first = True,
+            )
+            self.assertEqual(ret, [dict(sharecode = 'xxx-2')])
+            mock_fetch_sharecodes.assert_called_once_with('xxx-1', steamuser)
+            mock_resolve_sharecode.assert_called_once()
+            mock_resolve_protobuf.assert_called_once()
+
+        for subtest in (__test_0_new, __test_1_new):
+            with self.subTest(subtest = subtest.__name__):
+                subtest()
 
 
 def create_mocked_client_class(fetch_matches):
@@ -192,14 +238,29 @@ class fetch_matches(TestCase):
     def raise_error(error):
         raise error
 
-    @patch.object(cs2_client.Client, 'fetch_matches', return_value = ['mocked ret'])
-    def test_return_value(self, mock_api_fetch_matches):
-        ret = cs2_client.fetch_matches(first_sharecode = '', steamuser = None, recent_matches = list())
-        self.assertEqual(ret, ['mocked ret'])
+    @patch('cs2_client.Client', create_mocked_client_class(fetch_matches = lambda *args: [str(args)]))
+    def test(self):
+        """
+        Tests the arguments passed to `Client.fetch_matches` and the return value.
+        """
+        for skip_first in (False, True):
+            with self.subTest(skip_first = skip_first):
+                ret = cs2_client.fetch_matches(
+                    first_sharecode = 'xxx-1',
+                    steamuser = None,
+                    recent_matches = list(),
+                    skip_first = skip_first,
+                )
+                self.assertEqual(ret, [str(('xxx-1', None, list(), skip_first))])
 
     @patch('cs2_client.Client', create_mocked_client_class(fetch_matches = lambda *_: [os.getpid()]))
     def test_subprocessing(self):
-        pid = cs2_client.fetch_matches(first_sharecode = '', steamuser = None, recent_matches = list())
+        pid = cs2_client.fetch_matches(
+            first_sharecode = '',
+            steamuser = None,
+            recent_matches = list(),
+            skip_first = False,
+        )
         self.assertNotEqual(pid, [os.getpid()])
 
     def test_error_handling(self):
@@ -210,7 +271,12 @@ class fetch_matches(TestCase):
             ),
         ):
             with self.assertRaises(cs2_client.ClientError) as error:
-                cs2_client.fetch_matches(first_sharecode = '', steamuser = None, recent_matches = list())
+                cs2_client.fetch_matches(
+                    first_sharecode = '',
+                    steamuser = None,
+                    recent_matches = list(),
+                    skip_first = False,
+                )
             self.assertIsInstance(error.exception.__cause__, ValueError)
             self.assertEqual(str(error.exception.__cause__), 'error')
         with patch(
@@ -220,7 +286,12 @@ class fetch_matches(TestCase):
             ),
         ):
             with self.assertRaises(cs2_client.InvalidSharecodeError) as error:
-                cs2_client.fetch_matches(first_sharecode = '', steamuser = None, recent_matches = list())
+                cs2_client.fetch_matches(
+                    first_sharecode = '',
+                    steamuser = None,
+                    recent_matches = list(),
+                    skip_first = False,
+                )
             self.assertIsNone(error.exception.steamuser)
             self.assertEqual(error.exception.sharecode, 'xxx')
 
@@ -244,7 +315,12 @@ class fetch_matches(TestCase):
                 ],
             ),
         ):
-            matches = cs2_client.fetch_matches(first_sharecode = '', steamuser = None, recent_matches = recent_matches)
+            matches = cs2_client.fetch_matches(
+                first_sharecode = '',
+                steamuser = None,
+                recent_matches = recent_matches,
+                skip_first = False,
+            )
             self.assertEqual(len(matches), 2)
             self.assertEqual(matches[0].pk, recent_matches[0].pk)
             self.assertEqual(matches[1], dict(sharecode = 'xxx-2'))

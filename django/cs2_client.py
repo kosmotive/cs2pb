@@ -82,7 +82,19 @@ def _is_wingman_match(pmatch):
     return (np.asarray(pmatch['steam_ids']) == 0).sum() == 6
 
 
-def fetch_matches(first_sharecode, steamuser, recent_matches: list[Match]) -> list[dict | Match]:
+class SteamAPIUser:
+
+    def __init__(self, steamid, steamid_key):
+        self.steamid = steamid
+        self.steamid_key = steamid_key
+
+
+def fetch_matches(
+        first_sharecode: str,
+        steamuser: SteamAPIUser,
+        recent_matches: list[Match],
+        skip_first: bool,
+    ) -> list[dict | Match]:
     """
     Fetch any new matches for a user, based on the given sharecode.
 
@@ -102,7 +114,7 @@ def fetch_matches(first_sharecode, steamuser, recent_matches: list[Match]) -> li
             # Fetch matches and handle errors
             success = False
             try:
-                ret = Client(api).fetch_matches(first_sharecode, steamuser, recent_matches)
+                ret = Client(api).fetch_matches(first_sharecode, steamuser, recent_matches, skip_first)
                 success = True
             except ClientError as error:
                 ret = dict(error=error, cause=None)
@@ -147,7 +159,14 @@ class Client:
         self.api = api
         self.csgo = LazyCSGOWrapper()  # Steam connection is established only when the wrapper is used
 
-    def fetch_matches(self, first_sharecode, steamuser, recent_matches: list[Match]) -> list[dict | int]:
+    def fetch_matches(
+            self,
+            first_sharecode: str,
+            steamuser: SteamAPIUser,
+            recent_matches: list[Match],
+            skip_first: bool,
+        ) -> list[dict | int]:
+
         # Build a cache of recent matches that can be checked quickly
         recent_matches_cache = {pmatch.sharecode: pmatch for pmatch in recent_matches}
 
@@ -155,6 +174,11 @@ class Client:
         log.debug(f'Fetching sharecodes (for Steam ID: {steamuser.steamid})')
         sharecodes = list(self.api.fetch_sharecodes(first_sharecode, steamuser))
         log.debug(f'Fetched: {first_sharecode} -> {sharecodes}')
+
+        # Skip the first sharecode (if requested, i.e. if the corresponding mathc was already processed before)
+        if skip_first:
+            log.debug(f'Skipping first sharecode: {sharecodes[0]}')
+            sharecodes = sharecodes[1:]
 
         # Resolve the fetched sharecodes
         matches: list[dict] = list()
@@ -229,13 +253,6 @@ class Client:
     def _resolve_account_ids(self, account_ids):
         log.debug('Resolving Steam IDs')
         return [SteamID(int(account_id)).as_64 for account_id in account_ids]
-
-
-class SteamAPIUser:
-
-    def __init__(self, steamid, steamid_key):
-        self.steamid = steamid
-        self.steamid_key = steamid_key
 
 
 class ClientError(Exception):
