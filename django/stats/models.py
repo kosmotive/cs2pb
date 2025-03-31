@@ -1267,7 +1267,7 @@ class UpdateTask(models.Model):
 
     def run(self, recent_matches: list[Match]):
         import cs2_client
-        
+
         self.execution_timestamp = datetime.timestamp(datetime.now())
         self.save()
 

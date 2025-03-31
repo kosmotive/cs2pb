@@ -130,7 +130,7 @@ def fetch_matches(first_sharecode, steamuser, recent_matches: list[Match]) -> li
                     )
                     for summary in ret
                 ]
-            
+
             else:
 
                 # Report the error
@@ -171,7 +171,7 @@ class Client:
                 protobuf = self._resolve_sharecode(sharecode)
                 summary = self._resolve_protobuf(protobuf)
                 matches.append(summary)
-    
+
         # Return only matches that are not wingman matches
         retained_matches = [pmatch for pmatch in matches if not _is_wingman_match(pmatch)]
         log.debug(f'Fetched {len(matches)} match(es), retaining {len(retained_matches)} match(es)')
@@ -214,7 +214,7 @@ class Client:
             log.debug('Waiting for match data timed out, retrying')
         log.debug('Match data completed')
         return response[0].matches[0]
-    
+
     def _resolve_protobuf(self, sharecode: str, protobuf: Any) -> dict:
         """
         Resolves a protobuf object to a summary of a match.
