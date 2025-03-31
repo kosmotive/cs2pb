@@ -69,7 +69,7 @@ class add_globals_to_context(TestCase):
         self.assertTrue('date' in ctx['version'].keys())
 
 
-class Match__create_from_data(TestCase):
+class Match__from_summary(TestCase):
 
     def test(self):
         pmatch_data = {
@@ -165,7 +165,7 @@ class Match__create_from_data(TestCase):
                 76561198064174518,
             ],
         }
-        pmatch = models.Match.create_from_data(pmatch_data)
+        pmatch = models.Match.from_summary(pmatch_data)
 
         self.assertEqual(pmatch.sharecode, pmatch_data['sharecode'])
         self.assertEqual(pmatch.timestamp, pmatch_data['timestamp'])
@@ -183,7 +183,7 @@ class Match__create_from_data(TestCase):
 class Match__award_badges(TestCase):
 
     def test(self):
-        pmatch = Match__create_from_data().test()
+        pmatch = Match__from_summary().test()
         self.assertEqual(
             list(
                 models.MatchBadge.objects.filter(
@@ -232,7 +232,7 @@ class MatchBadge__award(TestCase):
 
     def setUp(self):
         with patch('stats.models.Match.award_badges'):
-            self.pmatch = Match__create_from_data().test()
+            self.pmatch = Match__from_summary().test()
         self.mp5 = self.pmatch.get_participation('76561197962477966')
         self.teammates = list(
             self.mp5.pmatch.matchparticipation_set.filter(
@@ -429,7 +429,7 @@ class MatchBadge__award(TestCase):
 class MatchBadge__award_with_history(TestCase):
 
     def test_no_awards(self):
-        pmatch = Match__create_from_data().test()
+        pmatch = Match__from_summary().test()
         participation = pmatch.get_participation('76561197967680028')
         models.MatchBadge.award_with_history(participation, list())
         self.assertEqual(len(models.MatchBadge.objects.filter(participation = participation)), 0)
@@ -515,7 +515,7 @@ class get_next_potw_mode(TestCase):
 
 class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
-    @testsuite.fake_api('accounts.models')
+    @testsuite.fake_api()
     def setUp(self):
         self.squad = Squad.objects.create(name = 'squad', discord_channel_id = '1234')
         self.team1 = [
@@ -700,7 +700,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
 class PlayerOfTheWeek__create_badge(TestCase):
 
-    @testsuite.fake_api('accounts.models')
+    @testsuite.fake_api()
     def test(self):
         get_next_badge_data = PlayerOfTheWeek__get_next_badge_data()
         get_next_badge_data.setUp()
@@ -715,7 +715,7 @@ class PlayerOfTheWeek__create_badge(TestCase):
 @patch('accounts.models.SteamProfile.update_cached_avatar')
 class squads(TestCase):
 
-    @testsuite.fake_api('accounts.models')
+    @testsuite.fake_api()
     def setUp(self):
         self.factory = RequestFactory()
         self.player = SteamProfile.objects.create(steamid='12345678900000001')
@@ -803,7 +803,7 @@ class split_into_chunks(TestCase):
 
 class matches(TestCase):
 
-    @testsuite.fake_api('accounts.models')
+    @testsuite.fake_api()
     def setUp(self):
         self.factory = RequestFactory()
         self.player = SteamProfile.objects.create(steamid = '12345678900000001')
@@ -905,7 +905,7 @@ class run_pending_tasks(TestCase):
 
 class UpdateTask__run(TestCase):
 
-    @testsuite.fake_api('accounts.models')
+    @testsuite.fake_api()
     def setUp(self):
         self.player = models.SteamProfile.objects.create(steamid = '12345678900000001')
         self.account = Account.objects.create(steam_profile = self.player, last_sharecode = 'xxx-sharecode-xxx')
@@ -922,7 +922,7 @@ class UpdateTask__run(TestCase):
         side_effect = cs2_client.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'),
     )
     def test_invalid_sharecode_error(self, mock_api_fetch_matches):
-        self.task.run()
+        self.task.run(recent_matches = list())
 
         # Accounts with invalid `last_sharecode` should be disabled, because there is no point in retrying an update
         # for an invalid sharecode
@@ -937,7 +937,7 @@ class UpdateTask__run(TestCase):
         # Verify that the error is passed through (so it can be handled by `run_pending_tasks`, see the
         # `run_pending_tasks` test)
         with self.assertRaises(cs2_client.ClientError):
-            self.task.run()
+            self.task.run(recent_matches = list())
 
         # Verify that the task is not completed (can be repeated later, usually after a new task is scheduled)
         self.assertFalse(self.task.completion_datetime)
@@ -951,7 +951,7 @@ class UpdateTask__run(TestCase):
         self.account.save()
 
         # Task should run without errors because account is disabled
-        self.task.run()
+        self.task.run(recent_matches = list())
 
         # Verify that the task was not actually processed
         self.assertEqual(mock_api_fetch_matches.call_count, 0)
@@ -1009,7 +1009,7 @@ class GamingSession(TestCase):
 
 class GamingSession__close(TestCase):
 
-    @testsuite.fake_api('accounts.models')
+    @testsuite.fake_api()
     def setUp(self):
         self.player1 = SteamProfile.objects.create(steamid = '12345678900000001')
         self.player2 = SteamProfile.objects.create(steamid = '12345678900000002')

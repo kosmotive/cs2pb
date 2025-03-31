@@ -5,7 +5,6 @@ import pathlib
 import urllib.request
 import uuid
 
-from cs2_client import api
 from stats.features import (
     FeatureContext,
     Features,
@@ -39,7 +38,8 @@ class SteamProfile(models.Model):
     avatar_l = models.CharField(blank=False, max_length=100, verbose_name='Avatar large')
 
     def save(self, *args, **kwargs):
-        profile = api.fetch_profile(self.steamid)
+        import cs2_client
+        profile = cs2_client.api.fetch_profile(self.steamid)
         self.name     = profile['personaname']
         self.avatar_s = profile['avatar']
         self.avatar_m = profile['avatarmedium']

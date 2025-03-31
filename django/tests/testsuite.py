@@ -1,5 +1,6 @@
 import functools
 import importlib
+import logging
 import os
 import pathlib
 import urllib.request
@@ -10,6 +11,9 @@ import numpy as np
 file_dir_path = pathlib.Path(__file__).parent
 demo_path = file_dir_path / 'data/demos'
 demo_path.mkdir(parents=True, exist_ok=True)
+
+# Disable all loging except for errors
+logging.disable(logging.ERROR)
 
 
 def get_demo_path(demo_id):
@@ -47,15 +51,15 @@ class _fake_api:
             setattr(m, 'api', api)
 
 
-def fake_api(*modules):
+def fake_api():
     def decorator(func):
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
-            _fake_api.inject(*modules)
+            _fake_api.inject('cs2_client')
             try:
                 return func(*args, **kwargs)
             finally:
-                _fake_api.restore(*modules)
+                _fake_api.restore('cs2_client')
         return wrapper
     return decorator
 

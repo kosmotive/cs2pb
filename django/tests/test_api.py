@@ -4,7 +4,10 @@ from unittest.mock import patch
 
 import cs2_client
 from memory_profiler import memory_usage
+from stats.models import Match
 from tests import testsuite
+
+from django.test import TestCase
 
 
 class fetch_match_details(unittest.TestCase):
@@ -125,18 +128,48 @@ class fetch_match_details(unittest.TestCase):
         self.assertEqual(mock_parse_demo.call_count, 3)
 
 
-class Client(unittest.TestCase):
+class Client(TestCase):
 
     def setUp(self):
         self.client = cs2_client.Client(cs2_client.api)
 
     @patch('django.conf.settings.CSGO_API_ENABLED', True)
-    def test(self):
+    def test_csgo(self):
         self.client.csgo.get().request_full_match_info(0, 0, 0)
         response = self.client.csgo.get().wait_event('full_match_info', 10)
         self.assertIsInstance(response, tuple)
         self.assertEqual(len(response), 1)
         self.assertEqual(type(response[0]).__name__, 'CMsgGCCStrike15_v2_MatchList')
+
+    def test_fetch_matches(self):
+        recent_matches = [
+            Match.objects.create(
+                sharecode = 'xxx-1',
+                timestamp = 0,
+                score_team1 = 12,
+                score_team2 = 13,
+                duration = 1653,
+                map_name = 'de_dust2',
+            )
+        ]
+        steamuser = cs2_client.SteamAPIUser('1234567890', 'steam_auth')
+
+        @patch.object(self.client.api, 'fetch_sharecodes', return_value = ['xxx-1', 'xxx-2'])
+        @patch.object(self.client, '_resolve_sharecode', side_effect = lambda sharecode: dict(sharecode = sharecode))
+        @patch.object(self.client, '_resolve_protobuf', side_effect = lambda param: param)
+        @patch('cs2_client._is_wingman_match', return_value = False)
+        def __test(mock_is_wingman_match, mock_resolve_protobuf, mock_resolve_sharecode, mock_fetch_sharecodes):
+            ret = self.client.fetch_matches(
+                first_sharecode = 'xxx-1',
+                steamuser = steamuser,
+                recent_matches = recent_matches,
+            )
+            self.assertEqual(ret, [recent_matches[0].pk, dict(sharecode = 'xxx-2')])
+            mock_fetch_sharecodes.assert_called_once_with('xxx-1', steamuser)
+            mock_resolve_sharecode.assert_called_once()
+            mock_resolve_protobuf.assert_called_once()
+
+        __test()
 
 
 def create_mocked_client_class(fetch_matches):
@@ -154,39 +187,64 @@ def create_mocked_client_class(fetch_matches):
     return MockedClient
 
 
-class fetch_matches(unittest.TestCase):
+class fetch_matches(TestCase):
 
     def raise_error(error):
         raise error
 
-    @patch.object(cs2_client.Client, 'fetch_matches', return_value='mocked ret')
+    @patch.object(cs2_client.Client, 'fetch_matches', return_value = ['mocked ret'])
     def test_return_value(self, mock_api_fetch_matches):
-        ret = cs2_client.fetch_matches(first_sharecode='', steamuser=None)
-        self.assertEqual(ret, 'mocked ret')
+        ret = cs2_client.fetch_matches(first_sharecode = '', steamuser = None, recent_matches = list())
+        self.assertEqual(ret, ['mocked ret'])
 
-    @patch('cs2_client.Client', create_mocked_client_class(fetch_matches=lambda *_: os.getpid()))
+    @patch('cs2_client.Client', create_mocked_client_class(fetch_matches = lambda *_: [os.getpid()]))
     def test_subprocessing(self):
-        pid = cs2_client.fetch_matches(first_sharecode='', steamuser=None)
-        self.assertNotEqual(pid, os.getpid())
+        pid = cs2_client.fetch_matches(first_sharecode = '', steamuser = None, recent_matches = list())
+        self.assertNotEqual(pid, [os.getpid()])
 
     def test_error_handling(self):
         with patch(
             'cs2_client.Client',
             create_mocked_client_class(
-                fetch_matches=lambda *_: fetch_matches.raise_error(ValueError('error')),
+                fetch_matches = lambda *_: fetch_matches.raise_error(ValueError('error')),
             ),
         ):
             with self.assertRaises(cs2_client.ClientError) as error:
-                cs2_client.fetch_matches(first_sharecode='', steamuser=None)
+                cs2_client.fetch_matches(first_sharecode = '', steamuser = None, recent_matches = list())
             self.assertIsInstance(error.exception.__cause__, ValueError)
             self.assertEqual(str(error.exception.__cause__), 'error')
         with patch(
             'cs2_client.Client',
             create_mocked_client_class(
-                fetch_matches=lambda *_: fetch_matches.raise_error(cs2_client.InvalidSharecodeError(None, 'xxx')),
+                fetch_matches = lambda *_: fetch_matches.raise_error(cs2_client.InvalidSharecodeError(None, 'xxx')),
             ),
         ):
             with self.assertRaises(cs2_client.InvalidSharecodeError) as error:
-                cs2_client.fetch_matches(first_sharecode='', steamuser=None)
+                cs2_client.fetch_matches(first_sharecode = '', steamuser = None, recent_matches = list())
             self.assertIsNone(error.exception.steamuser)
             self.assertEqual(error.exception.sharecode, 'xxx')
+
+    def test_recent_matches(self):
+        recent_matches = [
+            Match.objects.create(
+                sharecode = 'xxx-1',
+                timestamp = 0,
+                score_team1 = 12,
+                score_team2 = 13,
+                duration = 1653,
+                map_name = 'de_dust2',
+            )
+        ]
+        with patch(
+            'cs2_client.Client',
+            create_mocked_client_class(
+                fetch_matches = lambda *_: [
+                    recent_matches[0].pk,
+                    dict(sharecode = 'xxx-2'),
+                ],
+            ),
+        ):
+            matches = cs2_client.fetch_matches(first_sharecode = '', steamuser = None, recent_matches = recent_matches)
+            self.assertEqual(len(matches), 2)
+            self.assertEqual(matches[0].pk, recent_matches[0].pk)
+            self.assertEqual(matches[1], dict(sharecode = 'xxx-2'))

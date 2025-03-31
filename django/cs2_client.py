@@ -13,8 +13,13 @@ import gevent.exceptions
 import numpy as np
 import ratelimit
 import requests
+from cs2pb_typing import (
+    Any,
+    Hashable,
+)
 from csgo.client import CSGOClient
 from csgo.sharecode import decode as decode_sharecode
+from stats.models import Match
 from steam.client import SteamClient
 from steam.core.connection import WebsocketConnection
 from steam.steamid import SteamID
@@ -77,7 +82,17 @@ def _is_wingman_match(pmatch):
     return (np.asarray(pmatch['steam_ids']) == 0).sum() == 6
 
 
-def fetch_matches(first_sharecode, steamuser):
+def fetch_matches(first_sharecode, steamuser, recent_matches: list[Match]) -> list[dict | Match]:
+    """
+    Fetch any new matches for a user, based on the given sharecode.
+
+    The list of recent matches is used to avoid fetching matches that are already known and have been fetched recently.
+    It is crucial that those matches can be identified by their sharecode solely, which is why only very recent matches
+    can be used here.
+
+    Returns a list of matches, which can be either a `Match` object (from the list of recent matches) or a match
+    summary (dictionary of newly fetched data).
+    """
     with tempfile.NamedTemporaryFile(delete=False) as ret_file:
         newpid = os.fork()
 
@@ -87,7 +102,7 @@ def fetch_matches(first_sharecode, steamuser):
             # Fetch matches and handle errors
             success = False
             try:
-                ret = Client(api).fetch_matches(first_sharecode, steamuser)
+                ret = Client(api).fetch_matches(first_sharecode, steamuser, recent_matches)
                 success = True
             except ClientError as error:
                 ret = dict(error=error, cause=None)
@@ -105,8 +120,20 @@ def fetch_matches(first_sharecode, steamuser):
             ret_file.seek(0)
             ret = dill.load(ret_file)
             if exit_code == 0:
-                return ret
+
+                # Resolve any cache hits to the corresponding match objects,
+                # and return the list of matches / match summaries
+                match_by_pk = {pmatch.pk: pmatch for pmatch in recent_matches}
+                return [
+                    (
+                        match_by_pk.get(summary, summary) if isinstance(summary, Hashable) else summary
+                    )
+                    for summary in ret
+                ]
+            
             else:
+
+                # Report the error
                 log.error(f'An error occurred while fetching matches')
                 if ret['cause'] is None:
                     raise ret['error']
@@ -118,28 +145,37 @@ class Client:
 
     def __init__(self, api):
         self.api = api
-        self.csgo = CSGOWrapper()
+        self.csgo = LazyCSGOWrapper()  # Steam connection is established only when the wrapper is used
 
-    def fetch_matches(self, first_sharecode, steamuser):
+    def fetch_matches(self, first_sharecode, steamuser, recent_matches: list[Match]) -> list[dict | int]:
+        # Build a cache of recent matches that can be checked quickly
+        recent_matches_cache = {pmatch.sharecode: pmatch for pmatch in recent_matches}
+
+        # Fetch the newest sharecodes
         log.debug(f'Fetching sharecodes (for Steam ID: {steamuser.steamid})')
         sharecodes = list(self.api.fetch_sharecodes(first_sharecode, steamuser))
         log.debug(f'Fetched: {first_sharecode} -> {sharecodes}')
-        log.debug('Resolving sharecodes (fetching match data)')
-        matches = self._resolve_sharecodes(sharecodes)
-        log.debug('Resolving Steam IDs')
-        matches = [
-                dict(
-                    sharecode = sharecode,
-                    timestamp = pmatch.matchtime,
-                    summary   = self._unfold_summary(pmatch.roundstatsall[-1]),
-                    steam_ids = self._resolve_account_ids(pmatch.roundstatsall[-1].reservation.account_ids),
-                )
-                for sharecode, pmatch in zip(sharecodes, matches)
-            ]
-        log.debug(f'Fetched {len(matches)} match(es)')
-        matches = [pmatch for pmatch in matches if not _is_wingman_match(pmatch)]
-        log.debug(f'All matches fetched ({len(matches)})')
-        return matches
+
+        # Resolve the fetched sharecodes
+        matches: list[dict] = list()
+        for sharecode in sharecodes:
+
+            # Check if the sharecode is already among the recent matches (cache hit)
+            cache_hit = recent_matches_cache.get(sharecode)
+            if cache_hit is not None:
+                log.debug(f'Cache hit for sharecode: {sharecode}')
+                matches.append(cache_hit.pk)
+
+            # Otherwise, resolve the sharecode
+            else:
+                protobuf = self._resolve_sharecode(sharecode)
+                summary = self._resolve_protobuf(protobuf)
+                matches.append(summary)
+    
+        # Return only matches that are not wingman matches
+        retained_matches = [pmatch for pmatch in matches if not _is_wingman_match(pmatch)]
+        log.debug(f'Fetched {len(matches)} match(es), retaining {len(retained_matches)} match(es)')
+        return retained_matches
 
     def _unfold_summary(self, summary):
         """
@@ -162,23 +198,36 @@ class Client:
             ]
         }
 
-    def _resolve_sharecodes(self, sharecodes):
-        results = list()
-        for sharecode in sharecodes:
-            d = decode_sharecode(sharecode)
-            log.debug('Requesting match info')
-            while True:
-                self.csgo.get().request_full_match_info(d['matchid'], d['outcomeid'], d['token'])
-                log.debug('Waiting for match data')
-                response = self.csgo.get().wait_event('full_match_info', 10)
-                if response is not None:
-                    break
-                log.debug('Waiting for match data timed out, retrying')
-            log.debug('Match data completed')
-            results.append(response[0].matches[0])
-        return results
+    def _resolve_sharecode(self, sharecode: str) -> Any:
+        """
+        Resolves a sharecode to a protobuf object.
+        """
+        log.debug(f'Resolving sharecode: {sharecode}')
+        d = decode_sharecode(sharecode)
+        log.debug('Requesting match info')
+        while True:
+            self.csgo.get().request_full_match_info(d['matchid'], d['outcomeid'], d['token'])
+            log.debug('Waiting for match data')
+            response = self.csgo.get().wait_event('full_match_info', 10)
+            if response is not None:
+                break
+            log.debug('Waiting for match data timed out, retrying')
+        log.debug('Match data completed')
+        return response[0].matches[0]
+    
+    def _resolve_protobuf(self, sharecode: str, protobuf: Any) -> dict:
+        """
+        Resolves a protobuf object to a summary of a match.
+        """
+        return dict(
+            sharecode = sharecode,
+            timestamp = protobuf.matchtime,
+            summary   = self._unfold_summary(protobuf.roundstatsall[-1]),
+            steam_ids = self._resolve_account_ids(protobuf.roundstatsall[-1].reservation.account_ids),
+        )
 
     def _resolve_account_ids(self, account_ids):
+        log.debug('Resolving Steam IDs')
         return [SteamID(int(account_id)).as_64 for account_id in account_ids]
 
 
@@ -353,7 +402,7 @@ class CSGO:
             log.info(f'Finished waiting for CSGO game coordinator')
 
 
-class CSGOWrapper:
+class LazyCSGOWrapper:
 
     def __init__(self):
         self.csgo = None

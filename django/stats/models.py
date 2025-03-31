@@ -4,7 +4,6 @@ from datetime import (
     timedelta,
 )
 
-import cs2_client
 import numpy as np
 from accounts.models import (
     Account,
@@ -432,7 +431,7 @@ class Match(models.Model):
         """
 
     @staticmethod
-    def create_from_data(data: dict) -> Self:
+    def from_summary(data: dict) -> Self:
         """
         Get a :class:`Match` object corresponding to the given data.
 
@@ -465,6 +464,7 @@ class Match(models.Model):
             return existing_matches.get()
 
         # Fetch the match details (download and parse the demo file)
+        import cs2_client
         cs2_client.fetch_match_details(data)
 
         with transaction.atomic():
@@ -1265,40 +1265,31 @@ class UpdateTask(models.Model):
         """
         return self.completion_timestamp is not None
 
-    def run(self):
+    def run(self, recent_matches: list[Match]):
+        import cs2_client
+        
         self.execution_timestamp = datetime.timestamp(datetime.now())
         self.save()
 
         if self.account.enabled and settings.CSGO_API_ENABLED:
             try:
                 first_sharecode = self.account.sharecode
-                new_match_data = cs2_client.fetch_matches(
+                new_match_data: list[dict | Match] = cs2_client.fetch_matches(
                     first_sharecode,
                     cs2_client.SteamAPIUser(self.account.steamid, self.account.steam_auth),
+                    recent_matches,
                 )
 
                 old_participations = list(self.account.match_participations().order_by('pmatch__timestamp'))
                 for match_data in new_match_data:
-
-                    fast_forward = False
-                    try:
-                        pmatch = Match.create_from_data(match_data)
-
-                    except FileNotFoundError as ex:
-                        if str(ex) == 'JSON path does not exist!':
-                            # see: https://github.com/pnxenopoulos/awpy/issues/291
-                            log.error(
-                                f'Skipping match with sharecode {match_data["sharecode"]} due to error: '
-                                f'https://github.com/pnxenopoulos/awpy/issues/291'
-                            )
-                            fast_forward = True
-                        else:
-                            raise
+                    if isinstance(match_data, dict):
+                        pmatch: Match = Match.from_summary(match_data)
+                        recent_matches.append(pmatch)
+                    else:
+                        pmatch: Match = match_data
 
                     self.account.last_sharecode = match_data['sharecode']
                     self.account.save()
-                    if fast_forward:
-                        continue
 
                     participation = pmatch.get_participation(self.account.steam_profile)
                     MatchBadge.award_with_history(participation, old_participations)

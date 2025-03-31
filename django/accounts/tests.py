@@ -47,7 +47,7 @@ def _mark_task_as_completed(task, duration = datetime.timedelta(minutes = 2)):
 @patch('stats.updater.update_event.set', return_value = None)
 class Account__update_matches(TestCase):
 
-    @testsuite.fake_api('accounts.models')
+    @testsuite.fake_api()
     def setUp(self):
         self.player  = accounts.models.SteamProfile.objects.create(steamid = '12345678900000001')
         self.account = accounts.models.Account.objects.create(steam_profile = self.player)
@@ -105,7 +105,7 @@ class Account__update_matches(TestCase):
 @patch('accounts.models.SquadMembership.update_stats')
 class Squad__update_stats(TestCase):
 
-    @testsuite.fake_api('accounts.models')
+    @testsuite.fake_api()
     def setUp(self):
         self.players = [
             accounts.models.SteamProfile.objects.create(steamid = f'1234567890000000{pidx + 1}') for pidx in range(4)

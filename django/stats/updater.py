@@ -2,6 +2,7 @@ import datetime
 import logging
 import threading
 
+
 log = logging.getLogger(__name__)
 
 update_thread = None
@@ -22,9 +23,10 @@ def run_update_loop():
 def run_pending_tasks():
     from stats.models import UpdateTask
     pending_tasks = UpdateTask.objects.filter(completion_timestamp=None).order_by('-scheduling_timestamp').all()
+    recent_matches = list()
     for task in pending_tasks:
         try:
-            task.run()
+            task.run(recent_matches)
         except:  # noqa: E722
             log.critical(f'Failed to update stats.', exc_info = True)
 
