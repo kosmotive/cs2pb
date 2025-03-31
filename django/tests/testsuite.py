@@ -28,6 +28,8 @@ def get_demo_path(demo_id):
 
 class _fake_api:
 
+    _original_api = None
+
     @staticmethod
     def fetch_profile(steamid):
         return dict(
@@ -39,16 +41,18 @@ class _fake_api:
 
     @staticmethod
     def inject(*modules):
+        if _fake_api._original_api is None:
+            import cs2_client
+            _fake_api._original_api = cs2_client.api
         for module_name in modules:
             m = importlib.import_module(module_name)
             setattr(m, 'api', _fake_api)
 
     @staticmethod
     def restore(*modules):
-        from cs2_client import api
         for module_name in modules:
             m = importlib.import_module(module_name)
-            setattr(m, 'api', api)
+            setattr(m, 'api', _fake_api._original_api)
 
 
 def fake_api():
