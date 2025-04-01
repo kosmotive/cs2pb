@@ -95,7 +95,7 @@ class SteamAPIUser:
                 self.steamid_key == other.steamid_key,
             )
         )
-    
+
     def __hash__(self):
         return hash((self.steamid, self.steamid_key))
 
