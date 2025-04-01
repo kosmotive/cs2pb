@@ -51,6 +51,18 @@ body, input, button {
     font-size: 80%;
 }
 
+#footer a .branch-warning {
+    border: 1px solid #ff0000;
+    border-radius: 1em;
+    color: #ff0000;
+    display: inline-block;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    padding-top: 0.1em;
+    padding-bottom: 0.1em;
+    margin-top: 0.5em;
+}
+
 button.positive,
 input.positive {
     background-color: #cfc;

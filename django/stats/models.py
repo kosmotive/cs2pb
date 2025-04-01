@@ -10,12 +10,6 @@ from accounts.models import (
     Squad,
     SteamProfile,
 )
-from api import (
-    InvalidSharecodeError,
-    SteamAPIUser,
-    api,
-    fetch_match_details,
-)
 from cs2pb_typing import (
     FrozenSet,
     List,
@@ -459,7 +453,7 @@ class Match(models.Model):
         """
 
     @staticmethod
-    def create_from_data(data: dict) -> Self:
+    def from_summary(data: dict) -> Self:
         """
         Get a :class:`Match` object corresponding to the given data.
 
@@ -492,27 +486,28 @@ class Match(models.Model):
             return existing_matches.get()
 
         # Fetch the match details (download and parse the demo file)
-        fetch_match_details(data)
+        import cs2_client
+        cs2_client.fetch_match_details(data)
 
         with transaction.atomic():
             m = Match()
             m.sharecode = data['sharecode']
             m.timestamp = data['timestamp']
-            m.score_team1 = data['summary'].team_scores[0]
-            m.score_team2 = data['summary'].team_scores[1]
-            m.duration = data['summary'].match_duration
+            m.score_team1 = data['summary']['team_scores'][0]
+            m.score_team2 = data['summary']['team_scores'][1]
+            m.duration = data['summary']['match_duration']
             m.map_name = data['map']
             m.mtype = data['type']
             m.save()
 
             slices = [
                 data['steam_ids'],
-                data['summary'].enemy_kills,
-                data['summary'].assists,
-                data['summary'].deaths,
-                data['summary'].scores,
-                data['summary'].mvps,
-                data['summary'].enemy_headshots,
+                data['summary']['enemy_kills'],
+                data['summary']['assists'],
+                data['summary']['deaths'],
+                data['summary']['scores'],
+                data['summary']['mvps'],
+                data['summary']['enemy_headshots'],
             ]
             players = list()
             for pos, (steamid, kills, assists, deaths, score, mvps, headshots) in enumerate(zip(*slices)):
@@ -1305,47 +1300,49 @@ class UpdateTask(models.Model):
         """
         return self.completion_timestamp is not None
 
-    def run(self):
+    def run(self, recent_matches: list[Match]):
+        import cs2_client
+
         self.execution_timestamp = datetime.timestamp(datetime.now())
         self.save()
 
         if self.account.enabled and settings.CSGO_API_ENABLED:
             try:
+
+                # Determine the first sharecode to fetch the match for
                 first_sharecode = self.account.sharecode
-                new_match_data = api.fetch_matches(
+
+                # Determine if this is the inital update for the account
+                is_initial_update = (len(self.account.last_sharecode) == 0)
+
+                new_match_data: list[dict | Match] = cs2_client.fetch_matches(
                     first_sharecode,
-                    SteamAPIUser(self.account.steamid, self.account.steam_auth),
+                    cs2_client.SteamAPIUser(self.account.steamid, self.account.steam_auth),
+                    list(recent_matches),
+
+                    # Only process the match for `first_sharecode` if this is the inital update for the account
+                    skip_first = not is_initial_update,
                 )
 
-                old_participations = list(self.account.match_participations().order_by('pmatch__timestamp'))
                 for match_data in new_match_data:
+                    if isinstance(match_data, dict):
+                        pmatch: Match = Match.from_summary(match_data)
+                        recent_matches.append(pmatch)
+                    else:
+                        pmatch: Match = match_data
 
-                    fast_forward = False
-                    try:
-                        pmatch = Match.create_from_data(match_data)
-
-                    except FileNotFoundError as ex:
-                        if str(ex) == 'JSON path does not exist!':
-                            # see: https://github.com/pnxenopoulos/awpy/issues/291
-                            log.error(
-                                f'Skipping match with sharecode {match_data["sharecode"]} due to error: '
-                                f'https://github.com/pnxenopoulos/awpy/issues/291'
-                            )
-                            fast_forward = True
-                        else:
-                            raise
-
-                    self.account.last_sharecode = match_data['sharecode']
+                    self.account.last_sharecode = pmatch.sharecode
                     self.account.save()
-                    if fast_forward:
-                        continue
 
                     participation = pmatch.get_participation(self.account.steam_profile)
-                    MatchBadge.award_with_history(participation, old_participations)
+                    old_participations = list(
+                        self.account.match_participations().order_by('pmatch__timestamp').filter(
+                            pmatch__timestamp__lt = pmatch.timestamp,
+                        )
+                    )
+                    MatchBadge.award_with_history(participation, list(old_participations))
 
-                    old_participations.append(participation)
-
-            except InvalidSharecodeError:
+            except cs2_client.InvalidSharecodeError:
                 self.account.enabled = False
                 self.account.save()
 

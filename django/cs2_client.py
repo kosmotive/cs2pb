@@ -1,7 +1,6 @@
 import bz2
 import logging
 import os
-import os.path
 import tempfile
 import time
 import traceback
@@ -9,12 +8,18 @@ import traceback
 import awpy
 import awpy.data.map_data
 import awpy_fork.stats
+import dill
 import gevent.exceptions
 import numpy as np
 import ratelimit
 import requests
+from cs2pb_typing import (
+    Any,
+    Hashable,
+)
 from csgo.client import CSGOClient
 from csgo.sharecode import decode as decode_sharecode
+from stats.models import Match
 from steam.client import SteamClient
 from steam.core.connection import WebsocketConnection
 from steam.steamid import SteamID
@@ -30,12 +35,10 @@ log = logging.getLogger(__name__)
 
 
 def fetch_match_details(pmatch, max_retry_count = 4):
-    from stats.models import Match
-
     for retry_idx in range(max_retry_count):
         time.sleep(retry_idx * 10)
         try:
-            demo_url = pmatch['summary'].map
+            demo_url = pmatch['summary']['map']
             demo = parse_demo(demo_url)
 
             # No need to retry (fetch was successful)
@@ -65,7 +68,7 @@ def fetch_match_details(pmatch, max_retry_count = 4):
     pmatch['dmg'] = {str(steam_id): get_damage(steam_id) for steam_id in pmatch['steam_ids']}
 
     # We avoid using `awpy.stats.adr` because this requires `ticks=True` for Demo parsing
-    num_rounds = sum(pmatch['summary'].team_scores)
+    num_rounds = sum(pmatch['summary']['team_scores'])
     pmatch['adr'] = {str(steam_id): get_damage(steam_id) / num_rounds for steam_id in pmatch['steam_ids']}
 
     # Read the ranks from the demo, `demo.events['rank_update']` is a pandas dataframe with following columns:
@@ -98,72 +101,207 @@ def _is_wingman_match(pmatch):
     return (np.asarray(pmatch['steam_ids']) == 0).sum() == 6
 
 
-class API:
-
-    def __init__(self, **steam_api):
-        self.csgo = CSGOWrapper()
-        self.steam_api = SteamAPI(**steam_api)
-
-    def fetch_matches(self, first_sharecode, steamuser):
-        log.debug(f'Fetching sharecodes (for Steam ID: {steamuser.steamid})')
-        sharecodes = self.fetch_sharecodes(first_sharecode, steamuser)
-        log.debug(f'Fetched: {first_sharecode} -> {sharecodes}')
-        log.debug('Resolving sharecodes (fetching match data)')
-        matches = self.resolve_sharecodes(sharecodes)
-        log.debug('Resolving Steam IDs')
-        matches = [
-                dict(
-                    sharecode = sharecode,
-                    timestamp = pmatch.matchtime,
-                    summary   = pmatch.roundstatsall[-1],
-                    steam_ids = self.resolve_account_ids(pmatch.roundstatsall[-1].reservation.account_ids)
-                )
-                for sharecode, pmatch in zip(sharecodes, matches)
-            ]
-        log.debug(f'Fetched {len(matches)} match(es)')
-        matches = [pmatch for pmatch in matches if not _is_wingman_match(pmatch)]
-        log.debug(f'All matches fetched ({len(matches)})')
-        return matches
-
-    def resolve_sharecodes(self, sharecodes):
-        results = list()
-        for sharecode in sharecodes:
-            d = decode_sharecode(sharecode)
-            log.debug('Requesting match info')
-            while True:
-                self.csgo.get().request_full_match_info(d['matchid'], d['outcomeid'], d['token'])
-                log.debug('Waiting for match data')
-                response = self.csgo.get().wait_event('full_match_info', 10)
-                if response is not None:
-                    break
-                log.debug('Waiting for match data timed out, retrying')
-            log.debug('Match data completed')
-            results.append(response[0].matches[0])
-        return results
-
-    def resolve_account_ids(self, account_ids):
-        return [SteamID(int(account_id)).as_64 for account_id in account_ids]
-
-    def test_steam_auth(self, sharecode, steamuser):
-        log.debug('Testing Steam Auth')
-        return self.steam_api.test_steam_auth(sharecode, steamuser)
-
-    def fetch_sharecodes(self, first_sharecode, steamuser):
-        return list(self.steam_api.fetch_sharecodes(first_sharecode, steamuser))
-
-    def fetch_profile(self, steamid):
-        return self.steam_api.fetch_profile(steamid)
-
-
 class SteamAPIUser:
 
     def __init__(self, steamid, steamid_key):
         self.steamid = steamid
         self.steamid_key = steamid_key
 
+    def __eq__(self, other):
+        return isinstance(other, SteamAPIUser) and all(
+            (
+                self.steamid == other.steamid,
+                self.steamid_key == other.steamid_key,
+            )
+        )
 
-class InvalidSharecodeError(Exception):
-    """Raised when a sharecode is wrongly associated with a user.
+    def __hash__(self):
+        return hash((self.steamid, self.steamid_key))
+
+
+def fetch_matches(
+        first_sharecode: str,
+        steamuser: SteamAPIUser,
+        recent_matches: list[Match],
+        skip_first: bool,
+    ) -> list[dict | Match]:
+    """
+    Fetch any new matches for a user, based on the given sharecode.
+
+    The list of recent matches is used to avoid fetching matches that are already known and have been fetched recently.
+    It is crucial that those matches can be identified by their sharecode solely, which is why only very recent matches
+    can be used here.
+
+    Returns a list of matches, which can be either a `Match` object (from the list of recent matches) or a match
+    summary (dictionary of newly fetched data).
+    """
+    with tempfile.NamedTemporaryFile(delete=False) as ret_file:
+        newpid = os.fork()
+
+        # Execution inside the forked process
+        if newpid == 0:
+
+            # Fetch matches and handle errors
+            success = False
+            try:
+                ret = Client(api).fetch_matches(first_sharecode, steamuser, recent_matches, skip_first)
+                success = True
+            except ClientError as error:
+                log.error(f'An error occurred while fetching matches', exc_info=True)
+                ret = dict(error=error, cause=None)
+            except BaseException as error:
+                log.critical(f'An error occurred while fetching matches', exc_info=True)
+                ret = dict(error=ClientError(), cause=error)
+
+            # Serialize the result and exit the subprocess
+            dill.dump(ret, ret_file, byref=True)
+            ret_file.flush()
+            os._exit(0 if success else 1)
+
+        # Execution inside the parent process
+        else:
+            exit_code = os.waitpid(newpid, 0)[1]
+            ret_file.seek(0)
+            ret = dill.load(ret_file)
+            if exit_code == 0:
+
+                # Resolve any cache hits to the corresponding match objects,
+                # and return the list of matches / match summaries
+                match_by_pk = {pmatch.pk: pmatch for pmatch in recent_matches}
+                return [
+                    (
+                        match_by_pk.get(summary, summary) if isinstance(summary, Hashable) else summary
+                    )
+                    for summary in ret
+                ]
+
+            else:
+
+                # Report the error
+                if ret['cause'] is None:
+                    raise ret['error']
+                else:
+                    raise ret['error'] from ret['cause']
+
+
+class Client:
+
+    def __init__(self, api):
+        self.api = api
+        self.csgo = LazyCSGOWrapper()  # Steam connection is established only when the wrapper is used
+
+    def fetch_matches(
+            self,
+            first_sharecode: str,
+            steamuser: SteamAPIUser,
+            recent_matches: list[Match],
+            skip_first: bool,
+        ) -> list[dict | int]:
+
+        # Build a cache of recent matches that can be checked quickly
+        recent_matches_cache = {pmatch.sharecode: pmatch for pmatch in recent_matches}
+        log.info(f'Cached sharecodes: {", ".join(recent_matches_cache.keys()) or "None"}')
+
+        # Fetch the newest sharecodes
+        log.info(f'Fetching sharecodes (for Steam ID: {steamuser.steamid})')
+        sharecodes = list(self.api.fetch_sharecodes(first_sharecode, steamuser))
+        log.info(f'Fetched: {first_sharecode} -> {sharecodes}')
+
+        # Skip the first sharecode (if requested, i.e. if the corresponding match was already processed before)
+        if skip_first:
+            log.info(f'Skipping first sharecode: {sharecodes[0]}')
+            sharecodes = sharecodes[1:]
+
+        # Resolve the fetched sharecodes
+        matches: list[dict] = list()
+        for sidx, sharecode in enumerate(sharecodes):
+            log.info(f'Processing sharecode: {sharecode} ({sidx + 1} / {len(sharecodes)})')
+
+            # Check if the sharecode is already among the recent matches (cache hit)
+            cache_hit = recent_matches_cache.get(sharecode)
+            if cache_hit is not None:
+                log.info(f'Cache hit for sharecode: {sharecode}')
+                matches.append(cache_hit.pk)
+
+            # Otherwise, resolve the sharecode
+            else:
+                protobuf = self._resolve_sharecode(sharecode)
+                summary = self._resolve_protobuf(sharecode, protobuf)
+
+                # Skip the match if it is a wingman match
+                if _is_wingman_match(summary):
+                    log.info(f'Skipping wingman match: {sharecode}')
+                else:
+                    matches.append(summary)
+
+        # Return only matches that are not wingman matches
+        log.info(f'Fetched {len(matches)} match(es)')
+        return matches
+
+    def _unfold_summary(self, summary):
+        """
+        Unfold the protobuf object into a simple dictionary, that can easily be pickled.
+        """
+        return {
+            key: getattr(summary, key) for key in [
+                'map',
+                'match_duration',
+            ]
+        } | {
+            key: list(getattr(summary, key)) for key in [
+                'team_scores',
+                'enemy_kills',
+                'enemy_headshots',
+                'assists',
+                'deaths',
+                'scores',
+                'mvps',
+            ]
+        }
+
+    def _resolve_sharecode(self, sharecode: str) -> Any:
+        """
+        Resolves a sharecode to a protobuf object.
+        """
+        log.info(f'Resolving sharecode: {sharecode}')
+        d = decode_sharecode(sharecode)
+        log.info('Requesting match info')
+        while True:
+            self.csgo.get().request_full_match_info(d['matchid'], d['outcomeid'], d['token'])
+            log.info('Waiting for match data')
+            response = self.csgo.get().wait_event('full_match_info', 10)
+            if response is not None:
+                break
+            log.info('Waiting for match data timed out, retrying')
+        log.info('Match data completed')
+        return response[0].matches[0]
+
+    def _resolve_protobuf(self, sharecode: str, protobuf: Any) -> dict:
+        """
+        Resolves a protobuf object to a summary of a match.
+        """
+        return dict(
+            sharecode = sharecode,
+            timestamp = protobuf.matchtime,
+            summary   = self._unfold_summary(protobuf.roundstatsall[-1]),
+            steam_ids = self._resolve_account_ids(protobuf.roundstatsall[-1].reservation.account_ids),
+        )
+
+    def _resolve_account_ids(self, account_ids):
+        log.info('Resolving Steam IDs')
+        return [SteamID(int(account_id)).as_64 for account_id in account_ids]
+
+
+class ClientError(Exception):
+    """
+    Raised when a client operation fails.
+    """
+    pass
+
+
+class InvalidSharecodeError(ClientError):
+    """
+    Raised when a sharecode is wrongly associated with a user.
     """
 
     def __init__(self, steamuser, sharecode):
@@ -171,8 +309,9 @@ class InvalidSharecodeError(Exception):
         self.sharecode = sharecode
 
 
-class InvalidDemoError(Exception):
-    """Raised when a corrupted demo is faced.
+class InvalidDemoError(ClientError):
+    """
+    Raised when a corrupted demo is faced.
     """
 
     def __init__(self, sharecode, demo_url):
@@ -317,7 +456,7 @@ class CSGO:
             log.info(f'Finished waiting for CSGO game coordinator')
 
 
-class CSGOWrapper:
+class LazyCSGOWrapper:
 
     def __init__(self):
         self.csgo = None
@@ -338,4 +477,4 @@ class CSGOWrapper:
             return self.csgo.csgo
 
 
-api = API()
+api = SteamAPI()

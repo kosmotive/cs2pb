@@ -77,7 +77,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'api': {
+        'cs2_client': {
             'handlers': ['console'],
             'level': 'DEBUG',
         },
@@ -86,6 +86,10 @@ LOGGING = {
             'level': 'DEBUG',
         },
         'stats.models': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
+        'stats.updater': {
             'handlers': ['console'],
             'level': 'DEBUG',
         },
@@ -118,9 +122,6 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-#        'OPTIONS': {
-#            'timeout': 60, # seconds
-#        },
     },
 }
 

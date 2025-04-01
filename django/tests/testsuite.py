@@ -1,15 +1,19 @@
-import functools
-import importlib
+import logging
 import os
 import pathlib
 import urllib.request
+from unittest.mock import patch
 
+import cs2_client
 import matplotlib.image as mpimg
 import numpy as np
 
 file_dir_path = pathlib.Path(__file__).parent
 demo_path = file_dir_path / 'data/demos'
 demo_path.mkdir(parents=True, exist_ok=True)
+
+# Disable all logging except for errors
+logging.disable(logging.ERROR)
 
 
 def get_demo_path(demo_id):
@@ -22,7 +26,9 @@ def get_demo_path(demo_id):
     return str(demo_filepath)
 
 
-class _fake_api:
+class fake_api:
+
+    _original_api = None
 
     @staticmethod
     def fetch_profile(steamid):
@@ -34,30 +40,11 @@ class _fake_api:
         )
 
     @staticmethod
-    def inject(*modules):
-        for module_name in modules:
-            m = importlib.import_module(module_name)
-            setattr(m, 'api', _fake_api)
-
-    @staticmethod
-    def restore(*modules):
-        from api import api
-        for module_name in modules:
-            m = importlib.import_module(module_name)
-            setattr(m, 'api', api)
-
-
-def fake_api(*modules):
-    def decorator(func):
-        @functools.wraps(func)
+    def patch(func):
+        @patch.object(cs2_client, 'api', fake_api)
         def wrapper(*args, **kwargs):
-            _fake_api.inject(*modules)
-            try:
-                return func(*args, **kwargs)
-            finally:
-                _fake_api.restore(*modules)
+            return func(*args, **kwargs)
         return wrapper
-    return decorator
 
 
 def assert_image_almost_equal(testcase, test_id, actual, expected, delta = 0.1):

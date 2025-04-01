@@ -100,10 +100,13 @@ function autoscale() {
 </div>
 
 <div id="footer">
-    <a href="https://github.com/kosmotive/cs2pb" target="_blank">
+    <a href="https://github.com/kosmotive/cs2pb/tree/{{ version.branch }}" target="_blank">
         <b>CS2 Performance Board</b>
         {% if version %}
             <br>{{ version.sha|slice:"0:7" }} @ {{ version.date }}
+            {% if version.branch != "master" %}
+                <br><span class="branch-warning" title="This instance is currently running a branch with experimental features. Stability may be affected.">Experimental branch</span>
+            {% endif %}
         {% endif %}
         <p>contribute on
         <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" style="margin-left: 0.2em; aspect-ratio: 1; height: 1.2rem;" viewBox="0 0 16 16">

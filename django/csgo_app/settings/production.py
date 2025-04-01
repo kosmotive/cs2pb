@@ -41,9 +41,9 @@ LOGGING['handlers']['discord'] = {
     'when': 'D',
 }
 
-LOGGING['handlers']['api'] = {
+LOGGING['handlers']['cs2_client'] = {
     'class': 'logging.handlers.TimedRotatingFileHandler',
-    'filename': LOG_PATH / 'api.log',
+    'filename': LOG_PATH / 'cs2_client.log',
     'formatter': 'verbose',
     'when': 'D',
 }
@@ -104,8 +104,8 @@ LOGGING['loggers']['discordbot.models'] = {
     'level': 'INFO',
 }
 
-LOGGING['loggers']['api'] = {
-    'handlers': ['api', 'errors'],
+LOGGING['loggers']['cs2_client'] = {
+    'handlers': ['cs2_client', 'errors'],
     'level': 'DEBUG',
 }
 

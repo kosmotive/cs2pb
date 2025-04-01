@@ -8,6 +8,7 @@ from accounts.models import (
     Squad,
     SteamProfile,
 )
+from csgo_app.views import add_globals_to_context
 
 from django.contrib.auth import login as do_login
 from django.contrib.auth import logout as do_logout
@@ -26,7 +27,9 @@ def login(request):
             return redirect('squads')
     else:
         form = LoginForm()
-    return render(request, 'accounts/login.html', {'form': form})
+    context = {'form': form}
+    add_globals_to_context(context)
+    return render(request, 'accounts/login.html', context)
 
 
 def logout(request):
@@ -55,6 +58,7 @@ def join(request, uuid):
             'invitation': invitation,
             'form': form,
         }
+        add_globals_to_context(context)
         return render(request, 'accounts/join.html', context)
 
 
@@ -66,6 +70,7 @@ def invite(request, squadid, steamid):
         'invitation': invitation,
         'invite_url': invitation.absolute_url(request),
     }
+    add_globals_to_context(context)
     return render(request, 'accounts/invite.html', context)
 
 
@@ -80,6 +85,7 @@ def settings(request):
     context = {
         'form': form,
     }
+    add_globals_to_context(context)
     return render(request, 'accounts/settings.html', context)
 
 
