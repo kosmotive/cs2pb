@@ -1297,7 +1297,7 @@ class UpdateTask(models.Model):
                     else:
                         pmatch: Match = match_data
 
-                    self.account.last_sharecode = match_data['sharecode']
+                    self.account.last_sharecode = pmatch.sharecode
                     self.account.save()
 
                     participation = pmatch.get_participation(self.account.steam_profile)

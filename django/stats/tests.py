@@ -1018,7 +1018,7 @@ class UpdateTask__run(TestCase):
         mock_cs2_client_fetch_matches,
     ):
         """
-        Test a regular update for an account (i.e. there are prior matches) that yields no new matches.
+        Test a regular update (i.e. for an account with prior matches) that yields no new matches.
         """
         # Establish preconditions
         pmatch = models.Match.objects.create(
@@ -1065,6 +1065,81 @@ class UpdateTask__run(TestCase):
 
         # Verify that the state of the account remains correct
         self.assertEqual(self.account.last_sharecode, pmatch.sharecode)
+
+    @patch.object(models.settings, 'CSGO_API_ENABLED', True)
+    @patch('cs2_client.fetch_matches')
+    @patch('stats.models.Match.from_summary')
+    @patch('stats.models.MatchBadge.award_with_history')
+    def test_regular_update_with_recent_matches(
+        self,
+        mock_MatchBadge_award_with_history,
+        mock_Match_from_summary,
+        mock_cs2_client_fetch_matches,
+    ):
+        """
+        Test a regular update (i.e. for an account with prior matches) that yields a recent match.
+        """
+        # Establish preconditions
+        pmatch_previous = models.Match.objects.create(
+            sharecode = 'xxx-sharecode-xxx',
+            timestamp = 0,
+            score_team1 = 12,
+            score_team2 = 12,
+            duration = 3000,
+            map_name = 'de_dust2',
+        )
+        pmatch_recent = models.Match.objects.create(
+            sharecode = 'xxx-sharecode-recent',
+            timestamp = 0,
+            score_team1 = 12,
+            score_team2 = 12,
+            duration = 3000,
+            map_name = 'de_inferno',
+        )
+        for pmatch in (pmatch_previous, pmatch_recent):
+            models.MatchParticipation.objects.create(
+                player = self.account.steam_profile,
+                pmatch = pmatch,
+                team = 1,
+                result = 'l',
+                kills = 20,
+                assists = 10,
+                deaths = 15,
+                score = 30,
+                mvps = 5,
+                headshots = 15,
+                adr = 120.5,
+            )
+        mock_cs2_client_fetch_matches.return_value = [
+            pmatch_recent,
+        ]
+
+        # Task should run without errors
+        with patch.object(self.account, 'handle_finished_update') as mock_account_handle_finished_update:
+            self.task.run(recent_matches = [pmatch_recent])
+
+        # Verify that `cs2_client.fetch_matches` was called correctly
+        mock_cs2_client_fetch_matches.assert_called_once_with(
+            pmatch_previous.sharecode,
+            cs2_client.SteamAPIUser(self.account.steamid, self.account.steam_auth),
+            [pmatch_recent],
+            skip_first = True,
+        )
+
+        # Verify that `Match.from_summary` was not called
+        mock_Match_from_summary.assert_not_called()
+
+        # Verify that `MatchBadge.award_with_history` was called correctly
+        mock_MatchBadge_award_with_history.assert_called_once_with(
+            mock_Match_from_summary.return_value.get_participation(self.account.steam_profile),
+            [pmatch_previous.get_participation(self.account.steam_profile)],
+        )
+
+        # Verify that `account.handle_finished_update` was called correctly
+        mock_account_handle_finished_update.assert_called_once_with()
+
+        # Verify that the state of the account was updated correctly
+        self.assertEqual(self.account.last_sharecode, pmatch_recent.sharecode)
 
 
 class GamingSession(TestCase):
