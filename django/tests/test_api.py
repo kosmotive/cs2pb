@@ -149,7 +149,7 @@ class Client(TestCase):
                 '_resolve_sharecode',
                 side_effect = lambda sharecode: dict(sharecode = sharecode),
             )
-            @patch.object(self.client, '_resolve_protobuf', side_effect = lambda param: param)
+            @patch.object(self.client, '_resolve_protobuf', side_effect = lambda sharecode, protobuf: protobuf)
             @patch('cs2_client._is_wingman_match', return_value = False)
             def wrapper(*args, **kwargs):
                 return func(*args, **kwargs)

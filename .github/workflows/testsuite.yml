@@ -6,6 +6,11 @@ on:
   push:
     branches: ['master']
 
+# Cancel previous workflow runs on the same PR/branch/tag
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   run_testsuite:
     name: Tests
