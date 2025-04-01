@@ -12,7 +12,7 @@ file_dir_path = pathlib.Path(__file__).parent
 demo_path = file_dir_path / 'data/demos'
 demo_path.mkdir(parents=True, exist_ok=True)
 
-# Disable all loging except for errors
+# Disable all logging except for errors
 logging.disable(logging.ERROR)
 
 
