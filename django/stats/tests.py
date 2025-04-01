@@ -3,7 +3,10 @@ import math
 import pathlib
 import time
 import uuid
-from unittest.mock import patch
+from unittest.mock import (
+    MagicMock,
+    patch,
+)
 
 import cs2_client
 from accounts.models import (
@@ -974,8 +977,12 @@ class UpdateTask__run(TestCase):
         # Establish preconditions
         self.account.last_sharecode = ''
         self.account.save()
+        mock_Match_from_summary_ret = MagicMock()
+        mock_Match_from_summary_ret.sharecode = 'xxx-sharecode-xxx'
+        mock_Match_from_summary_ret.timestamp = 3000
+        mock_Match_from_summary.return_value = mock_Match_from_summary_ret
         mock_cs2_client_fetch_matches.return_value = [
-            dict(sharecode = 'xxx-sharecode-xxx'),
+            dict(sharecode = mock_Match_from_summary_ret.sharecode),
         ]
 
         # Task should run without errors
