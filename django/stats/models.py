@@ -420,16 +420,27 @@ class Match(models.Model):
     The gaming sessions in which the match was played.
     """
 
-    mtype = models.CharField(blank = True, max_length = 20)
-    """
-    The type of the match. This is either MTYPE_COMPETITIVE, MTYPE_WINGMAN, MTYPE_DANGER_ZONE, MTYPE_PREMIER, or empty
-    if the type of the match is unknown.
-    """
-
     MTYPE_COMPETITIVE = 'Competitive'
     MTYPE_WINGMAN = 'Wingman'
     MTYPE_DANGER_ZONE = 'Danger Zone'
     MTYPE_PREMIER = 'Premier'
+
+    mtype = models.CharField(
+        blank = True,
+        max_length = 20,
+        verbose_name = 'Match type',
+        choices = [
+            ('', 'Unknown'),
+            (MTYPE_COMPETITIVE, 'Competitive'),
+            (MTYPE_WINGMAN, 'Wingman'),
+            (MTYPE_DANGER_ZONE, 'Danger Zone'),
+            (MTYPE_PREMIER, 'Premier'),
+        ],
+    )
+    """
+    The type of the match. This is either MTYPE_COMPETITIVE, MTYPE_WINGMAN, MTYPE_DANGER_ZONE, MTYPE_PREMIER, or empty
+    if the type of the match is unknown.
+    """
 
     class Meta:
 
