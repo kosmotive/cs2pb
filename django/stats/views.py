@@ -1,8 +1,6 @@
 import logging
 import numbers
-import os
 
-import gitinfo
 import numpy as np
 from accounts.models import (
     Account,
@@ -14,8 +12,8 @@ from cs2pb_typing import (
     List,
     Optional,
 )
+from csgo_app.views import add_globals_to_context
 
-from django.core.mail import send_mail
 from django.db.models import (
     Count,
     F,
@@ -40,14 +38,9 @@ from .models import (
     MatchBadgeType,
     MatchParticipation,
     PlayerOfTheWeek,
-    UpdateTask,
 )
 
 log = logging.getLogger(__name__)
-
-
-ADMIN_MAIL_ADDRESS = os.environ['CS2PB_ADMIN_MAIL_ADDRESS']
-assert len(ADMIN_MAIL_ADDRESS) > 0
 
 
 badge_order = [
@@ -350,16 +343,6 @@ def matches(request, squad=None, last_timestamp=None):
         return render(request, 'stats/sessions.html', context)
     else:
         return render(request, 'stats/sessions-list.html', context)
-
-
-def add_globals_to_context(context):
-    context['version'] = gitinfo.get_head_info()
-    qs = UpdateTask.objects.filter(completion_timestamp = None)
-    qs = qs.values('account').annotate(count = Count('account'))
-    if qs.count() > 0 and qs.latest('count')['count'] > 1:
-        msg = 'There is a temporary malfunction of the Steam Client API.'
-        context['error'] = f'{msg} Come back later.'
-        send_mail('Steam API malfunction', msg, ADMIN_MAIL_ADDRESS, [ADMIN_MAIL_ADDRESS], fail_silently=True)
 
 
 def player(request, squad, steamid):

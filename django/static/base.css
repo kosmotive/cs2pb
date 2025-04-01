@@ -58,6 +58,8 @@ body, input, button {
     display: inline-block;
     padding-left: 0.5em;
     padding-right: 0.5em;
+    padding-top: 0.1em;
+    padding-bottom: 0.1em;
     margin-top: 0.5em;
 }
 
