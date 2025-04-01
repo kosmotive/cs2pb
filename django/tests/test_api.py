@@ -5,6 +5,7 @@ from unittest.mock import patch
 import api
 from memory_profiler import memory_usage
 from tests import testsuite
+from stats.models import Match
 
 
 class fetch_match_details(unittest.TestCase):
@@ -53,6 +54,23 @@ class fetch_match_details(unittest.TestCase):
         self.assertEqual(round(pmatch['adr']['76561198140806020'], 1), 98.9)
         self.assertEqual(round(pmatch['adr']['76561198064174518'], 1), 63.6)
 
+        self.assertEqual(pmatch['type'], Match.TYPE_PREMIER)
+        self.assertEqual(
+            pmatch['ranks'],
+            {
+                '76561197961345487': {'new': 11483, 'old': 11590},
+                '76561197961748270': {'new': 11963, 'old': 12073},
+                '76561197962477966': {'new':  9893, 'old':  9999},
+                '76561197967680028': {'new': 15107, 'old': 15231},
+                '76561198064174518': {'new': 12856, 'old': 12498},
+                '76561198067716219': {'new': 11645, 'old': 11754},
+                '76561198140806020': {'new': 11186, 'old': 10829},
+                '76561198298259382': {'new': 12812, 'old': 12662},
+                '76561198309743637': {'new': 13958, 'old': 13634},
+                '76561199034015511': {'new': 13080, 'old': 12966},
+            },
+        )
+
     def test_awpy_003698946311295336822_1609103086(self):
         # This test fails with awpy older than 2.0.0.b4 and should pass with newer versions
         pmatch = {
@@ -85,6 +103,16 @@ class fetch_match_details(unittest.TestCase):
 
         # If parsing succeeds, perform some checks to make sure that the data is correct
         self.assertEqual(pmatch['map'], 'de_vertigo')
+        self.assertEqual(pmatch['type'], Match.TYPE_WINGMAN)
+        self.assertEqual(
+            pmatch['ranks'],
+            {
+                '76561197962477966': {'new':  0, 'old':  0},
+                '76561197963929445': {'new':  0, 'old':  0},
+                '76561198192222793': {'new': 10, 'old': 10},
+                '76561198195506142': {'new':  9, 'old':  9},
+            },
+        )
 
     @patch('api.parse_demo', wraps=api.parse_demo)
     def test_corrupted_demo_file(self, mock_parse_demo):

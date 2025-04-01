@@ -420,6 +420,11 @@ class Match(models.Model):
     The gaming sessions in which the match was played.
     """
 
+    TYPE_COMPETITIVE = 'Competitive'
+    TYPE_WINGMAN = 'Wingman'
+    TYPE_DANGER_ZONE = 'Danger Zone'
+    TYPE_PREMIER = 'Premier'
+
     class Meta:
 
         verbose_name_plural = 'Matches'
