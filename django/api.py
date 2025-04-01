@@ -74,10 +74,10 @@ def fetch_match_details(pmatch, max_retry_count = 4):
     #  - rank_new: Rank after the match (where 0 is unranked)
     #  - user_steamid: Steam ID of the player
     pmatch['type'] = {
-        6:  Match.TYPE_COMPETITIVE,
-        7:  Match.TYPE_WINGMAN,
-        10: Match.TYPE_DANGER_ZONE,
-        11: Match.TYPE_PREMIER,
+        6:  Match.MTYPE_COMPETITIVE,
+        7:  Match.MTYPE_WINGMAN,
+        10: Match.MTYPE_DANGER_ZONE,
+        11: Match.MTYPE_PREMIER,
     }.get(demo.events['rank_update'].rank_type_id.iloc[0], '')
     pmatch['ranks'] = {
         str(row['user_steamid']): dict(

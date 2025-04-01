@@ -174,8 +174,11 @@ class Match__create_from_data(TestCase):
         self.assertEqual(pmatch.score_team2, pmatch_data['summary'].team_scores[1])
         self.assertEqual(pmatch.duration, pmatch_data['summary'].match_duration)
         self.assertEqual(pmatch.map_name, 'de_vertigo')
+        self.assertEqual(pmatch.mtype, models.Match.MTYPE_PREMIER)
         self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').kills, 17)
         self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').deaths, 15)
+        self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').old_rank, 15231)
+        self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').new_rank, 15107)
         self.assertEqual(round(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').adr, 1), 104.7)
 
         return pmatch

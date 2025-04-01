@@ -385,7 +385,7 @@ class Match(models.Model):
     A match that has been played and finished.
     """
 
-    sharecode = models.CharField(blank=False, max_length=50)
+    sharecode = models.CharField(blank = False, max_length = 50)
     """
     The share code of the match.
     """
@@ -420,10 +420,16 @@ class Match(models.Model):
     The gaming sessions in which the match was played.
     """
 
-    TYPE_COMPETITIVE = 'Competitive'
-    TYPE_WINGMAN = 'Wingman'
-    TYPE_DANGER_ZONE = 'Danger Zone'
-    TYPE_PREMIER = 'Premier'
+    mtype = models.CharField(blank = True, max_length = 20)
+    """
+    The type of the match. This is either MTYPE_COMPETITIVE, MTYPE_WINGMAN, MTYPE_DANGER_ZONE, MTYPE_PREMIER, or empty
+    if the type of the match is unknown.
+    """
+
+    MTYPE_COMPETITIVE = 'Competitive'
+    MTYPE_WINGMAN = 'Wingman'
+    MTYPE_DANGER_ZONE = 'Danger Zone'
+    MTYPE_PREMIER = 'Premier'
 
     class Meta:
 
@@ -485,6 +491,7 @@ class Match(models.Model):
             m.score_team2 = data['summary'].team_scores[1]
             m.duration = data['summary'].match_duration
             m.map_name = data['map']
+            m.mtype = data['type']
             m.save()
 
             slices = [
@@ -518,6 +525,8 @@ class Match(models.Model):
                 mp.mvps      = mvps
                 mp.headshots = headshots
                 mp.adr       = float(data['adr'][str(steam_profile.steamid)] or 0)
+                mp.old_rank  = data['ranks'][str(steam_profile.steamid)]['old']
+                mp.new_rank  = data['ranks'][str(steam_profile.steamid)]['new']
                 mp.save()
 
             for kill_data in data['kills'].to_dict(orient='records'):
@@ -695,6 +704,16 @@ class MatchParticipation(models.Model):
     adr = models.FloatField()
     """
     The average damage per round the player scored in the match.
+    """
+
+    old_rank = models.IntegerField(null = True, blank = True)
+    """
+    The rank of the player before the match (None if unranked).
+    """
+
+    new_rank = models.IntegerField(null = True, blank = True)
+    """
+    The rank of the player after the match (None if unranked).
     """
 
     class Meta:

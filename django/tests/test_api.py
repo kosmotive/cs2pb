@@ -54,7 +54,7 @@ class fetch_match_details(unittest.TestCase):
         self.assertEqual(round(pmatch['adr']['76561198140806020'], 1), 98.9)
         self.assertEqual(round(pmatch['adr']['76561198064174518'], 1), 63.6)
 
-        self.assertEqual(pmatch['type'], Match.TYPE_PREMIER)
+        self.assertEqual(pmatch['type'], Match.MTYPE_PREMIER)
         self.assertEqual(
             pmatch['ranks'],
             {
@@ -103,7 +103,7 @@ class fetch_match_details(unittest.TestCase):
 
         # If parsing succeeds, perform some checks to make sure that the data is correct
         self.assertEqual(pmatch['map'], 'de_vertigo')
-        self.assertEqual(pmatch['type'], Match.TYPE_WINGMAN)
+        self.assertEqual(pmatch['type'], Match.MTYPE_WINGMAN)
         self.assertEqual(
             pmatch['ranks'],
             {
