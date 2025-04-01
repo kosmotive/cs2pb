@@ -232,7 +232,7 @@ class Client:
                 if _is_wingman_match(summary):
                     log.info(f'Skipping wingman match: {sharecode}')
                 else:
-                 matches.append(summary)
+                    matches.append(summary)
 
         # Return only matches that are not wingman matches
         log.info(f'Fetched {len(matches)} match(es)')
