@@ -5,10 +5,6 @@ import pathlib
 import urllib.request
 import uuid
 
-from stats.features import (
-    FeatureContext,
-    Features,
-)
 from stats.updater import queue_update_task
 from url_forward import get_redirect_url_to
 
@@ -480,6 +476,10 @@ class SquadMembership(models.Model):
         """
         Update the stats and trends of the squad member based on their performance within the last 30 days.
         """
+        from stats.features import (
+            FeatureContext,
+            Features,
+        )
 
         # Store the current stats for later comparison
         previous_stats = dict(self.stats)
@@ -520,6 +520,10 @@ class SquadMembership(models.Model):
         """
         Returns the player value with and without other squad members.
         """
+        from stats.features import (
+            FeatureContext,
+            Features,
+        )
         buddy_performances = dict()
         for buddy_membership in self.squad.memberships.exclude(pk = self.pk):
             buddy_matches = buddy_membership.player.matches()

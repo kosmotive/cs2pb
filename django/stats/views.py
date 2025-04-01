@@ -58,7 +58,7 @@ badge_order = [
 
 all_features_collapsed = [
     Features.player_value,
-    Features.participation_effect,
+    Features.premier_rank,
     Features.headshot_rate,
     Features.peach_rate,
 ]
@@ -153,6 +153,7 @@ def compute_card(
             'trend': trend,
             'trend_str': trend_str,
             'label': feature.format.format(value) if value is not None else '',
+            'extra': feature.extra,
         }
 
     stats   = [stat(feature) for feature in features]

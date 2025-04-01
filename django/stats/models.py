@@ -36,10 +36,6 @@ from django.db.models import (
 from django.db.models.signals import m2m_changed
 
 from . import potw
-from .features import (
-    FeatureContext,
-    Features,
-)
 
 log = logging.getLogger(__name__)
 
@@ -90,6 +86,11 @@ class GamingSession(models.Model):
         """
         Close the session.
         """
+        from .features import (
+            FeatureContext,
+            Features,
+        )
+
         was_already_closed = self.is_closed
         self.is_closed = True
         self.save()

@@ -146,6 +146,7 @@ div.profile-card .profile-stats {
 
 div.profile-card .profile-stat {
     margin-top: 2mm;
+    position: relative;
 }
 
 div.profile-card .profile-stat-name {
@@ -200,8 +201,16 @@ div.profile-card .profile-stats .profile-stat-order3~.profile-stat-order3 {
 div.profile-card .profile-stat-bar-value {
     display: inline-block;
     position: absolute;
-    right: 5mm;
+    right: 0;
     z-index: 1;
+}
+
+div.profile-card .profile-stat-extra {
+    display: inline-block;
+    position: absolute;
+    right: 0;
+    top: 0.5em;
+    font-size: 60%;
 }
 
 div.profile-card .profile-stat-bar-trend-up,
