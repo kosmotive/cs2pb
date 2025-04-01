@@ -186,7 +186,7 @@ class Client:
         sharecodes = list(self.api.fetch_sharecodes(first_sharecode, steamuser))
         log.debug(f'Fetched: {first_sharecode} -> {sharecodes}')
 
-        # Skip the first sharecode (if requested, i.e. if the corresponding mathc was already processed before)
+        # Skip the first sharecode (if requested, i.e. if the corresponding match was already processed before)
         if skip_first:
             log.debug(f'Skipping first sharecode: {sharecodes[0]}')
             sharecodes = sharecodes[1:]
@@ -204,7 +204,7 @@ class Client:
             # Otherwise, resolve the sharecode
             else:
                 protobuf = self._resolve_sharecode(sharecode)
-                summary = self._resolve_protobuf(protobuf)
+                summary = self._resolve_protobuf(sharecode, protobuf)
                 matches.append(summary)
 
         # Return only matches that are not wingman matches
