@@ -1,0 +1,9 @@
+indent-width = 4
+target-version = "py310"
+
+[lint]
+select = ["ERA001"]
+
+[format]
+quote-style = "single"
+indent-style = "space"
