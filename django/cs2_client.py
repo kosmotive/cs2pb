@@ -147,8 +147,10 @@ def fetch_matches(
                 ret = Client(api).fetch_matches(first_sharecode, steamuser, recent_matches, skip_first)
                 success = True
             except ClientError as error:
+                log.error(f'An error occurred while fetching matches', exc_info=True)
                 ret = dict(error=error, cause=None)
             except BaseException as error:
+                log.critical(f'An error occurred while fetching matches', exc_info=True)
                 ret = dict(error=ClientError(), cause=error)
 
             # Serialize the result and exit the subprocess
@@ -176,7 +178,6 @@ def fetch_matches(
             else:
 
                 # Report the error
-                log.error(f'An error occurred while fetching matches')
                 if ret['cause'] is None:
                     raise ret['error']
                 else:
@@ -199,37 +200,43 @@ class Client:
 
         # Build a cache of recent matches that can be checked quickly
         recent_matches_cache = {pmatch.sharecode: pmatch for pmatch in recent_matches}
+        log.info(f'Cached sharecodes: {", ".join(recent_matches_cache.keys()) or "None"}')
 
         # Fetch the newest sharecodes
-        log.debug(f'Fetching sharecodes (for Steam ID: {steamuser.steamid})')
+        log.info(f'Fetching sharecodes (for Steam ID: {steamuser.steamid})')
         sharecodes = list(self.api.fetch_sharecodes(first_sharecode, steamuser))
-        log.debug(f'Fetched: {first_sharecode} -> {sharecodes}')
+        log.info(f'Fetched: {first_sharecode} -> {sharecodes}')
 
         # Skip the first sharecode (if requested, i.e. if the corresponding match was already processed before)
         if skip_first:
-            log.debug(f'Skipping first sharecode: {sharecodes[0]}')
+            log.info(f'Skipping first sharecode: {sharecodes[0]}')
             sharecodes = sharecodes[1:]
 
         # Resolve the fetched sharecodes
         matches: list[dict] = list()
-        for sharecode in sharecodes:
+        for sidx, sharecode in enumerate(sharecodes):
+            log.info(f'Processing sharecode: {sharecode} ({sidx + 1} / {len(sharecodes)})')
 
             # Check if the sharecode is already among the recent matches (cache hit)
             cache_hit = recent_matches_cache.get(sharecode)
             if cache_hit is not None:
-                log.debug(f'Cache hit for sharecode: {sharecode}')
+                log.info(f'Cache hit for sharecode: {sharecode}')
                 matches.append(cache_hit.pk)
 
             # Otherwise, resolve the sharecode
             else:
                 protobuf = self._resolve_sharecode(sharecode)
                 summary = self._resolve_protobuf(sharecode, protobuf)
-                matches.append(summary)
+
+                # Skip the match if it is a wingman match
+                if _is_wingman_match(summary):
+                    log.info(f'Skipping wingman match: {sharecode}')
+                else:
+                 matches.append(summary)
 
         # Return only matches that are not wingman matches
-        retained_matches = [pmatch for pmatch in matches if not _is_wingman_match(pmatch)]
-        log.debug(f'Fetched {len(matches)} match(es), retaining {len(retained_matches)} match(es)')
-        return retained_matches
+        log.info(f'Fetched {len(matches)} match(es)')
+        return matches
 
     def _unfold_summary(self, summary):
         """
@@ -256,17 +263,17 @@ class Client:
         """
         Resolves a sharecode to a protobuf object.
         """
-        log.debug(f'Resolving sharecode: {sharecode}')
+        log.info(f'Resolving sharecode: {sharecode}')
         d = decode_sharecode(sharecode)
-        log.debug('Requesting match info')
+        log.info('Requesting match info')
         while True:
             self.csgo.get().request_full_match_info(d['matchid'], d['outcomeid'], d['token'])
-            log.debug('Waiting for match data')
+            log.info('Waiting for match data')
             response = self.csgo.get().wait_event('full_match_info', 10)
             if response is not None:
                 break
-            log.debug('Waiting for match data timed out, retrying')
-        log.debug('Match data completed')
+            log.info('Waiting for match data timed out, retrying')
+        log.info('Match data completed')
         return response[0].matches[0]
 
     def _resolve_protobuf(self, sharecode: str, protobuf: Any) -> dict:
@@ -281,7 +288,7 @@ class Client:
         )
 
     def _resolve_account_ids(self, account_ids):
-        log.debug('Resolving Steam IDs')
+        log.info('Resolving Steam IDs')
         return [SteamID(int(account_id)).as_64 for account_id in account_ids]
 
 

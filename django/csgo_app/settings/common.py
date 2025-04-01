@@ -89,6 +89,10 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'DEBUG',
         },
+        'stats.updater': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        },
         'discord': {
             'handlers': ['console'],
             'level': 'ERROR',
