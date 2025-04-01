@@ -48,6 +48,7 @@
                     <tr><td colspan="8">Team {{ team_idx }}</td></tr>
                     <tr>
                         <td>Player</td>
+                        <td>Rank</td>
                         <td>K</td>
                         <td>D</td>
                         <td>A</td>
@@ -67,6 +68,17 @@
                                     <img src="{% static 'badges' %}/{{ badge.badge_type.slug }}.png" class="badge">
                                 {% endfor %}</div>
                             </div>
+                        </td>
+                        <td>
+                            <div class="previous-rank-container">
+                                {{ mp.old_rank|rank:"rank-small" }}
+                                {% if mp.old_rank %}
+                                    <span>
+                                        {% if mp.new_rank > mp.old_rank %}+{% endif %}{{ mp.new_rank|subtract:mp.old_rank }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            {{ mp.new_rank|rank }}
                         </td>
                         <td>{{ mp.kills }}</td>
                         <td>{{ mp.deaths }}</td>
