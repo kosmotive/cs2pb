@@ -44,11 +44,17 @@ class Feature:
     A unique identifier of the feature (determined automatically, may change over time).
     """
 
-    def __init__(self, name: str, description, format = '{:.2f}'):
+    extra: Optional[str]
+    """
+    An extra information about the feature, that is displayed next to the value.
+    """
+
+    def __init__(self, name: str, description, format = '{:.2f}', extra = None):
         self.name = name
         self.description = description
         self.format = format
         self.slug = None
+        self.extra = extra
 
     def __call__(self, ctx: FeatureContext) -> Optional[float]:
         ...
@@ -91,6 +97,29 @@ class ParticipationEffect(Feature):
             victory_chance_without_participation = victories_without_participation / matches_without_participation
             expected_causal_effect = victory_chance_with_participation - victory_chance_without_participation
             return (1 + expected_causal_effect) / 2
+
+
+class Rank(Feature):
+
+    def __init__(self, mtype):
+        from .models import Match
+        assert mtype in (Match.MTYPE_COMPETITIVE, Match.MTYPE_DANGER_ZONE, Match.MTYPE_WINGMAN, Match.MTYPE_PREMIER)
+        super().__init__(
+            f'{mtype} Rank',
+            f'The latest {mtype} rank of the player.',
+            format = '{:.1f}',
+            extra = 'x1000',
+        )
+        self.mtype = mtype
+
+    def __call__(self, ctx: FeatureContext) -> Optional[float]:
+        from .models import MatchParticipation
+        try:
+            return ctx.match_participations_of_player.filter(
+                pmatch__mtype = self.mtype,
+            ).latest('pmatch__timestamp').new_rank / 1000
+        except MatchParticipation.DoesNotExist:
+            return None
 
 
 class PeachRate(Feature):
@@ -149,6 +178,8 @@ class Features:
     )
 
     peach_rate = PeachRate()
+
+    premier_rank = Rank(mtype = 'Premier')
 
     all: List[Feature] = []  # Filled automatically
 

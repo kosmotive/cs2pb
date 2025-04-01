@@ -34,6 +34,14 @@
 
             {% else %}
 
+                {% if stat.extra %}
+
+                    <div class="profile-stat-extra">
+                        {{ stat.extra }}
+                    </div>
+                    
+                {% endif %}
+
                 <div class="profile-stat-bar">
                     <div class="profile-stat-bar-outer">
                         <div class="profile-stat-bar-inner" style="width: {{ stat.load }}%;">&nbsp;</div>

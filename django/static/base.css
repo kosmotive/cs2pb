@@ -178,3 +178,122 @@ input.negative {
     right: 0;
     padding: 8mm 15mm;
 }
+
+/* .rank
+ */
+
+.rank {
+    transform: skew(-10deg, 0);
+    display: inline-block;
+    box-shadow: 0 0 1px #000000;
+}
+
+.rank, .rank div {
+    border-left: 0.2em solid #000000;
+}
+
+.rank div {
+    margin-left: 0.1em;
+    padding-left: 0.3em;
+    padding-right: 0.4em;
+    background: linear-gradient(0.25turn, #0000008f, #00000000 10%);
+}
+
+/* .previous-rank-container
+ */
+
+.previous-rank-container {
+    position: absolute;
+    transform: translate(0, -1.1em);
+    font-size: 50%;
+}
+
+.previous-rank-container span {
+    transform: skew(-10deg, 0);
+    font-weight: bold;
+    display: inline-block;
+}
+
+/* .rank-class1
+*/
+
+.rank-class1 {
+    background-color: #3c424b;
+}
+
+.rank-class1, .rank-class1 div {
+    border-color: #b9c4d0;
+    color: #b9c4d0;
+}
+
+/* .rank-class2
+*/
+
+.rank-class2 {
+    background-color: #2d4455;
+}
+
+.rank-class2, .rank-class2 div {
+    border-color: #8cbbe3;
+    color: #8cbbe3;
+}
+
+/* .rank-class3
+*/
+
+.rank-class3 {
+    background-color: #1e2b59;
+}
+
+.rank-class3, .rank-class3 div {
+    border-color: #667fe8;
+    color: #667fe8;
+}
+
+/* .rank-class4
+*/
+
+.rank-class4 {
+    background-color: #422157;
+}
+
+.rank-class4, .rank-class4 div {
+    border-color: #c26bfd;
+    color: #c26bfd;
+}
+
+/* .rank-class5
+*/
+
+.rank-class5 {
+    background-color: #5a015c;
+}
+
+.rank-class5, .rank-class5 div {
+    border-color: #db15ef;
+    color: #db15ef;
+}
+
+/* .rank-class6
+*/
+
+.rank-class6 {
+    background-color: #611614;
+}
+
+.rank-class6, .rank-class6 div {
+    border-color: #ee4947;
+    color: #ee4947;
+}
+
+/* .rank-class7
+*/
+
+.rank-class7 {
+    background-color: #4d3801;
+}
+
+.rank-class7, .rank-class7 div {
+    border-color: #ffd900;
+    color: #ffd900;
+}
