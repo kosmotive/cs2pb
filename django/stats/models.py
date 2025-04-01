@@ -1277,15 +1277,15 @@ class UpdateTask(models.Model):
                 # Determine the first sharecode to fetch the match for
                 first_sharecode = self.account.sharecode
 
-                # Determine if this is the inital update for the user
-                is_initial_update = (first_sharecode == self.account.last_sharecode)
+                # Determine if this is the inital update for the account
+                is_initial_update = (len(self.account.last_sharecode) == 0)
 
                 new_match_data: list[dict | Match] = cs2_client.fetch_matches(
                     first_sharecode,
                     cs2_client.SteamAPIUser(self.account.steamid, self.account.steam_auth),
                     list(recent_matches),
 
-                    # Only process the match for `first_sharecode` if this is the inital update for the user
+                    # Only process the match for `first_sharecode` if this is the inital update for the account
                     skip_first = not is_initial_update,
                 )
 
