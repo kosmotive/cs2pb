@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import api
 from memory_profiler import memory_usage
-from tests import testsuite
 from stats.models import Match
+from tests import testsuite
 
 
 class fetch_match_details(unittest.TestCase):
