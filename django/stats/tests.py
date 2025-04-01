@@ -1090,7 +1090,7 @@ class UpdateTask__run(TestCase):
         )
         pmatch_recent = models.Match.objects.create(
             sharecode = 'xxx-sharecode-recent',
-            timestamp = 0,
+            timestamp = 5000,
             score_team1 = 12,
             score_team2 = 12,
             duration = 3000,
@@ -1131,7 +1131,7 @@ class UpdateTask__run(TestCase):
 
         # Verify that `MatchBadge.award_with_history` was called correctly
         mock_MatchBadge_award_with_history.assert_called_once_with(
-            mock_Match_from_summary.return_value.get_participation(self.account.steam_profile),
+            pmatch_recent.get_participation(self.account.steam_profile),
             [pmatch_previous.get_participation(self.account.steam_profile)],
         )
 

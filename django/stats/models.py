@@ -1289,7 +1289,6 @@ class UpdateTask(models.Model):
                     skip_first = not is_initial_update,
                 )
 
-                old_participations = list(self.account.match_participations().order_by('pmatch__timestamp'))
                 for match_data in new_match_data:
                     if isinstance(match_data, dict):
                         pmatch: Match = Match.from_summary(match_data)
@@ -1301,9 +1300,12 @@ class UpdateTask(models.Model):
                     self.account.save()
 
                     participation = pmatch.get_participation(self.account.steam_profile)
+                    old_participations = list(
+                        self.account.match_participations().order_by('pmatch__timestamp').filter(
+                            pmatch__timestamp__lt = pmatch.timestamp,
+                        )
+                    )
                     MatchBadge.award_with_history(participation, list(old_participations))
-
-                    old_participations.append(participation)
 
             except cs2_client.InvalidSharecodeError:
                 self.account.enabled = False
