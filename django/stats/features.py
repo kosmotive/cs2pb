@@ -106,7 +106,7 @@ class Rank(Feature):
         assert mtype in (Match.MTYPE_COMPETITIVE, Match.MTYPE_DANGER_ZONE, Match.MTYPE_WINGMAN, Match.MTYPE_PREMIER)
         super().__init__(
             f'{mtype} Rank',
-            'The latest mtype} rank of the player.',
+            f'The latest {mtype} rank of the player.',
             format = '{:.1f}',
             extra = 'x1000',
         )
