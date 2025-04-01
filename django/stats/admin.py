@@ -43,8 +43,8 @@ class MatchAdmin(admin.ModelAdmin):
     def has_add_permission(self, request, obj = None):
         return False
 
-    list_display = ('map_name', 'date_and_time', 'score_team1', 'score_team2', 'session_list')
-    list_filter = ('map_name',)
+    list_display = ('map_name', 'date_and_time', 'score_team1', 'score_team2', 'session_list', 'mtype')
+    list_filter = ('map_name', 'mtype')
 
     search_fields = ('map_name', 'timestamp', 'sharecode')
     ordering = ('-timestamp',)
