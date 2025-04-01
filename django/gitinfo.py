@@ -27,7 +27,10 @@ def get_head_info():
     r = git.Repo(str(repo_dir))
     sha = r.head.object.hexsha
     date = get_fmt_date(r.head.object)
-    branch = r.active_branch.name
+    try:
+        branch = r.active_branch.name
+    except TypeError:
+        branch = sha  # Detached HEAD
     return dict(sha = sha, date = date, branch = branch)
 
 
