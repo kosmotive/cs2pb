@@ -50,7 +50,7 @@ botimpl.bot = FakeBot()
 
 class bot(TestCase):
 
-    @testsuite.fake_api()
+    @testsuite.fake_api.patch
     def setUp(self):
         """
         Sets up multiple users:

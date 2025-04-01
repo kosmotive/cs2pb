@@ -1,10 +1,10 @@
-import functools
-import importlib
 import logging
 import os
 import pathlib
 import urllib.request
+from unittest.mock import patch
 
+import cs2_client
 import matplotlib.image as mpimg
 import numpy as np
 
@@ -26,7 +26,7 @@ def get_demo_path(demo_id):
     return str(demo_filepath)
 
 
-class _fake_api:
+class fake_api:
 
     _original_api = None
 
@@ -38,34 +38,13 @@ class _fake_api:
             avatarmedium = f'https://{steamid}/avatar-m.url',
             avatarfull = f'https://{steamid}/avatar-l.url',
         )
-
+    
     @staticmethod
-    def inject(*modules):
-        if _fake_api._original_api is None:
-            import cs2_client
-            _fake_api._original_api = cs2_client.api
-        for module_name in modules:
-            m = importlib.import_module(module_name)
-            setattr(m, 'api', _fake_api)
-
-    @staticmethod
-    def restore(*modules):
-        for module_name in modules:
-            m = importlib.import_module(module_name)
-            setattr(m, 'api', _fake_api._original_api)
-
-
-def fake_api():
-    def decorator(func):
-        @functools.wraps(func)
+    def patch(func):
+        @patch.object(cs2_client, 'api', fake_api)
         def wrapper(*args, **kwargs):
-            _fake_api.inject('cs2_client')
-            try:
-                return func(*args, **kwargs)
-            finally:
-                _fake_api.restore('cs2_client')
+            return func(*args, **kwargs)
         return wrapper
-    return decorator
 
 
 def assert_image_almost_equal(testcase, test_id, actual, expected, delta = 0.1):

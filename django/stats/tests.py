@@ -518,7 +518,7 @@ class get_next_potw_mode(TestCase):
 
 class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
-    @testsuite.fake_api()
+    @testsuite.fake_api.patch
     def setUp(self):
         self.squad = Squad.objects.create(name = 'squad', discord_channel_id = '1234')
         self.team1 = [
@@ -703,7 +703,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
 
 class PlayerOfTheWeek__create_badge(TestCase):
 
-    @testsuite.fake_api()
+    @testsuite.fake_api.patch
     def test(self):
         get_next_badge_data = PlayerOfTheWeek__get_next_badge_data()
         get_next_badge_data.setUp()
@@ -718,7 +718,7 @@ class PlayerOfTheWeek__create_badge(TestCase):
 @patch('accounts.models.SteamProfile.update_cached_avatar')
 class squads(TestCase):
 
-    @testsuite.fake_api()
+    @testsuite.fake_api.patch
     def setUp(self):
         self.factory = RequestFactory()
         self.player = SteamProfile.objects.create(steamid='12345678900000001')
@@ -806,7 +806,7 @@ class split_into_chunks(TestCase):
 
 class matches(TestCase):
 
-    @testsuite.fake_api()
+    @testsuite.fake_api.patch
     def setUp(self):
         self.factory = RequestFactory()
         self.player = SteamProfile.objects.create(steamid = '12345678900000001')
@@ -908,7 +908,7 @@ class run_pending_tasks(TestCase):
 
 class UpdateTask__run(TestCase):
 
-    @testsuite.fake_api()
+    @testsuite.fake_api.patch
     def setUp(self):
         self.player = models.SteamProfile.objects.create(steamid = '12345678900000001')
         self.account = Account.objects.create(steam_profile = self.player, last_sharecode = 'xxx-sharecode-xxx')
@@ -1201,7 +1201,7 @@ class GamingSession(TestCase):
 
 class GamingSession__close(TestCase):
 
-    @testsuite.fake_api()
+    @testsuite.fake_api.patch
     def setUp(self):
         self.player1 = SteamProfile.objects.create(steamid = '12345678900000001')
         self.player2 = SteamProfile.objects.create(steamid = '12345678900000002')
