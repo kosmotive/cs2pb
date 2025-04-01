@@ -38,7 +38,7 @@ class fake_api:
             avatarmedium = f'https://{steamid}/avatar-m.url',
             avatarfull = f'https://{steamid}/avatar-l.url',
         )
-    
+
     @staticmethod
     def patch(func):
         @patch.object(cs2_client, 'api', fake_api)
