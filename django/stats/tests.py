@@ -921,7 +921,7 @@ class UpdateTask__run(TestCase):
         'cs2_client.fetch_matches',
         side_effect = cs2_client.InvalidSharecodeError('12345678900000001', 'xxx-sharecode-xxx'),
     )
-    def test_invalid_sharecode_error(self, mock_api_fetch_matches):
+    def test_invalid_sharecode_error(self, mock_cs2_client_fetch_matches):
         self.task.run(recent_matches = list())
 
         # Accounts with invalid `last_sharecode` should be disabled, because there is no point in retrying an update
@@ -933,7 +933,7 @@ class UpdateTask__run(TestCase):
 
     @patch.object(models.settings, 'CSGO_API_ENABLED', True)
     @patch('cs2_client.fetch_matches', side_effect = cs2_client.ClientError)
-    def test_fetch_matches_error(self, mock_api_fetch_matches):
+    def test_fetch_matches_error(self, mock_cs2_client_fetch_matches):
         # Verify that the error is passed through (so it can be handled by `run_pending_tasks`, see the
         # `run_pending_tasks` test)
         with self.assertRaises(cs2_client.ClientError):
@@ -946,7 +946,7 @@ class UpdateTask__run(TestCase):
         self.assertTrue(self.account.enabled)
 
     @patch('cs2_client.fetch_matches')
-    def test_disabled_account(self, mock_api_fetch_matches):
+    def test_disabled_account(self, mock_cs2_client_fetch_matches):
         self.account.enabled = False
         self.account.save()
 
@@ -954,7 +954,53 @@ class UpdateTask__run(TestCase):
         self.task.run(recent_matches = list())
 
         # Verify that the task was not actually processed
-        self.assertEqual(mock_api_fetch_matches.call_count, 0)
+        self.assertEqual(mock_cs2_client_fetch_matches.call_count, 0)
+
+    @patch.object(models.settings, 'CSGO_API_ENABLED', True)
+    @patch('cs2_client.fetch_matches')
+    @patch('stats.models.Match.from_summary')
+    @patch('stats.models.MatchBadge.award_with_history')
+    def test_initial_update(
+        self,
+        mock_MatchBadge_award_with_history,
+        mock_Match_from_summary,
+        mock_cs2_client_fetch_matches,
+    ):
+        """
+        Test the initial update for an account (no prior matches).
+        """
+        mock_cs2_client_fetch_matches.return_value = [
+            dict(sharecode = 'xxx-sharecode-xxx'),
+        ]
+
+        # Task should run without errors
+        with patch.object(self.account, 'handle_finished_update') as mock_account_handle_finished_update:
+            self.task.run(recent_matches = list())
+
+        # Verify that `cs2_client.fetch_matches` was called correctly
+        mock_cs2_client_fetch_matches.assert_called_once_with(
+            self.account.sharecode,
+            cs2_client.SteamAPIUser(self.account.steamid, self.account.steam_auth),
+            list(),
+            skip_first = False,
+        )
+
+        # Verify that `Match.from_summary` was called correctly
+        mock_Match_from_summary.assert_called_once_with(
+            mock_cs2_client_fetch_matches.return_value[0],
+        )
+
+        # Verify that `MatchBadge.award_with_history` was called correctly
+        mock_MatchBadge_award_with_history.assert_called_once_with(
+            mock_Match_from_summary.return_value.get_participation(self.account.steam_profile),
+            list(),
+        )
+
+        # Verify that `account.handle_finished_update` was called correctly
+        mock_account_handle_finished_update.assert_called_once_with()
+
+        # Verify that the states of the task and account were updated correctly
+        self.assertEqual(self.account.last_sharecode, mock_cs2_client_fetch_matches.return_value[0]['sharecode'])
 
 
 class GamingSession(TestCase):

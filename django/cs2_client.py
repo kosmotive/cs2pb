@@ -88,6 +88,17 @@ class SteamAPIUser:
         self.steamid = steamid
         self.steamid_key = steamid_key
 
+    def __eq__(self, other):
+        return isinstance(other, SteamAPIUser) and all(
+            (
+                self.steamid == other.steamid,
+                self.steamid_key == other.steamid_key,
+            )
+        )
+    
+    def __hash__(self):
+        return hash((self.steamid, self.steamid_key))
+
 
 def fetch_matches(
         first_sharecode: str,

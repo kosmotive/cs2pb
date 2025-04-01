@@ -1283,7 +1283,7 @@ class UpdateTask(models.Model):
                 new_match_data: list[dict | Match] = cs2_client.fetch_matches(
                     first_sharecode,
                     cs2_client.SteamAPIUser(self.account.steamid, self.account.steam_auth),
-                    recent_matches,
+                    list(recent_matches),
 
                     # Only process the match for `first_sharecode` if this is the inital update for the user
                     skip_first = not is_initial_update,
@@ -1301,7 +1301,7 @@ class UpdateTask(models.Model):
                     self.account.save()
 
                     participation = pmatch.get_participation(self.account.steam_profile)
-                    MatchBadge.award_with_history(participation, old_participations)
+                    MatchBadge.award_with_history(participation, list(old_participations))
 
                     old_participations.append(participation)
 
