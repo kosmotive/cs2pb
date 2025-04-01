@@ -117,14 +117,14 @@ def list_of_gaming_sessions(qs):
 
 
 @register.filter(is_safe = True)
-def rank(value: int | None, extra_class: str | None = None) -> str:
+def rank(value: int | None) -> str:
     if value is None or value == 0:
         return ''
     else:
         return mark_safe(
             f'''
-            <div class="rank rank-class{ 1 + value // 5000 } {extra_class}"><div>
-            <span>{ value }</span>
+            <div class="rank rank-class{ 1 + value // 5000 }"><div>
+                <span>{ value }</span>
             </div></div>
             '''
         )
