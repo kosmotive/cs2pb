@@ -71,6 +71,25 @@ def fetch_match_details(pmatch, max_retry_count = 4):
     num_rounds = sum(pmatch['summary']['team_scores'])
     pmatch['adr'] = {str(steam_id): get_damage(steam_id) / num_rounds for steam_id in pmatch['steam_ids']}
 
+    # Read the ranks from the demo, `demo.events['rank_update']` is a pandas dataframe with following columns:
+    #  - rank_type_id: 6 -> Competitive, 7 -> Wingman, 10 -> Danger Zone, 11 -> Premier
+    #  - rank_old: Rank before the match (where 0 is unranked)
+    #  - rank_new: Rank after the match (where 0 is unranked)
+    #  - user_steamid: Steam ID of the player
+    pmatch['type'] = {
+        6:  Match.MTYPE_COMPETITIVE,
+        7:  Match.MTYPE_WINGMAN,
+        10: Match.MTYPE_DANGER_ZONE,
+        11: Match.MTYPE_PREMIER,
+    }.get(demo.events['rank_update'].rank_type_id.iloc[0], '')
+    pmatch['ranks'] = {
+        str(row['user_steamid']): dict(
+            old = row['rank_old'],
+            new = row['rank_new'],
+        )
+        for _, row in demo.events['rank_update'].iterrows()
+    }
+
 
 def _is_wingman_match(pmatch):
     """
