@@ -44,7 +44,7 @@ def fetch_match_details(pmatch, max_retry_count = 4):
             # No need to retry (fetch was successful)
             break
 
-        except:  # noqa: E722
+        except BaseException as error:
             log.warning(traceback.format_exc())
             log.warning(f'Failed to fetch match details (attempt: {retry_idx + 1} / {max_retry_count})')
 
@@ -52,7 +52,7 @@ def fetch_match_details(pmatch, max_retry_count = 4):
                 raise InvalidDemoError(
                     sharecode = pmatch['sharecode'],
                     demo_url = demo_url,
-                )
+                ) from error
 
     # Fetch info from parsed demo
     pmatch['map'] = demo.header['map_name']
