@@ -631,7 +631,7 @@ div.session .match-result.match-result-l {
 }
 
 div.session .match-scoreboard-team1 {
-    margin-right: 5mm;
+    margin-right: 2em;
     margin-left: 110mm;
 }
 
@@ -659,7 +659,7 @@ div.session .match-scoreboard table tr:nth-of-type(2) td {
 }
 
 div.session .match-scoreboard table tr td .first-item {
-    width: 35mm;
+    width: 9em;
     display: inline-flex;
     align-items: center;
 }

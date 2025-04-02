@@ -75,7 +75,7 @@
                             <td>
                                 <div class="previous-rank-container">
                                     {{ mp.old_rank|rank }}
-                                    {% if mp.old_rank %}
+                                    {% if mp.old_rank and mp.new_rank != mp.old_rank %}
                                         <span>
                                             {% if mp.new_rank > mp.old_rank %}+{% endif %}{{ mp.new_rank|subtract:mp.old_rank }}
                                         </span>
