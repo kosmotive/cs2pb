@@ -45,6 +45,7 @@ def create_kill_event(
         victim_x: int = 0,
         victim_y: int = 0,
         victim_z: int = 0,
+        weapon: str = '',
     ):
     return models.KillEvent(
         killer = mp_killer,
@@ -58,6 +59,7 @@ def create_kill_event(
         victim_x = victim_x,
         victim_y = victim_y,
         victim_z = victim_z,
+        weapon = weapon,
     )
 
 
@@ -430,6 +432,40 @@ class MatchBadge__award(TestCase):
         self.mp5.save()
         models.MatchBadge.award(self.mp5)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 0)
+
+    def test_knife_kill(self):
+        mp1 = self.pmatch.get_participation('76561197967680028')
+        mp2 = self.pmatch.get_participation('76561197961345487')
+        models.KillEvent.objects.all().delete()
+        models.KillEvent.objects.bulk_create(
+            [
+                create_kill_event(mp1, mp2, round = 1, weapon='knife'),
+            ]
+        )
+        # Test twice. The badge should be awarded only once.
+        for itr in range(2):
+            with self.subTest(itr = itr):
+                models.MatchBadge.award(mp1)
+                self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'weapon-knife')), 1)
+                badge = models.MatchBadge.objects.filter(badge_type = 'weapon-knife').get()
+                self.assertEqual(badge.participation.pk, mp1.pk)
+                self.assertEqual(badge.frequency, 1)
+
+    def test_knife_kill_twice(self):
+        mp1 = self.pmatch.get_participation('76561197967680028')
+        mp2 = self.pmatch.get_participation('76561197961345487')
+        models.KillEvent.objects.all().delete()
+        models.KillEvent.objects.bulk_create(
+            [
+                create_kill_event(mp1, mp2, round = 1, weapon='knife'),
+                create_kill_event(mp1, mp2, round = 1, weapon='knife'),
+            ]
+        )
+        models.MatchBadge.award(mp1)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'weapon-knife')), 1)
+        badge = models.MatchBadge.objects.filter(badge_type = 'weapon-knife').get()
+        self.assertEqual(badge.participation.pk, mp1.pk)
+        self.assertEqual(badge.frequency, 2)
 
 
 class MatchBadge__award_with_history(TestCase):

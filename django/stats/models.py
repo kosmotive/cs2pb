@@ -558,6 +558,7 @@ class Match(models.Model):
                 kev.round    = kill_data['round']
                 kev.kill_type = 1 if kill_data['attacker_team_name'] == 'TERRORIST' else 2
                 kev.bomb_planted = kill_data['is_bomb_planted']
+                kev.weapon = kill_data['weapon']
                 kev.save()
 
             squad_ids = set()
@@ -801,6 +802,11 @@ class KillEvent(models.Model):
     bomb_planted = models.BooleanField(null = False)
     """
     Whether the bomb was already planted when the kill occurred.
+    """
+
+    weapon = models.CharField(max_length = 50, blank = True)
+    """
+    The weapon used to score the kill.
     """
 
     killer_x = models.FloatField()
@@ -1081,6 +1087,7 @@ class MatchBadge(models.Model):
         MatchBadge.award_margin_badge(
             participation, 'peach', order = 'adr', margin = 0.67, emoji = '🍑', max_adr = 50, max_kd = 0.5, **kwargs,
         )
+        MatchBadge.award_weapon_badge(participation, 'knife', emoji = '🔪', **kwargs)
 
     @staticmethod
     def award_with_history(participation, old_participations):
@@ -1168,6 +1175,24 @@ class MatchBadge(models.Model):
             text = (
                 f'{emoji} <{participation.player.steamid}> has qualified for the **{badge_type.name}** '
                 f'on *{participation.pmatch.map_name}*!'
+            )
+            if not mute_discord:
+                for m in participation.player.squad_memberships.all():
+                    m.squad.notify_on_discord(text)
+
+    @staticmethod
+    def award_weapon_badge(participation, weapon, emoji, mute_discord = False):
+        badge_type = MatchBadgeType.objects.get(slug = f'weapon-{weapon}')
+        if MatchBadge.objects.filter(badge_type=badge_type, participation=participation).exists():
+            return
+        number = participation.kill_events.filter(weapon = weapon).count()
+        if number > 0:
+            log.info(f'{participation.player.name} achieved {badge_type.name} {number} time(s)')
+            MatchBadge.objects.create(badge_type = badge_type, participation = participation, frequency = number)
+            frequency = '' if number == 1 else f' {number} times'
+            text = (
+                f'{emoji} <{participation.player.steamid}> had **{badge_type.name}**{frequency} on '
+                f'*{participation.pmatch.map_name}*!'
             )
             if not mute_discord:
                 for m in participation.player.squad_memberships.all():
