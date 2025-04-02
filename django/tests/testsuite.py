@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import pathlib
@@ -21,12 +20,8 @@ def get_demo_path(demo_id):
     demo_filename = f'{demo_id}.dem.bz2'
     demo_filepath = demo_path / demo_filename
 
-    with open(file_dir_path / 'data/index.json') as file:
-        index = json.load(file)
-
     if not demo_filepath.is_file():
-        url = index[demo_filename]
-        urllib.request.urlretrieve(url, str(demo_filepath))
+        urllib.request.urlretrieve(f'http://evoid.de/cs2pb-test-data/demos/{demo_filename}', str(demo_filepath))
 
     return str(demo_filepath)
 
