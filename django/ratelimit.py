@@ -33,6 +33,10 @@ class Ratelimiter:
         """
         log.debug(f'{method.upper()} {url}, {str(kwargs)}')
 
+        # set default timeout to 10 seconds
+        kwargs = dict(kwargs)
+        kwargs.setdefault('timeout', 10)
+
         # enforce the rate limit
         dt = time.time() - self.last_request_time
         min_dt = 1 / self.rate
@@ -46,17 +50,23 @@ class Ratelimiter:
             log.debug(f'-> trycount: {trycount} / {self.max_trycount}')
 
             # do the request
-            response = getattr(requests, method)(url=url, **kwargs)
+            try:
+                response = getattr(requests, method)(url=url, **kwargs)
+            except requests.exceptions.Timeout:
+                log.debug('  -> timeout')
+                continue
+
+            # handle the response
             log.debug(f'  -> {str(response)}')
             if response is not None and response.status_code not in accept:
                 raise RequestError(response.status_code)
             if response:
-
+    
                 # increase the rate but don't exceed the server-enforced rate limit
                 actual_request_dt = time.time() - self.last_request_time
                 self.rate = max((self.rate * self.accel, 1 / actual_request_dt))
                 return response
-
+    
             # we probably hit the rate limit
             waittime = trycount * self.ratebreak
             print(f'{str(self)} hit at {self.rate:.0f} req/s, waiting {waittime:.1f} s')

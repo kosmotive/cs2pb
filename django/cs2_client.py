@@ -161,6 +161,7 @@ def fetch_matches(
         # Execution inside the parent process
         else:
             exit_code = os.waitpid(newpid, 0)[1]
+            log.info(f'fetch_matches subprocess finished with exit code {exit_code}')
             ret_file.seek(0)
             ret = dill.load(ret_file)
             if exit_code == 0:
@@ -349,6 +350,8 @@ class SteamAPI:
                 # https://developer.valvesoftware.com/wiki/Counter-Strike:_Global_Offensive_Access_Match_History#Error_Handling
                 if ex.status_code == 412 and sharecode == first_sharecode:
                     raise InvalidSharecodeError(steamuser, sharecode)
+                else:
+                    raise
 
     def test_steam_auth(self, sharecode, steamuser):
         tmp_http = ratelimit.Ratelimiter('Steam Auth Test', max_trycount=2)
