@@ -61,12 +61,12 @@ class Ratelimiter:
             if response is not None and response.status_code not in accept:
                 raise RequestError(response.status_code)
             if response:
-    
+
                 # increase the rate but don't exceed the server-enforced rate limit
                 actual_request_dt = time.time() - self.last_request_time
                 self.rate = max((self.rate * self.accel, 1 / actual_request_dt))
                 return response
-    
+
             # we probably hit the rate limit
             waittime = trycount * self.ratebreak
             print(f'{str(self)} hit at {self.rate:.0f} req/s, waiting {waittime:.1f} s')
