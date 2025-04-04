@@ -1,2 +1,2 @@
-Steam ID{% for mp in participations %}
-{{ mp.player.steamid }}{% endfor %}
+Steam ID;Team{% for mp in participations %}
+{{ mp.player.steamid }};{{ mp.team }}{% endfor %}
