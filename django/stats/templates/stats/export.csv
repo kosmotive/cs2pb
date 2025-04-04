@@ -1,0 +1,2 @@
+Steam ID{% for mp in participations %}
+{{ mp.player.steamid }}{% endfor %}

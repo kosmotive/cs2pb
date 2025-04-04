@@ -11,4 +11,5 @@ urlpatterns = [
     path('matches/<uuid:squad>', views.matches, name='matches'),
     path('matches/<int:last_timestamp>', views.matches, name='matches'),
     path('matches/<uuid:squad>/<int:last_timestamp>', views.matches, name='matches'),
+    path('csv/<int:matchid>', views.export_csv, name='csv'),
 ]

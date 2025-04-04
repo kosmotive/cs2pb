@@ -405,3 +405,9 @@ def player(request, squad, steamid):
     # Add the global context and render the player page
     add_globals_to_context(context)
     return render(request, 'stats/player.html', context)
+
+
+def export_csv(request, matchid):
+    from stats.models import MatchParticipation
+    participations = MatchParticipation.objects.filter(pmatch__id = matchid)
+    return render(request, 'stats/export.csv', dict(participations = participations), content_type = 'text/csv')
