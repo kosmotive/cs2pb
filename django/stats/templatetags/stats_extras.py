@@ -49,6 +49,11 @@ def subtract(a, b):
     return int(a) - int(b)
 
 
+@register.filter(name = 'abs')
+def absolute(value):
+    return abs(value)
+
+
 @register.filter
 def player_value(match_participation):
     if match_participation.deaths == 0:
