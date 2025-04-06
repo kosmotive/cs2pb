@@ -59,7 +59,7 @@ class Ratelimiter:
             # handle the response
             log.debug(f'  -> {str(response)}')
 
-            # handle unexpexted errors
+            # handle unexpected errors
             if all(
                 (
                     response is not None,
