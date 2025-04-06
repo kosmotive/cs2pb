@@ -376,7 +376,7 @@ def _corr_coeff_with_trendline(xfeat, yfeat) -> Dict[str, float]:
             Both `xfeat` and `yfeat` must have the same length.
 
     Returns:
-        dict: A dictionary containing the correlation coefficient (`corr_coeff`), 
+        dict: A dictionary containing the correlation coefficient (`corr_coeff`),
               trendline slope (`trendline_slope`), and trendline offset (`trendline_offset`).
     """
     xfeat = np.asarray(xfeat)
