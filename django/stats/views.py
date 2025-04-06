@@ -9,6 +9,7 @@ from accounts.models import (
     SteamProfile,
 )
 from cs2pb_typing import (
+    Dict,
     List,
     Optional,
 )
@@ -29,6 +30,7 @@ from django.urls import reverse
 from . import potw
 from .features import (
     Feature,
+    FeatureContext,
     Features,
 )
 from .models import (
@@ -346,6 +348,51 @@ def matches(request, squad=None, last_timestamp=None):
         return render(request, 'stats/sessions-list.html', context)
 
 
+def _get_average_opponent_rank(participation: MatchParticipation) -> float:
+    """
+    Compute the average rank of the opponents in the match.
+    """
+    ranks = np.mean(
+        participation.pmatch.matchparticipation_set.exclude(
+            player = participation.player,
+        ).exclude(
+            team = participation.team,
+        ).values_list(
+            'old_rank',
+            'new_rank',
+        ),
+        axis = 1,
+    )
+    return np.mean(ranks)
+
+
+def _corr_coeff_with_trendline(xfeat, yfeat) -> Dict[str, float]:
+    """
+    Compute the correlation coefficient and trendline slope and offset between two sequences.
+
+    Arguments:
+        xfeat (array-like): A sequence of numerical values representing the x-axis feature.
+        yfeat (array-like): A sequence of numerical values representing the y-axis feature.
+            Both `xfeat` and `yfeat` must have the same length.
+
+    Returns:
+        dict: A dictionary containing the correlation coefficient (`corr_coeff`),
+              trendline slope (`trendline_slope`), and trendline offset (`trendline_offset`).
+    """
+    xfeat = np.asarray(xfeat)
+    yfeat = np.asarray(yfeat)
+    xfeat_std = np.std(xfeat)
+    yfeat_std = np.std(yfeat)
+    corr_coeff = np.mean((xfeat - np.mean(xfeat)) * (yfeat - np.mean(yfeat))) / (xfeat_std * yfeat_std)
+    trendline_slope = corr_coeff * yfeat_std / xfeat_std
+    trendline_offset = np.mean(yfeat) - trendline_slope * np.mean(xfeat)
+    return dict(
+        corr_coeff = corr_coeff,
+        trendline_slope = trendline_slope,
+        trendline_offset = trendline_offset,
+    )
+
+
 def player(request, squad, steamid):
     squad = Squad.objects.get(uuid = squad)
     squad.update_stats()
@@ -358,7 +405,25 @@ def player(request, squad, steamid):
     # Fetch the player's match participations
     participations = MatchParticipation.objects.filter(player = player).order_by('pmatch__timestamp')
 
-    # Determine the start and end of the period for accounted period
+    # Compute stats for the player's Premier participations
+    premier_participations = participations.filter(pmatch__mtype = Match.MTYPE_PREMIER)
+    if premier_participations.count() > 0:
+
+        # Compute the average opponent rank for each of the player's match participation and corresponding player value
+        premier = dict(player_values = list(), average_opponent_ranks = list())
+        for participation in Features.player_value.get_queryset(FeatureContext(premier_participations, player)):
+            average_opponent_rank = _get_average_opponent_rank(participation)
+            premier['average_opponent_ranks'].append(average_opponent_rank)
+            premier['player_values'].append(participation.value)
+
+        # Compute the trendline
+        premier.update(_corr_coeff_with_trendline(premier['average_opponent_ranks'], premier['player_values']))
+
+    # The player has not participated in any Premier matches
+    else:
+        premier = None
+
+    # Determine the start and end of the accounted period
     accounted_participations = squad_membership.accounted_match_participations
     accounted_period_start: Optional[int] = None
     accounted_period_end: Optional[int] = None
@@ -374,6 +439,7 @@ def player(request, squad, steamid):
         request = request,
         player = card,
         participations = participations,
+        premier = premier,
         period_start = accounted_period_start,
         period_end = accounted_period_end,
         period_average = squad_membership.stats.get('player_value'),

@@ -93,7 +93,26 @@ const matchDateList = [ {% for mp in participations %}
 
             </div>
 
-            <div id="pv-plot" style="width:600px; height: 280px;"></div>
+            <div id="pv-plot" style="width: 800px; height: 280px;"></div>
+
+            {% if premier %}
+            <h2>Premier performance</h2>
+
+            <p>
+                Correlation between own <em>player value</em> and <em>average opponent rank</em>:
+                <b>{{ premier.corr_coeff|floatformat:2 }}
+
+                {% if premier.corr_coeff|abs < 0.4 %}
+                    (no correlation)
+                {% elif premier.corr_coeff|abs < 0.7 %}
+                    (weak correlation)
+                {% else %}
+                    (strong correlation)
+                {% endif %}</b>
+            </p>
+
+            <div id="premier-plot" style="width: 800px; height: 280px;"></div>
+            {% endif %}
 
             {% if squad_buddy_performances %}
             <h2>Performance with squad buddies</h2>
@@ -205,6 +224,11 @@ const matchDateList = [ {% for mp in participations %}
 </div>
 
 <script language="javascript">
+
+/* ======================================================
+ * Player-value Plot
+ * ======================================================
+ */
 
 const pvPlot = document.getElementById('pv-plot');
 Plotly.newPlot( pvPlot, [] );
@@ -392,6 +416,60 @@ smoothing_rescale.addEventListener
 
 updatePlot( smoothing.value );
 autoscale();
+
+
+
+/* ======================================================
+ * Premier Plot
+ * ======================================================
+ */
+ {% if premier %}
+
+const premierScatter = {
+    x: {{ premier.average_opponent_ranks }},
+    y: {{ premier.player_values }},
+    mode: 'markers',
+    type: 'scatter'
+};
+
+const premierTrendline = {
+    x: [ Math.min(...{{ premier.average_opponent_ranks }}), Math.max(...{{ premier.average_opponent_ranks }}) ],
+    y: [
+        {{ premier.trendline_offset }} + {{ premier.trendline_slope }} * Math.min(...{{ premier.average_opponent_ranks }}),
+        {{ premier.trendline_offset }} + {{ premier.trendline_slope }} * Math.max(...{{ premier.average_opponent_ranks }})
+    ],
+    mode: 'lines',
+    type: 'scatter',
+    line: {
+        color: '#3682be'
+    }
+};
+
+const premierPlot = document.getElementById('premier-plot');
+Plotly.newPlot
+(
+    premierPlot,
+    [premierScatter, premierTrendline],
+    {
+        showlegend: false,
+        autosize: false,
+        width: 800,
+        height: 280,
+        margin: { t: 45, l: 50, b: 50, r: 10 },
+        xaxis: {
+            title: { text: 'Average opponent rank' }
+        },
+        yaxis: {
+            title: { text: 'Player value' }
+        }
+    },
+    {
+        staticPlot: true
+    }
+);
+
+{% endif %}
+
 </script>
 
 {% endblock %}
