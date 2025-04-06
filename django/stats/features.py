@@ -67,9 +67,12 @@ class ExpressionFeature(Feature):
         self.expression = expression
 
     def __call__(self, ctx: FeatureContext) -> Optional[float]:
-        avg_value_qs = ctx.match_participations_of_player.annotate(value = self.expression).aggregate(Avg('value'))
+        avg_value_qs = self.get_queryset(ctx).aggregate(Avg('value'))
         avg_value = avg_value_qs['value__avg']
         return 0 if avg_value is not None and avg_value < 0 else avg_value
+    
+    def get_queryset(self, ctx: FeatureContext):
+        return ctx.match_participations_of_player.annotate(value = self.expression)
 
 
 class ParticipationEffect(Feature):
