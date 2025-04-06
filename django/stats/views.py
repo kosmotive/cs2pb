@@ -9,6 +9,7 @@ from accounts.models import (
     SteamProfile,
 )
 from cs2pb_typing import (
+    Dict,
     List,
     Optional,
 )
@@ -365,16 +366,25 @@ def _get_average_opponent_rank(participation: MatchParticipation) -> float:
     return np.mean(ranks)
 
 
-def _corr_coeff_with_trendline(xfeat, yfeat):
+def _corr_coeff_with_trendline(xfeat, yfeat) -> Dict[str, float]:
     """
     Compute the correlation coefficient and trendline slope and offset between two sequences.
+
+    Arguments:
+        xfeat (array-like): A sequence of numerical values representing the x-axis feature.
+        yfeat (array-like): A sequence of numerical values representing the y-axis feature.
+            Both `xfeat` and `yfeat` must have the same length.
+
+    Returns:
+        dict: A dictionary containing the correlation coefficient (`corr_coeff`), 
+              trendline slope (`trendline_slope`), and trendline offset (`trendline_offset`).
     """
     xfeat = np.asarray(xfeat)
     yfeat = np.asarray(yfeat)
     xfeat_std = np.std(xfeat)
-    yfear_std = np.std(yfeat)
-    corr_coeff = np.mean((xfeat - np.mean(xfeat)) * (yfeat - np.mean(yfeat))) / (xfeat_std * yfear_std)
-    trendline_slope = corr_coeff * yfear_std / xfeat_std
+    yfeat_std = np.std(yfeat)
+    corr_coeff = np.mean((xfeat - np.mean(xfeat)) * (yfeat - np.mean(yfeat))) / (xfeat_std * yfeat_std)
+    trendline_slope = corr_coeff * yfeat_std / xfeat_std
     trendline_offset = np.mean(yfeat) - trendline_slope * np.mean(xfeat)
     return dict(
         corr_coeff = corr_coeff,
