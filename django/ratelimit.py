@@ -58,8 +58,20 @@ class Ratelimiter:
 
             # handle the response
             log.debug(f'  -> {str(response)}')
-            if response is not None and response.status_code not in accept:
+
+            # handle unexpexted errors
+            if all(
+                (
+                    response is not None,
+                    response.status_code not in accept,
+
+                    # status code 429 means that we hit the rate limit
+                    response.status_code != 429,
+                )
+            ):
                 raise RequestError(response.status_code)
+
+            # handle successful requests
             if response:
 
                 # increase the rate but don't exceed the server-enforced rate limit
