@@ -345,9 +345,12 @@ def matches(request, squad=None, last_timestamp=None):
         return render(request, 'stats/sessions.html', context)
     else:
         return render(request, 'stats/sessions-list.html', context)
-    
 
-def _get_average_opponent_rank(participation):
+
+def _get_average_opponent_rank(participation: MatchParticipation) -> float:
+    """
+    Compute the average rank of the opponents in the match.
+    """
     ranks = np.mean(
         participation.pmatch.matchparticipation_set.exclude(
             player = participation.player,
@@ -363,6 +366,9 @@ def _get_average_opponent_rank(participation):
 
 
 def _corr_coeff_with_trendline(xfeat, yfeat):
+    """
+    Compute the correlation coefficient and trendline slope and offset between two sequences.
+    """
     xfeat = np.asarray(xfeat)
     yfeat = np.asarray(yfeat)
     xfeat_std = np.std(xfeat)
