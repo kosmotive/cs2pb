@@ -425,18 +425,25 @@ autoscale();
  */
  {% if premier %}
 
+const premierData = {
+    'average_opponent_ranks': {{ premier.average_opponent_ranks }},
+    'player_values': {{ premier.player_values }},
+    'trendline_offset': {{ premier.trendline_offset }},
+    'trendline_slope': {{ premier.trendline_slope }}
+};
+
 const premierScatter = {
-    x: {{ premier.average_opponent_ranks }},
-    y: {{ premier.player_values }},
+    x: premierData['average_opponent_ranks'],
+    y: premierData['player_values'],
     mode: 'markers',
     type: 'scatter'
 };
 
 const premierTrendline = {
-    x: [ Math.min(...{{ premier.average_opponent_ranks }}), Math.max(...{{ premier.average_opponent_ranks }}) ],
+    x: [ Math.min(...premierData['average_opponent_ranks']), Math.max(...premierData['average_opponent_ranks']) ],
     y: [
-        {{ premier.trendline_offset }} + {{ premier.trendline_slope }} * Math.min(...{{ premier.average_opponent_ranks }}),
-        {{ premier.trendline_offset }} + {{ premier.trendline_slope }} * Math.max(...{{ premier.average_opponent_ranks }})
+        premierData['trendline_offset'] + premierData['trendline_slope'] * Math.min(...premierData['average_opponent_ranks']),
+        premierData['trendline_offset'] + premierData['trendline_slope'] * Math.max(...premierData['average_opponent_ranks'])
     ],
     mode: 'lines',
     type: 'scatter',

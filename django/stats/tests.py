@@ -1569,3 +1569,126 @@ class GamingSession__close(TestCase):
             actual = attachment,
             expected = 'tests/data/radarplot_with_avatar.png',
         )
+
+
+class player(TestCase):
+
+    @testsuite.fake_api.patch
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.players = [
+            SteamProfile.objects.create(steamid = '12345678900000001'),
+            SteamProfile.objects.create(steamid = '12345678900000002'),
+            SteamProfile.objects.create(steamid = '12345678900000003'),
+        ]
+        self.squad = Squad.objects.create(name = 'Test Squad')
+        SquadMembership.objects.create(squad = self.squad, player = self.players[0])
+        self.session = models.GamingSession.objects.create(squad = self.squad)
+        timestamp0 = int(time.time())
+        self.matches = list()
+        for midx in range(2):
+            pmatch = models.Match.objects.create(
+                timestamp = timestamp0 + midx,
+                score_team1 = 12,
+                score_team2 = 13,
+                duration = 1653,
+                map_name = 'de_dust2',
+            )
+            self.matches.append(pmatch)
+            pmatch.sessions.add(self.session)
+            for pidx in range(len(self.players)):
+                team = 1  if pidx == 0 else 2  # team 1 for player 0, team 2 for others
+                models.MatchParticipation.objects.create(
+                    player = self.players[pidx],
+                    pmatch = pmatch,
+                    team = team,
+                    result = 'l' if team == 1 else 'w',
+                    kills = 20 + midx,
+                    assists = 10,
+                    deaths = 15,
+                    score = 30,
+                    mvps = 5,
+                    headshots = 15,
+                    adr = 120,
+                )
+
+    def _request(self):
+        return self.client.get(
+            reverse('player',
+                kwargs = dict(
+                    squad = self.squad.uuid,
+                    steamid = self.players[0].steamid,
+                ),
+            ),
+        )
+
+    def test_no_premier(self):
+        response = self._request()
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/player.html')
+        self.assertIsNone(response.context['premier'])
+        for token in [
+            'Premier performance',
+            'Correlation between own',
+            'premier-plot',
+            'premierData',
+            'premierScatter',
+            'premierTrendline',
+            'premierPlot',
+        ]:
+            self.assertNotContains(response, token)
+
+    def test_with_1premier(self):
+        self.matches[0].mtype = models.Match.MTYPE_PREMIER
+        self.matches[0].save()
+        p = self.matches[0].get_participation(self.players[1])
+        p.old_rank = 6000
+        p.new_rank = 6200
+        p.save()
+        self.test_no_premier()
+
+    def test_with_2premier(self):
+        self.matches[0].mtype = models.Match.MTYPE_PREMIER
+        self.matches[0].save()
+        p = self.matches[0].get_participation(self.players[1])
+        p.old_rank = None
+        p.new_rank = 6200
+        p.save()
+
+        self.matches[1].mtype = models.Match.MTYPE_PREMIER
+        self.matches[1].save()
+        p = self.matches[1].get_participation(self.players[1])
+        p.old_rank = 6200
+        p.new_rank = 6400
+        p.save()
+        p = self.matches[1].get_participation(self.players[2])
+        p.old_rank = None
+        p.new_rank = 4000
+        p.save()
+
+        response = self._request()
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/player.html')
+
+        self.assertEqual(response.context['premier']['average_opponent_ranks'], [6200, 5150])
+        self.assertEqual(
+            response.context['premier']['player_values'],
+            [
+                math.sqrt(20 / 15 * 1.2),
+                math.sqrt(21 / 15 * 1.2),
+            ],
+        )
+        self.assertContains(response, '(strong correlation)')
+        self.assertEqual(response.context['premier']['corr_coeff'], -1)
+        self.assertEqual(response.context['premier']['trendline_slope'], -2.9749595823066835e-05)
+        self.assertEqual(response.context['premier']['trendline_offset'], 1.449358558170366)
+
+    def test_with_2premier_equal_performances(self):
+        for pmatch in self.matches:
+            pmatch.mtype = models.Match.MTYPE_PREMIER
+            pmatch.save()
+            p = pmatch.get_participation(self.players[1])
+            p.old_rank = None
+            p.new_rank = 6200
+            p.save()
+        self.test_no_premier()
