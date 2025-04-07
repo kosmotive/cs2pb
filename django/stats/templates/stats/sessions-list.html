@@ -16,7 +16,7 @@
         {% for player in session.participated_squad_members %}
 
             <div class="session-member {% if player.steamid == session.rising_star.pk %}rising-star{% endif %}">
-                <img src="{{ player.avatar_s }}" class="avatar">
+                <a href="{% url 'player' session.squad.uuid player.steamid %}"><img src="{{ player.avatar_s }}" class="avatar"></a>
 
                 {% if player.steamid == session.rising_star.pk %}
 
@@ -64,7 +64,7 @@
                     <tr class="{% if mp.player.steamid in session.participated_squad_members_steamids %}is-squad-member{% else %}is-not-squad-member{% endif %}">
                         <td>
                             <div class="first-item">
-                                <img src="{{ mp.player.avatar_s }}" class="avatar">
+                                <a href="{% url 'player' session.squad.uuid mp.player.steamid %}"><img src="{{ mp.player.avatar_s }}" class="avatar"></a>
                                 <div class="player-name">{{ mp.player.name }}</div>
                                 <div class="badge-list">{% for badge in mp.badges.all reversed %}
                                     <img src="{% static 'badges' %}/{{ badge.badge_type.slug }}.png" class="badge">
