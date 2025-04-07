@@ -258,7 +258,9 @@ class MatchBadge__award(TestCase):
 
     def setUp(self):
         with patch('stats.models.Match.award_badges'):
-            self.pmatch = Match__from_summary().test()
+            Match__from_summary__test = Match__from_summary()
+            Match__from_summary__test.setUp()
+            self.pmatch = Match__from_summary__test.test()
         self.mp5 = self.pmatch.get_participation('76561197962477966')
         self.teammates = list(
             self.mp5.pmatch.matchparticipation_set.filter(
@@ -489,7 +491,9 @@ class MatchBadge__award(TestCase):
 class MatchBadge__award_with_history(TestCase):
 
     def test_no_awards(self):
-        pmatch = Match__from_summary().test()
+        Match__from_summary__test = Match__from_summary()
+        Match__from_summary__test.setUp()
+        pmatch = Match__from_summary__test.test()
         participation = pmatch.get_participation('76561197967680028')
         models.MatchBadge.award_with_history(participation, list())
         self.assertEqual(len(models.MatchBadge.objects.filter(participation = participation)), 0)
