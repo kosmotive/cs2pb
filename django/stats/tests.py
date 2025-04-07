@@ -188,7 +188,7 @@ class Match__from_summary(TestCase):
         self.assertEqual(round(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').adr, 1), 104.7)
 
         return pmatch
-    
+
     def test_unranked(self):
         data = dict(self.summary)
         cs2_client.fetch_match_details(data)
@@ -1635,7 +1635,7 @@ class player(TestCase):
             self.matches.append(pmatch)
             pmatch.sessions.add(self.session)
             for pidx in range(len(self.players)):
-                team = 1  if pidx == 0 else 2  # team 1 for player 0, team 2 for others
+                team = 1 if pidx == 0 else 2  # team 1 for player 0, team 2 for others
                 models.MatchParticipation.objects.create(
                     player = self.players[pidx],
                     pmatch = pmatch,
@@ -1652,7 +1652,8 @@ class player(TestCase):
 
     def _request(self):
         return self.client.get(
-            reverse('player',
+            reverse(
+                'player',
                 kwargs = dict(
                     squad = self.squad.uuid,
                     steamid = self.players[0].steamid,
