@@ -1,5 +1,6 @@
 import logging
 import numbers
+import warnings
 
 import numpy as np
 from accounts.models import (
@@ -352,18 +353,19 @@ def _get_average_opponent_rank(participation: MatchParticipation) -> float:
     """
     Compute the average rank of the opponents in the match.
     """
-    ranks = np.mean(
+    ranks_data = np.array(
         participation.pmatch.matchparticipation_set.exclude(
-            player = participation.player,
-        ).exclude(
             team = participation.team,
         ).values_list(
             'old_rank',
             'new_rank',
         ),
-        axis = 1,
+        dtype = float,
     )
-    return np.mean(ranks)
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category = RuntimeWarning)  # Ignore "Mean of empty slice" warning
+        ranks = np.nanmean(ranks_data, axis = 1)
+    return np.nanmean(ranks)
 
 
 def _corr_coeff_with_trendline(xfeat, yfeat) -> Dict[str, float]:
@@ -383,7 +385,12 @@ def _corr_coeff_with_trendline(xfeat, yfeat) -> Dict[str, float]:
     yfeat = np.asarray(yfeat)
     xfeat_std = np.std(xfeat)
     yfeat_std = np.std(yfeat)
-    corr_coeff = np.mean((xfeat - np.mean(xfeat)) * (yfeat - np.mean(yfeat))) / (xfeat_std * yfeat_std)
+
+    # Ignore "invalid value encountered in scalar divide" warning
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category = RuntimeWarning)
+        corr_coeff = np.mean((xfeat - np.mean(xfeat)) * (yfeat - np.mean(yfeat))) / (xfeat_std * yfeat_std)
+
     trendline_slope = corr_coeff * yfeat_std / xfeat_std
     trendline_offset = np.mean(yfeat) - trendline_slope * np.mean(xfeat)
     return dict(
@@ -407,7 +414,7 @@ def player(request, squad, steamid):
 
     # Compute stats for the player's Premier participations
     premier_participations = participations.filter(pmatch__mtype = Match.MTYPE_PREMIER)
-    if premier_participations.count() > 0:
+    if premier_participations.count() > 1:
 
         # Compute the average opponent rank for each of the player's match participation and corresponding player value
         premier = dict(player_values = list(), average_opponent_ranks = list())
@@ -418,6 +425,10 @@ def player(request, squad, steamid):
 
         # Compute the trendline
         premier.update(_corr_coeff_with_trendline(premier['average_opponent_ranks'], premier['player_values']))
+
+        # Suppress Premier stats if data is insufficient
+        if np.isnan(premier['corr_coeff']):
+            premier = None
 
     # The player has not participated in any Premier matches
     else:

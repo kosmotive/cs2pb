@@ -34,6 +34,13 @@ NAV_SUPPORTED_MAPS = frozenset(awpy.data.map_data.MAP_DATA.keys())
 log = logging.getLogger(__name__)
 
 
+def _zero_to_none(value: Any) -> Any:
+    if value == 0:
+        return None
+    else:
+        return value
+
+
 def fetch_match_details(pmatch, max_retry_count = 4):
     for retry_idx in range(max_retry_count):
         time.sleep(retry_idx * 10)
@@ -84,8 +91,8 @@ def fetch_match_details(pmatch, max_retry_count = 4):
     }.get(demo.events['rank_update'].rank_type_id.iloc[0], '')
     pmatch['ranks'] = {
         str(row['user_steamid']): dict(
-            old = row['rank_old'],
-            new = row['rank_new'],
+            old = _zero_to_none(row['rank_old']),
+            new = _zero_to_none(row['rank_new']),
         )
         for _, row in demo.events['rank_update'].iterrows()
     }

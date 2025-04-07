@@ -76,8 +76,8 @@ class add_globals_to_context(TestCase):
 
 class Match__from_summary(TestCase):
 
-    def test(self):
-        pmatch_data = {
+    def setUp(self):
+        self.summary = {
             'sharecode': 'CSGO-a622L-DjJDC-5zwn4-Gx2tf-YYmQD',
             'timestamp': 1720469310,
             'summary': dict(
@@ -170,13 +170,15 @@ class Match__from_summary(TestCase):
                 76561198064174518,
             ],
         }
-        pmatch = models.Match.from_summary(pmatch_data)
 
-        self.assertEqual(pmatch.sharecode, pmatch_data['sharecode'])
-        self.assertEqual(pmatch.timestamp, pmatch_data['timestamp'])
-        self.assertEqual(pmatch.score_team1, pmatch_data['summary']['team_scores'][0])
-        self.assertEqual(pmatch.score_team2, pmatch_data['summary']['team_scores'][1])
-        self.assertEqual(pmatch.duration, pmatch_data['summary']['match_duration'])
+    def test(self):
+        pmatch = models.Match.from_summary(self.summary)
+
+        self.assertEqual(pmatch.sharecode, self.summary['sharecode'])
+        self.assertEqual(pmatch.timestamp, self.summary['timestamp'])
+        self.assertEqual(pmatch.score_team1, self.summary['summary']['team_scores'][0])
+        self.assertEqual(pmatch.score_team2, self.summary['summary']['team_scores'][1])
+        self.assertEqual(pmatch.duration, self.summary['summary']['match_duration'])
         self.assertEqual(pmatch.map_name, 'de_vertigo')
         self.assertEqual(pmatch.mtype, models.Match.MTYPE_PREMIER)
         self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').kills, 17)
@@ -187,11 +189,27 @@ class Match__from_summary(TestCase):
 
         return pmatch
 
+    def test_unranked(self):
+        data = dict(self.summary)
+        cs2_client.fetch_match_details(data)
+        data['ranks']['76561197961345487'] = dict(old = None, new = None)
+
+        def __mock_fetch_match_details(summary):
+            summary.update(data)
+
+        with patch('cs2_client.fetch_match_details', side_effect = __mock_fetch_match_details):
+            pmatch = self.test()
+
+        self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197961345487').old_rank, None)
+        self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197961345487').new_rank, None)
+
 
 class Match__award_badges(TestCase):
 
     def test(self):
-        pmatch = Match__from_summary().test()
+        Match__from_summary__test = Match__from_summary()
+        Match__from_summary__test.setUp()
+        pmatch = Match__from_summary__test.test()
         self.assertEqual(
             list(
                 models.MatchBadge.objects.filter(
@@ -240,7 +258,9 @@ class MatchBadge__award(TestCase):
 
     def setUp(self):
         with patch('stats.models.Match.award_badges'):
-            self.pmatch = Match__from_summary().test()
+            Match__from_summary__test = Match__from_summary()
+            Match__from_summary__test.setUp()
+            self.pmatch = Match__from_summary__test.test()
         self.mp5 = self.pmatch.get_participation('76561197962477966')
         self.teammates = list(
             self.mp5.pmatch.matchparticipation_set.filter(
@@ -471,7 +491,9 @@ class MatchBadge__award(TestCase):
 class MatchBadge__award_with_history(TestCase):
 
     def test_no_awards(self):
-        pmatch = Match__from_summary().test()
+        Match__from_summary__test = Match__from_summary()
+        Match__from_summary__test.setUp()
+        pmatch = Match__from_summary__test.test()
         participation = pmatch.get_participation('76561197967680028')
         models.MatchBadge.award_with_history(participation, list())
         self.assertEqual(len(models.MatchBadge.objects.filter(participation = participation)), 0)
@@ -915,6 +937,31 @@ class matches(TestCase):
         response = self.client.get(reverse('matches'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('login'))
+
+    def test_premier_ranked(self):
+        self.match.mtype = models.Match.MTYPE_PREMIER
+        self.match.save()
+        self.participation.old_rank = 6003
+        self.participation.new_rank = 6123
+        self.participation.save()
+        response = self.client.get(reverse('matches', kwargs={'squad': self.squad.uuid}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/sessions.html')
+        self.assertInHTML('<div class="rank rank-class2"><div><span>6003</span></div></div>', response.content.decode())
+        self.assertInHTML('<div class="rank rank-class2"><div><span>6123</span></div></div>', response.content.decode())
+        self.assertContains(response, '+120')
+
+    def test_premier_newly_ranked(self):
+        self.match.mtype = models.Match.MTYPE_PREMIER
+        self.match.save()
+        self.participation.old_rank = None
+        self.participation.new_rank = 6123
+        self.participation.save()
+        response = self.client.get(reverse('matches', kwargs={'squad': self.squad.uuid}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/sessions.html')
+        self.assertInHTML('<div class="rank rank-class2"><div><span>6123</span></div></div>', response.content.decode())
+        self.assertNotContains(response, '<div class="previous-rank-container">')
 
 
 class run_pending_tasks(TestCase):
@@ -1569,3 +1616,127 @@ class GamingSession__close(TestCase):
             actual = attachment,
             expected = 'tests/data/radarplot_with_avatar.png',
         )
+
+
+class player(TestCase):
+
+    @testsuite.fake_api.patch
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.players = [
+            SteamProfile.objects.create(steamid = '12345678900000001'),
+            SteamProfile.objects.create(steamid = '12345678900000002'),
+            SteamProfile.objects.create(steamid = '12345678900000003'),
+        ]
+        self.squad = Squad.objects.create(name = 'Test Squad')
+        SquadMembership.objects.create(squad = self.squad, player = self.players[0])
+        self.session = models.GamingSession.objects.create(squad = self.squad)
+        timestamp0 = int(time.time())
+        self.matches = list()
+        for midx in range(2):
+            pmatch = models.Match.objects.create(
+                timestamp = timestamp0 + midx,
+                score_team1 = 12,
+                score_team2 = 13,
+                duration = 1653,
+                map_name = 'de_dust2',
+            )
+            self.matches.append(pmatch)
+            pmatch.sessions.add(self.session)
+            for pidx in range(len(self.players)):
+                team = 1 if pidx == 0 else 2  # team 1 for player 0, team 2 for others
+                models.MatchParticipation.objects.create(
+                    player = self.players[pidx],
+                    pmatch = pmatch,
+                    team = team,
+                    result = 'l' if team == 1 else 'w',
+                    kills = 20 + midx,
+                    assists = 10,
+                    deaths = 15,
+                    score = 30,
+                    mvps = 5,
+                    headshots = 15,
+                    adr = 120,
+                )
+
+    def _request(self):
+        return self.client.get(
+            reverse(
+                'player',
+                kwargs = dict(
+                    squad = self.squad.uuid,
+                    steamid = self.players[0].steamid,
+                ),
+            ),
+        )
+
+    def test_no_premier(self):
+        response = self._request()
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/player.html')
+        self.assertIsNone(response.context['premier'])
+        for token in [
+            'Premier performance',
+            'Correlation between own',
+            'premier-plot',
+            'premierData',
+            'premierScatter',
+            'premierTrendline',
+            'premierPlot',
+        ]:
+            self.assertNotContains(response, token)
+
+    def test_with_1premier(self):
+        self.matches[0].mtype = models.Match.MTYPE_PREMIER
+        self.matches[0].save()
+        p = self.matches[0].get_participation(self.players[1])
+        p.old_rank = 6000
+        p.new_rank = 6200
+        p.save()
+        self.test_no_premier()
+
+    def test_with_2premier(self):
+        self.matches[0].mtype = models.Match.MTYPE_PREMIER
+        self.matches[0].save()
+        p = self.matches[0].get_participation(self.players[1])
+        p.old_rank = None
+        p.new_rank = 6200
+        p.save()
+
+        self.matches[1].mtype = models.Match.MTYPE_PREMIER
+        self.matches[1].save()
+        p = self.matches[1].get_participation(self.players[1])
+        p.old_rank = 6200
+        p.new_rank = 6400
+        p.save()
+        p = self.matches[1].get_participation(self.players[2])
+        p.old_rank = None
+        p.new_rank = 4000
+        p.save()
+
+        response = self._request()
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/player.html')
+
+        self.assertEqual(response.context['premier']['average_opponent_ranks'], [6200, 5150])
+        self.assertEqual(
+            response.context['premier']['player_values'],
+            [
+                math.sqrt(20 / 15 * 1.2),
+                math.sqrt(21 / 15 * 1.2),
+            ],
+        )
+        self.assertContains(response, '(strong correlation)')
+        self.assertEqual(response.context['premier']['corr_coeff'], -1)
+        self.assertEqual(response.context['premier']['trendline_slope'], -2.9749595823066835e-05)
+        self.assertEqual(response.context['premier']['trendline_offset'], 1.449358558170366)
+
+    def test_with_2premier_equal_performances(self):
+        for pmatch in self.matches:
+            pmatch.mtype = models.Match.MTYPE_PREMIER
+            pmatch.save()
+            p = pmatch.get_participation(self.players[1])
+            p.old_rank = None
+            p.new_rank = 6200
+            p.save()
+        self.test_no_premier()
