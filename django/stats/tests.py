@@ -198,13 +198,18 @@ class Match__from_summary(TestCase):
             summary.update(data)
 
         with patch('cs2_client.fetch_match_details', side_effect = __mock_fetch_match_details):
-            self.test()
+            pmatch = self.test()
+
+        self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197961345487').old_rank, None)
+        self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197961345487').new_rank, None)
 
 
 class Match__award_badges(TestCase):
 
     def test(self):
-        pmatch = Match__from_summary().test()
+        Match__from_summary__test = Match__from_summary()
+        Match__from_summary__test.setUp()
+        pmatch = Match__from_summary__test.test()
         self.assertEqual(
             list(
                 models.MatchBadge.objects.filter(
