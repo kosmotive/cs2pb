@@ -73,6 +73,7 @@
                         </td>
                         {% if m.mtype == "Premier" %}
                             <td>
+                                {% if mp.old_rank > 0 %}
                                 <div class="previous-rank-container">
                                     {{ mp.old_rank|rank }}
                                     {% if mp.old_rank and mp.new_rank != mp.old_rank %}
@@ -81,6 +82,7 @@
                                         </span>
                                     {% endif %}
                                 </div>
+                                {% endif %}
                                 {{ mp.new_rank|rank }}
                             </td>
                         {% endif %}

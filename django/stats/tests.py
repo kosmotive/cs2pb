@@ -76,8 +76,8 @@ class add_globals_to_context(TestCase):
 
 class Match__from_summary(TestCase):
 
-    def test(self):
-        pmatch_data = {
+    def setUp(self):
+        self.summary = {
             'sharecode': 'CSGO-a622L-DjJDC-5zwn4-Gx2tf-YYmQD',
             'timestamp': 1720469310,
             'summary': dict(
@@ -170,13 +170,15 @@ class Match__from_summary(TestCase):
                 76561198064174518,
             ],
         }
-        pmatch = models.Match.from_summary(pmatch_data)
 
-        self.assertEqual(pmatch.sharecode, pmatch_data['sharecode'])
-        self.assertEqual(pmatch.timestamp, pmatch_data['timestamp'])
-        self.assertEqual(pmatch.score_team1, pmatch_data['summary']['team_scores'][0])
-        self.assertEqual(pmatch.score_team2, pmatch_data['summary']['team_scores'][1])
-        self.assertEqual(pmatch.duration, pmatch_data['summary']['match_duration'])
+    def test(self):
+        pmatch = models.Match.from_summary(self.summary)
+
+        self.assertEqual(pmatch.sharecode, self.summary['sharecode'])
+        self.assertEqual(pmatch.timestamp, self.summary['timestamp'])
+        self.assertEqual(pmatch.score_team1, self.summary['summary']['team_scores'][0])
+        self.assertEqual(pmatch.score_team2, self.summary['summary']['team_scores'][1])
+        self.assertEqual(pmatch.duration, self.summary['summary']['match_duration'])
         self.assertEqual(pmatch.map_name, 'de_vertigo')
         self.assertEqual(pmatch.mtype, models.Match.MTYPE_PREMIER)
         self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').kills, 17)
@@ -186,6 +188,17 @@ class Match__from_summary(TestCase):
         self.assertEqual(round(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').adr, 1), 104.7)
 
         return pmatch
+    
+    def test_unranked(self):
+        data = dict(self.summary)
+        cs2_client.fetch_match_details(data)
+        data['ranks']['76561197961345487'] = dict(old = None, new = None)
+
+        def __mock_fetch_match_details(summary):
+            summary.update(data)
+
+        with patch('cs2_client.fetch_match_details', side_effect = __mock_fetch_match_details):
+            self.test()
 
 
 class Match__award_badges(TestCase):
@@ -915,6 +928,31 @@ class matches(TestCase):
         response = self.client.get(reverse('matches'))
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse('login'))
+
+    def test_premier_ranked(self):
+        self.match.mtype = models.Match.MTYPE_PREMIER
+        self.match.save()
+        self.participation.old_rank = 6003
+        self.participation.new_rank = 6123
+        self.participation.save()
+        response = self.client.get(reverse('matches', kwargs={'squad': self.squad.uuid}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/sessions.html')
+        self.assertInHTML('<div class="rank rank-class2"><div><span>6003</span></div></div>', response.content.decode())
+        self.assertInHTML('<div class="rank rank-class2"><div><span>6123</span></div></div>', response.content.decode())
+        self.assertContains(response, '+120')
+
+    def test_premier_newly_ranked(self):
+        self.match.mtype = models.Match.MTYPE_PREMIER
+        self.match.save()
+        self.participation.old_rank = None
+        self.participation.new_rank = 6123
+        self.participation.save()
+        response = self.client.get(reverse('matches', kwargs={'squad': self.squad.uuid}))
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'stats/sessions.html')
+        self.assertInHTML('<div class="rank rank-class2"><div><span>6123</span></div></div>', response.content.decode())
+        self.assertNotContains(response, '<div class="previous-rank-container">')
 
 
 class run_pending_tasks(TestCase):

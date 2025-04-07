@@ -727,7 +727,13 @@ class MatchParticipation(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=['player', 'pmatch'], name='unique_player_pmatch'
+                fields = ['player', 'pmatch'], name = 'unique_player_pmatch'
+            ),
+            models.CheckConstraint(
+                check = ~models.Q(old_rank = 0), name = 'old_rank_not_zero'
+            ),
+            models.CheckConstraint(
+                check = ~models.Q(new_rank = 0), name = 'new_rank_not_zero'
             ),
         ]
         ordering = ['-adr']
