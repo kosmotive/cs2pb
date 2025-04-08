@@ -118,9 +118,10 @@ class Rank(Feature):
     def __call__(self, ctx: FeatureContext) -> Optional[float]:
         from .models import MatchParticipation
         try:
-            return ctx.match_participations_of_player.filter(
+            rank = ctx.match_participations_of_player.filter(
                 pmatch__mtype = self.mtype,
-            ).latest('pmatch__timestamp').new_rank / 1000
+            ).latest('pmatch__timestamp').new_rank
+            return None if rank is None else rank / 1000
         except MatchParticipation.DoesNotExist:
             return None
 
