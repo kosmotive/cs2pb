@@ -56,6 +56,7 @@ badge_order = [
     'rising-star',
     'ace',
     'quad-kill',
+    'weapon-knife',
 ]
 
 
