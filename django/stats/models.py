@@ -1197,7 +1197,7 @@ class MatchBadge(models.Model):
             MatchBadge.objects.create(badge_type = badge_type, participation = participation, frequency = number)
             frequency = '' if number == 1 else f' {number} times'
             text = (
-                f'{emoji} <{participation.player.steamid}> had **{badge_type.name}**{frequency} on '
+                f'{emoji} <{participation.player.steamid}> had a **{badge_type.name}**{frequency} on '
                 f'*{participation.pmatch.map_name}*!'
             )
             if not mute_discord:
