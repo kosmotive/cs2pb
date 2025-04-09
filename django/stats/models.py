@@ -220,18 +220,14 @@ class GamingSession(models.Model):
         """
         Get the Steam IDs of the players who participated in the session.
         """
-        steamids = set()
-        for pmatch in self.matches.all():
-            for mp in pmatch.matchparticipation_set.all():
-                steamids.add(mp.player.steamid)
-        return frozenset(steamids)
+        return frozenset(p.steamid for p in self.participants)
 
     @property
-    def participants(self) -> List[SteamProfile]:
+    def participants(self) -> QuerySet:
         """
         Get the players who participated in the session.
         """
-        return [SteamProfile.objects.get(steamid = steamid) for steamid in self.participated_steamids]
+        return SteamProfile.objects.filter(matchparticipation__pmatch__in = self.matches.all())
 
     @property
     def participated_squad_members_steamids(self) -> QuerySet:
@@ -668,7 +664,7 @@ class MatchParticipation(models.Model):
         SteamProfile,
         on_delete = models.SET_NULL,
         verbose_name = 'Executing Player',
-        related_name = 'executed_matchparticipations',
+        related_name = 'executed_matchparticipations',  # TODO: rename to `executed_matchparticipation`
         null = True,
     )
     """
