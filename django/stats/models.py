@@ -1125,6 +1125,10 @@ class MatchBadge(models.Model):
 
     @staticmethod
     def award(participation, **kwargs):
+        # Mute Discord notifications if the player was not authentic
+        if participation.player != participation.executing_player:
+            kwargs['mute_discord'] = True
+
         MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace', **kwargs)
         MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill', **kwargs)
         MatchBadge.award_margin_badge(participation, 'carrier', order = '-adr', margin = 1.8, emoji = '🍆', **kwargs)

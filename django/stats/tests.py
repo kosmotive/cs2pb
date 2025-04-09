@@ -512,7 +512,7 @@ class MatchBadge__award(TestCase):
     def test_ace_unauthentic(self):
         mp1 = self.pmatch.get_participation('76561197967680028')
         mp2 = self.pmatch.get_participation('76561197961345487')
-        mp1.executing_player = self.teammates[0].player
+        mp1.executing_player = self.mp5.player
         mp1.executing_player.save()
         models.KillEvent.objects.all().delete()
         models.KillEvent.objects.bulk_create(
