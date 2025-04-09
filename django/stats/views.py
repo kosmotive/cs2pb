@@ -479,10 +479,7 @@ def player(request, squad, steamid):
     for badge_type in MatchBadgeType.objects.all():
         context['badges']['match_badges'][badge_type.slug] = dict(
             name = badge_type.name,
-            matches = MatchBadge.objects.filter(
-                participation__player = player,
-                badge_type = badge_type,
-            )
+            matches = player.match_badges().filter(badge_type = badge_type),
         )
 
     # Add the global context and render the player page
