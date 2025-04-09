@@ -55,7 +55,11 @@ class SteamProfile(models.Model):
 
     def match_badges(self, **kwargs):  # TODO: remove kwargs, filtering can be performed on returned QuerySet
         from stats.models import MatchBadge
-        return MatchBadge.objects.filter(participation__player = self, **kwargs)
+        return MatchBadge.objects.filter(
+            participation__player = self,
+            participation__executing_player = self,
+            **kwargs,
+        )
 
     def matches(self, role: Literal['played', 'executed', 'authentic'] = 'played', **kwargs):  # TODO: remove kwargs, filtering can be performed on returned QuerySet
         from stats.models import Match
