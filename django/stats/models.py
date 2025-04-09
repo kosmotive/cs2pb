@@ -537,7 +537,7 @@ class Match(models.Model):
 
                 players.append(steam_profile)
 
-                mp = MatchParticipation(player = steam_profile, pmatch = m)
+                mp = MatchParticipation(player = steam_profile, executing_player = steam_profile, pmatch = m)
                 mp.team      = 1 + pos // 5
                 mp.result    = get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
                 mp.kills     = kills

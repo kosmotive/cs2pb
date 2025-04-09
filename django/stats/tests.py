@@ -614,7 +614,7 @@ class PlayerOfTheWeek__get_next_badge_data(TestCase):
             map_name = 'de_dust2',
         )
         for uidx, user in enumerate(self.players):
-            mp = models.MatchParticipation(player = user, pmatch = m)
+            mp = models.MatchParticipation(player = user, executing_player = user, pmatch = m)
             mp.team      = 1 + uidx // 3
             mp.result    = models.get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
             mp.kills     =  20   + uidx
@@ -885,6 +885,7 @@ class matches(TestCase):
         self.match.sessions.add(self.session)
         self.participation = models.MatchParticipation.objects.create(
             player = self.player,
+            executing_player = self.player,
             pmatch = self.match,
             team = 1,
             result = 'l',
@@ -1124,6 +1125,7 @@ class UpdateTask__run(TestCase):
         )
         models.MatchParticipation.objects.create(
             player = self.account.steam_profile,
+            executing_player = self.account.steam_profile,
             pmatch = pmatch,
             team = 1,
             result = 'l',
@@ -1192,6 +1194,7 @@ class UpdateTask__run(TestCase):
         for pmatch in (pmatch_previous, pmatch_recent):
             models.MatchParticipation.objects.create(
                 player = self.account.steam_profile,
+                executing_player = self.account.steam_profile,
                 pmatch = pmatch,
                 team = 1,
                 result = 'l',
@@ -1306,6 +1309,7 @@ class GamingSession__close(TestCase):
         self.match1.sessions.add(self.session1)
         self.participation1 = models.MatchParticipation.objects.create(
             player = self.player1,
+            executing_player = self.player1,
             pmatch = self.match1,
             team = 1,
             result = 'l',
@@ -1329,6 +1333,7 @@ class GamingSession__close(TestCase):
         self.match2.sessions.add(self.session2)
         self.participation2 = models.MatchParticipation.objects.create(
             player = self.player1,
+            executing_player = self.player1,
             pmatch = self.match2,
             team = 1,
             result = 'l',
@@ -1445,6 +1450,7 @@ class GamingSession__close(TestCase):
         # Add a second participant to the current session (teammate)
         self.participation3 = models.MatchParticipation.objects.create(
             player = self.player2,
+            executing_player = self.player2,
             pmatch = self.match2,
             team = self.participation2.team,
             result = self.participation2.result,
@@ -1467,6 +1473,7 @@ class GamingSession__close(TestCase):
         match3.sessions.add(self.session2)
         models.MatchParticipation.objects.create(
             player = self.player1,
+            executing_player = self.player1,
             pmatch = match3,
             team = 1,
             result = 'w',
@@ -1489,6 +1496,7 @@ class GamingSession__close(TestCase):
         match4.sessions.add(self.session2)
         models.MatchParticipation.objects.create(
             player = self.player1,
+            executing_player = self.player1,
             pmatch = match4,
             team = 1,
             result = 't',
@@ -1530,6 +1538,7 @@ class GamingSession__close(TestCase):
         # Add a second participant to the current session (teammate)
         self.participation3 = models.MatchParticipation.objects.create(
             player = self.player2,
+            executing_player = self.player2,
             pmatch = self.match2,
             team = self.participation2.team,
             result = self.participation2.result,
@@ -1579,6 +1588,7 @@ class GamingSession__close(TestCase):
         # Add a second participant to the current session (teammate)
         self.participation3 = models.MatchParticipation.objects.create(
             player = self.player2,
+            executing_player = self.player2,
             pmatch = self.match2,
             team = self.participation2.team,
             result = self.participation2.result,
@@ -1647,6 +1657,7 @@ class player(TestCase):
                 team = 1 if pidx == 0 else 2  # team 1 for player 0, team 2 for others
                 models.MatchParticipation.objects.create(
                     player = self.players[pidx],
+                    executing_player = self.players[pidx],
                     pmatch = pmatch,
                     team = team,
                     result = 'l' if team == 1 else 'w',
