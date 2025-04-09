@@ -1294,9 +1294,11 @@ class GamingSession__close(TestCase):
     def setUp(self):
         self.player1 = SteamProfile.objects.create(steamid = '12345678900000001')
         self.player2 = SteamProfile.objects.create(steamid = '12345678900000002')
+        self.player3 = SteamProfile.objects.create(steamid = '12345678900000003')
         self.squad = Squad.objects.create(name = 'Test Squad', discord_channel_id = '1234')
         SquadMembership.objects.create(squad = self.squad, player = self.player1)
         SquadMembership.objects.create(squad = self.squad, player = self.player2)
+        SquadMembership.objects.create(squad = self.squad, player = self.player3)
 
         # Create a previously played session
         self.session1 = models.GamingSession.objects.create(squad = self.squad, is_closed = True)
@@ -1345,6 +1347,20 @@ class GamingSession__close(TestCase):
             headshots = 15,
             adr = 120.5,
         )
+
+    def test_with_unauthentic(self):
+        self.squad.update_stats()
+
+        # Make one participant unauthentic
+        self.participation2.executing_player = None
+        self.participation2.save()
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
 
     def test_first_session(self):
         # Remove the previously played session
@@ -1626,6 +1642,33 @@ class GamingSession__close(TestCase):
             actual = attachment,
             expected = 'tests/data/radarplot_with_avatar.png',
         )
+
+    def test_with_one_unauthentic(self):
+        self.squad.update_stats()
+
+        # Make one participant unauthentic
+        self.participation2.executing_player = self.player2
+        self.participation2.save()
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star
+        self.assertIsNone(self.session2.rising_star)
+
+        # Verify the scheduled Discord notifcation for player performance
+        self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 2)
+        notification = ScheduledNotification.objects.all()[1]
+        self.assertEqual(notification.squad.pk, self.squad.pk)
+        self.assertEqual(
+            f'<12345678900000002> played as <12345678900000001>.',
+            notification.text,
+        )
+
+    # TODO: Add test with two unauthentic players
+
+    # TODO: Add test to verify that match badges received by unauthentic players do not get announced on Discord
 
 
 class player(TestCase):

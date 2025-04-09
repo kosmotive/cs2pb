@@ -100,29 +100,24 @@ class GamingSession(models.Model):
             return
 
         # Process the participated squad members
-        participated_steamids = self.participated_steamids
         comments: List[str] = list()
         top_player: Optional[SteamProfile] = None
         top_player_trend_rel: float = 0
-        participated_squad_members: int = 0
         feature_contexts = dict()
-        for m in self.squad.memberships.all():
-
-            if m.player.steamid not in participated_steamids:
-                continue
-            participated_squad_members += 1
+        for player_data in self.participated_authentic_squad_members:
+            player = SteamProfile.objects.get(steamid = player_data['steamid'])
 
             # Compute the PV of the player in this session
-            feature_contexts[m.player.steamid] = (
+            feature_contexts[player.steamid] = (
                 ctx := FeatureContext(
-                    MatchParticipation.objects.filter(player = m.player, pmatch__sessions = self),
-                    m.player,
+                    MatchParticipation.objects.filter(player = player, pmatch__sessions = self),
+                    player,
                 )
             )
             pv_today = Features.player_value(ctx)
 
             # Skip further consideration if today's PV or the reference PV is not available
-            pv_ref = m.stats.get('player_value', None)
+            pv_ref = self.squad.memberships.get(player = player).stats.get('player_value', None)
             if pv_today is None or pv_ref is None:
                 continue
 
@@ -135,20 +130,20 @@ class GamingSession(models.Model):
 
             # Update the top squad participant
             if top_player is None or kpi['trend_rel'] > top_player_trend_rel:
-                top_player = m.player
+                top_player = player
                 top_player_trend_rel = kpi['trend_rel']
 
             # Proclaim the PV trend of the player, if their relative trend *rounded to 1 decimal* is larger than 0.1%
             if abs(kpi['trend_rel']) > 0.0005:
                 icon = '📈' if kpi['trend_rel'] > 0 else '📉'
                 comments.append(
-                    f' <{m.player.steamid}> {icon} {100 * kpi["trend_rel"]:+.1f}% ({kpi["value"]:.2f})'
+                    f' <{player.steamid}> {icon} {100 * kpi["trend_rel"]:+.1f}% ({kpi["value"]:.2f})'
                 )
 
             # Otherwise, just proclaim the PV of the player
             else:
                 comments.append(
-                    f' <{m.player.steamid}> ±0.00% ({kpi["value"]:.2f})'
+                    f' <{player.steamid}> ±0.00% ({kpi["value"]:.2f})'
                 )
 
         # Compose the notification text for Discord out of the comments generated above
@@ -157,6 +152,20 @@ class GamingSession(models.Model):
             text += ' Here is your current performance compared to your 30-days average: ' + ', '.join(comments)
             text += ', with respect to the *player value*.'
         self.squad.notify_on_discord(text)
+
+        # Compose another notification about unauthentic players
+        player_by_executing_player = dict()
+        for player_data in self.participated_unauthentic_squad_members:
+            for executing_player in SteamProfile.objects.filter(
+                executed_matchparticipations__pmatch__sessions = self,
+                executed_matchparticipations__player__steamid = player_data['steamid'],
+            ).distinct():
+                player_by_executing_player.setdefault(executing_player.steamid, list())
+                player_by_executing_player[executing_player.steamid].append(player_data['steamid'])
+        for executing_player, played_as in player_by_executing_player.items():
+            self.squad.notify_on_discord(
+                f'<{executing_player}> played as {", ".join([f"<{steamid}>" for steamid in played_as])}.',
+            )
 
         # Compose another notification for a summary of the matches
         text = 'Matches played in this session:'
@@ -174,7 +183,11 @@ class GamingSession(models.Model):
         self.squad.notify_on_discord(text)
 
         # Determine the rising star (if any)
-        if participated_squad_members > 1 and top_player is not None and top_player_trend_rel > 0.01:
+        if (
+            self.participated_authentic_squad_members.count() > 1 and
+            top_player is not None and
+            top_player_trend_rel > 0.01
+        ):
             from .plots import trends as plot_trends
             notification = self.squad.notify_on_discord(
                 f'And today\'s **rising star** was: 🌟 <{top_player.steamid}>! '
@@ -238,13 +251,7 @@ class GamingSession(models.Model):
             player__steamid__in = self.participated_steamids
         ).values_list('player__steamid', flat = True)
     
-    def _get_participated_squad_members(self, authentic_only: bool = False) -> QuerySet:
-        if authentic_only:
-            filters = dict(
-                matchparticipation__player = F('matchparticipation__executing_player'),
-            )
-        else:
-            filters = dict()
+    def _get_participated_squad_members(self, **filters) -> QuerySet:
         return SteamProfile.objects.filter(
             steamid__in = self.participated_squad_members_steamids,
             matchparticipation__pmatch__in = self.matches.values_list('pk', flat = True),
@@ -264,15 +271,17 @@ class GamingSession(models.Model):
         """
         Get the authentic squad members who participated in the session.
         """
-        return self._get_participated_squad_members(authentic_only = True)
+        return self._get_participated_squad_members(
+            matchparticipation__player = F('matchparticipation__executing_player')
+        )
 
     @property
     def participated_unauthentic_squad_members(self):
         """
         Get the unauthentic squad members who participated in the session.
         """
-        return self._get_participated_squad_members(authentic_only = False).exclude(
-            pk__in = self._get_participated_squad_members(authentic_only = True).values_list('pk', flat = True),
+        return self._get_participated_squad_members().exclude(
+            pk__in = self.participated_authentic_squad_members.values_list('pk', flat = True),
         )
 
     @property
@@ -685,6 +694,7 @@ class MatchParticipation(models.Model):
         verbose_name = 'Executing Player',
         related_name = 'executed_matchparticipations',  # TODO: rename to `executed_matchparticipation`
         null = True,
+        blank = True,
     )
     """
     The player who's actually been playing.
