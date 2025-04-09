@@ -531,14 +531,20 @@ div.session .session-content .session-header {
     vertical-align: top;
 }
 
-div.session .session-content .session-members {
+div.session .session-content .authentic-session-members,
+div.session .session-content .unauthentic-session-members {
     display: inline-block;
     vertical-align: top;
     margin-left: 5mm;
     font-size: 200%;
 }
 
-div.session .session-content .session-members img.avatar {
+div.session .session-content .unauthentic-session-members {
+    opacity: 0.5;
+}
+
+div.session .session-content .authentic-session-members img.avatar,
+div.session .session-content .unauthentic-session-members img.avatar {
     height: 1em;
 }
 

@@ -237,15 +237,18 @@ class GamingSession(models.Model):
         return self.squad.memberships.filter(
             player__steamid__in = self.participated_steamids
         ).values_list('player__steamid', flat = True)
-
-    @property
-    def participated_squad_members(self):
-        """
-        Get the squad members who participated in the session.
-        """
+    
+    def _get_participated_squad_members(self, authentic_only: bool = False) -> QuerySet:
+        if authentic_only:
+            filters = dict(
+                matchparticipation__player = F('matchparticipation__executing_player'),
+            )
+        else:
+            filters = dict()
         return SteamProfile.objects.filter(
             steamid__in = self.participated_squad_members_steamids,
             matchparticipation__pmatch__in = self.matches.values_list('pk', flat = True),
+            **filters
         ).values(
             'steamid',
             'name',
@@ -254,6 +257,22 @@ class GamingSession(models.Model):
             avg_adr = Avg('matchparticipation__adr'),
         ).order_by(
             '-avg_adr',
+        )
+
+    @property
+    def participated_authentic_squad_members(self):
+        """
+        Get the authentic squad members who participated in the session.
+        """
+        return self._get_participated_squad_members(authentic_only = True)
+
+    @property
+    def participated_unauthentic_squad_members(self):
+        """
+        Get the unauthentic squad members who participated in the session.
+        """
+        return self._get_participated_squad_members(authentic_only = False).exclude(
+            pk__in = self._get_participated_squad_members(authentic_only = True).values_list('pk', flat = True),
         )
 
     @property

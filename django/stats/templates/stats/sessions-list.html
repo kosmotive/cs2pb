@@ -12,8 +12,8 @@
             <b>Session:</b> {{ session.started_weekday }}, {{ session.started_date }}, {{ session.started_time }} &ndash; {{ session.ended_time }}
         </div>
 
-        <div class="session-members">
-        {% for player in session.participated_squad_members %}
+        <div class="authentic-session-members">
+        {% for player in session.participated_authentic_squad_members %}
 
             <div class="session-member {% if player.steamid == session.rising_star.pk %}rising-star{% endif %}">
                 <a href="{% url 'player' session.squad.uuid player.steamid %}"><img src="{{ player.avatar_s }}" class="avatar"></a>
@@ -24,6 +24,16 @@
 
                 {% endif %}
 
+            </div>
+
+        {% endfor %}
+        </div>
+
+        <div class="unauthentic-session-members">
+        {% for player in session.participated_unauthentic_squad_members %}
+
+            <div class="session-member {% if player.steamid == session.rising_star.pk %}rising-star{% endif %}">
+                <a href="{% url 'player' session.squad.uuid player.steamid %}"><img src="{{ player.avatar_s }}" class="avatar"></a>
             </div>
 
         {% endfor %}
