@@ -24,8 +24,9 @@ from .models import (
 
 class MatchParticipationInline(admin.TabularInline):
     model = MatchParticipation
-    fields = ('datetime', 'result', 'kills', 'assists', 'deaths', 'score', 'mvps', 'headshots')
+    fields = ('executing_player', 'datetime', 'result', 'kills', 'assists', 'deaths', 'score', 'mvps', 'headshots')
     readonly_fields = ('datetime',)
+    fk_name = 'player'
 
     def datetime(self, mp):
         return mp.pmatch.datetime

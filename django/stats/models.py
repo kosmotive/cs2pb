@@ -661,7 +661,18 @@ class MatchParticipation(models.Model):
 
     player = models.ForeignKey(SteamProfile, on_delete = models.PROTECT, verbose_name = 'Player')
     """
-    The player who participated in the match.
+    The player who's Steam account participated in the match.
+    """
+
+    executing_player = models.ForeignKey(
+        SteamProfile,
+        on_delete = models.SET_NULL,
+        verbose_name = 'Executing Player',
+        related_name = 'executed_matchparticipations',
+        null = True,
+    )
+    """
+    The player who's actually been playing.
     """
 
     pmatch = models.ForeignKey(Match, on_delete = models.CASCADE, verbose_name = 'Match')

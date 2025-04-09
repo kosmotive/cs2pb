@@ -65,7 +65,14 @@
                         <td>
                             <div class="first-item">
                                 <a href="{% url 'player' session.squad.uuid mp.player.steamid %}"><img src="{{ mp.player.avatar_s }}" class="avatar"></a>
-                                <div class="player-name">{{ mp.player.name }}</div>
+                                <div class="player-name">
+                                    {% if mp.executing_player.pk != mp.player.pk %}
+                                    <div class="executing-player">
+                                        &#128100; {{ mp.executing_player.name }}
+                                    </div>
+                                    {% endif %}
+                                    {{ mp.player.name }}
+                                </div>
                                 <div class="badge-list">{% for badge in mp.badges.all reversed %}
                                     <img src="{% static 'badges' %}/{{ badge.badge_type.slug }}.png" class="badge">
                                 {% endfor %}</div>
