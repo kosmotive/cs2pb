@@ -53,7 +53,7 @@ class SteamProfile(models.Model):
         else:
             return self.name
 
-    def match_badges(self, **kwargs):
+    def match_badges(self, **kwargs):  # TODO: remove kwargs, filtering can be performed on returned QuerySet
         from stats.models import MatchBadge
         return MatchBadge.objects.filter(participation__player = self, **kwargs)
 
@@ -68,7 +68,7 @@ class SteamProfile(models.Model):
 
         return qs
 
-    def match_participations(self,  **filters):
+    def match_participations(self,  **filters):  # TODO: remove kwargs, filtering can be performed on returned QuerySet
         from stats.models import MatchParticipation
         return MatchParticipation.objects.filter(player=self, **filters)
 

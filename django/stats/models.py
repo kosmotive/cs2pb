@@ -969,7 +969,9 @@ class PlayerOfTheWeek(models.Model):
         player_stats   = dict()
         match_participations = squad.match_participations(
             pmatch__timestamp__gt  = prev_badge.timestamp,
-            pmatch__timestamp__lte = next_timestamp)
+            pmatch__timestamp__lte = next_timestamp,
+            player = F('executing_player'),  # Only account for authentic participations
+        )
 
         # Accumulate stats
         stat_fields = {'score'}
