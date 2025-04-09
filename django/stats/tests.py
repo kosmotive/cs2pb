@@ -269,11 +269,21 @@ class MatchBadge__award(TestCase):
                 pk = self.mp5.pk,
             ).order_by('-adr')
         )
+        self.squad = Squad.objects.create(
+            name = 'Test Squad',
+            discord_channel_id = 123456789012345678,
+        )
+        for mp in self.pmatch.matchparticipation_set.all():
+            SquadMembership.objects.create(
+                player = mp.player,
+                squad = self.squad,
+            )
 
     def test_no_awards(self):
         participation = self.pmatch.get_participation('76561197967680028')
         models.MatchBadge.award(participation)
         self.assertEqual(len(models.MatchBadge.objects.filter(participation = participation)), 0)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
     def test_quad_kill(self):
         mp1 = self.pmatch.get_participation('76561197967680028')
@@ -295,6 +305,7 @@ class MatchBadge__award(TestCase):
                 badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
                 self.assertEqual(badge.participation.pk, mp1.pk)
                 self.assertEqual(badge.frequency, 1)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
 
     def test_quad_kill_twice(self):
         mp1 = self.pmatch.get_participation('76561197967680028')
@@ -317,6 +328,7 @@ class MatchBadge__award(TestCase):
         badge = models.MatchBadge.objects.filter(badge_type = 'quad-kill').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
 
     def test_ace(self):
         mp1 = self.pmatch.get_participation('76561197967680028')
@@ -336,6 +348,7 @@ class MatchBadge__award(TestCase):
         badge = models.MatchBadge.objects.filter(badge_type = 'ace').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 1)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
 
     def test_ace_twice(self):
         mp1 = self.pmatch.get_participation('76561197967680028')
@@ -360,6 +373,7 @@ class MatchBadge__award(TestCase):
         badge = models.MatchBadge.objects.filter(badge_type = 'ace').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
 
     def test_carrier_badge(self):
         mp1 = self.pmatch.get_participation('76561197967680028')
@@ -370,6 +384,7 @@ class MatchBadge__award(TestCase):
         mp1.save()
         models.MatchBadge.award(mp1)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'carrier', participation = mp1)), 0)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
         # Test with ADR right above the threshold
         mp1.adr = 1.81 * mp2.adr
@@ -378,6 +393,7 @@ class MatchBadge__award(TestCase):
             with self.subTest(itr = itr):
                 models.MatchBadge.award(mp1)
                 self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'carrier', participation = mp1)), 1)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
 
     def test_peach_price__within_bounds(self):
         """
@@ -404,6 +420,7 @@ class MatchBadge__award(TestCase):
                 self.assertEqual(
                     len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 1,
                 )
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
 
     def test_peach_price__kd_too_high(self):
         """
@@ -420,6 +437,7 @@ class MatchBadge__award(TestCase):
         self.mp5.save()
         models.MatchBadge.award(self.mp5)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 1)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
     def test_peach_price__adr_too_high(self):
         """
@@ -436,6 +454,7 @@ class MatchBadge__award(TestCase):
         self.mp5.save()
         models.MatchBadge.award(self.mp5)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 1)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
     def test_peach_price__kd_and_adr_too_high(self):
         """
@@ -452,6 +471,7 @@ class MatchBadge__award(TestCase):
         self.mp5.save()
         models.MatchBadge.award(self.mp5)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 0)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
     def test_knife_kill(self):
         mp1 = self.pmatch.get_participation('76561197967680028')
@@ -470,6 +490,7 @@ class MatchBadge__award(TestCase):
                 badge = models.MatchBadge.objects.filter(badge_type = 'weapon-knife').get()
                 self.assertEqual(badge.participation.pk, mp1.pk)
                 self.assertEqual(badge.frequency, 1)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
 
     def test_knife_kill_twice(self):
         mp1 = self.pmatch.get_participation('76561197967680028')
@@ -486,6 +507,25 @@ class MatchBadge__award(TestCase):
         badge = models.MatchBadge.objects.filter(badge_type = 'weapon-knife').get()
         self.assertEqual(badge.participation.pk, mp1.pk)
         self.assertEqual(badge.frequency, 2)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
+
+    def test_ace_unauthentic(self):
+        mp1 = self.pmatch.get_participation('76561197967680028')
+        mp2 = self.pmatch.get_participation('76561197961345487')
+        mp1.executing_player = self.teammates[0].player
+        mp1.executing_player.save()
+        models.KillEvent.objects.all().delete()
+        models.KillEvent.objects.bulk_create(
+            [
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+                create_kill_event(mp1, mp2, round = 1),
+            ]
+        )
+        models.MatchBadge.award(mp1)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
 
 class MatchBadge__award_with_history(TestCase):
@@ -1665,10 +1705,6 @@ class GamingSession__close(TestCase):
             f'<12345678900000002> played as <12345678900000001>.',
             notification.text,
         )
-
-    # TODO: Add test with two unauthentic players
-
-    # TODO: Add test to verify that match badges received by unauthentic players do not get announced on Discord
 
 
 class player(TestCase):
