@@ -63,7 +63,3 @@ cd django
 python manage.py migrate
 python initialize.py --help
 ```
-
-## Web links
-
-- Badge designer: <https://badge.design>
