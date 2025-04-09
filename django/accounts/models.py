@@ -279,7 +279,7 @@ class Squad(models.Model):
             **kwargs,
         )
 
-    def match_participations(self, **kwargs):
+    def match_participations(self, **kwargs):  # TODO: Remove kwargs, filtering can be performed on return QuerySet
         from stats.models import MatchParticipation
         return MatchParticipation.objects.filter(
             player__in = self.memberships.values_list('player__pk', flat = True),
@@ -458,6 +458,8 @@ class SquadMembership(models.Model):
         """
         Return the match participations of the squad member for the computation of their performance within the last 30
         days (all match participations corresponding to sessions started and ended within the last 30 days).
+
+        Only authentic match participations are returned (executing player is the same as the squad member).
         """
         sessions = self.squad.sessions.filter(
             is_closed = True,  # Exclude matches from sessions that did not end yet
@@ -470,6 +472,9 @@ class SquadMembership(models.Model):
         )
         return self.squad.match_participations(
             pmatch__sessions__in = sessions,
+        ).filter(
+            player = self.player,
+            executing_player = self.player,
         )
 
     def update_stats(self):

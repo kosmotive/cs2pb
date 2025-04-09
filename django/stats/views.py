@@ -412,16 +412,19 @@ def player(request, squad, steamid):
     # Compute the player card
     card = compute_card(squad_membership, all_features_expanded, max_badge_count = 6)
 
-    # Fetch the player's match participations
-    participations = MatchParticipation.objects.filter(player = player).order_by('pmatch__timestamp')
+    # Fetch the player's executed match participations
+    participations = MatchParticipation.objects.filter(executing_player = player).order_by('pmatch__timestamp')
+    authentic_participations = participations.filter(player = player)
 
-    # Compute stats for the player's Premier participations
+    # Compute stats for the player's executed Premier participations
     premier_participations = participations.filter(pmatch__mtype = Match.MTYPE_PREMIER)
     if premier_participations.count() > 1:
 
         # Compute the average opponent rank for each of the player's match participation and corresponding player value
         premier = dict(player_values = list(), average_opponent_ranks = list())
-        for participation in Features.player_value.get_queryset(FeatureContext(premier_participations, player)):
+        for participation in Features.player_value.get_queryset(
+            FeatureContext(premier_participations, player, participations = 'executed'),
+        ):
             average_opponent_rank = _get_average_opponent_rank(participation)
             premier['average_opponent_ranks'].append(average_opponent_rank)
             premier['player_values'].append(participation.value)
@@ -441,7 +444,7 @@ def player(request, squad, steamid):
     accounted_participations = squad_membership.accounted_match_participations
     accounted_period_start: Optional[int] = None
     accounted_period_end: Optional[int] = None
-    for pidx, participation in enumerate(participations):
+    for pidx, participation in enumerate(authentic_participations):
         if participation.pk in accounted_participations.values_list('pk', flat = True):
             if accounted_period_start is None:
                 accounted_period_start = pidx
@@ -452,7 +455,7 @@ def player(request, squad, steamid):
         squad = squad,
         request = request,
         player = card,
-        participations = participations,
+        participations = authentic_participations,
         premier = premier,
         period_start = accounted_period_start,
         period_end = accounted_period_end,

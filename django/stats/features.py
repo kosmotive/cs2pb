@@ -1,5 +1,6 @@
 from cs2pb_typing import (
     List,
+    Literal,
     Optional,
 )
 
@@ -17,9 +18,19 @@ def F_float(expr):
 
 class FeatureContext:
 
-    def __init__(self, match_participations, player):
+    def __init__(
+            self,
+            match_participations,
+            player,
+            participations: Literal['played', 'executed', 'authentic'] = 'played',
+        ):
         self.match_participations_universe = match_participations
-        self.match_participations_of_player = match_participations.filter(player = player)
+        self.match_participations_of_player = match_participations
+
+        if participations in ('authentic', 'played'):
+            self.match_participations_of_player = self.match_participations_of_player.filter(player = player)
+        if participations in ('authentic', 'executed'):
+            self.match_participations_of_player = self.match_participations_of_player.filter(executing_player = player)
 
 
 class Feature:
