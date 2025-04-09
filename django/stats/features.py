@@ -22,14 +22,14 @@ class FeatureContext:
             self,
             match_participations,
             player,
-            participations: Literal['played', 'executed', 'authentic'] = 'played',
+            role: Literal['played', 'executed', 'authentic'] = 'authentic',
         ):
         self.match_participations_universe = match_participations
         self.match_participations_of_player = match_participations
 
-        if participations in ('authentic', 'played'):
+        if role in ('authentic', 'played'):
             self.match_participations_of_player = self.match_participations_of_player.filter(player = player)
-        if participations in ('authentic', 'executed'):
+        if role in ('authentic', 'executed'):
             self.match_participations_of_player = self.match_participations_of_player.filter(executing_player = player)
 
 

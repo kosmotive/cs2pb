@@ -5,6 +5,7 @@ import pathlib
 import urllib.request
 import uuid
 
+from cs2pb_typing import Literal
 from stats.updater import queue_update_task
 from url_forward import get_redirect_url_to
 
@@ -56,9 +57,16 @@ class SteamProfile(models.Model):
         from stats.models import MatchBadge
         return MatchBadge.objects.filter(participation__player = self, **kwargs)
 
-    def matches(self, **kwargs):
+    def matches(self, role: Literal['played', 'executed', 'authentic'] = 'played', **kwargs):  # TODO: remove kwargs, filtering can be performed on returned QuerySet
         from stats.models import Match
-        return Match.objects.filter(matchparticipation__player=self)
+        qs = Match.objects.filter(**kwargs)
+
+        if role in ('authentic', 'played'):
+            qs = qs.filter(matchparticipation__player = self)
+        if role in ('authentic', 'executed'):
+            qs = qs.filter(matchparticipation__executing_player = self)
+
+        return qs
 
     def match_participations(self,  **filters):
         from stats.models import MatchParticipation
@@ -531,7 +539,7 @@ class SquadMembership(models.Model):
         )
         buddy_performances = dict()
         for buddy_membership in self.squad.memberships.exclude(pk = self.pk):
-            buddy_matches = buddy_membership.player.matches()
+            buddy_matches = buddy_membership.player.matches(role = 'authentic')
             participations_with_buddy = self.accounted_match_participations.filter(pmatch__in = buddy_matches)
             participations_without_buddy = self.accounted_match_participations.exclude(pmatch__in = buddy_matches)
             pv_with_buddy = Features.player_value(FeatureContext(participations_with_buddy, self.player))

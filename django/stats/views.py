@@ -423,7 +423,7 @@ def player(request, squad, steamid):
         # Compute the average opponent rank for each of the player's match participation and corresponding player value
         premier = dict(player_values = list(), average_opponent_ranks = list())
         for participation in Features.player_value.get_queryset(
-            FeatureContext(premier_participations, player, participations = 'executed'),
+            FeatureContext(premier_participations, player, role = 'executed'),
         ):
             average_opponent_rank = _get_average_opponent_rank(participation)
             premier['average_opponent_ranks'].append(average_opponent_rank)
