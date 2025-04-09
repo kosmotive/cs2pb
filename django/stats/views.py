@@ -74,7 +74,7 @@ all_features_expanded = all_features_collapsed + [
 ]
 
 
-def get_badges(squad, player):
+def get_badges(squad, player, max_badge_count = 6):
     potw = [
         len(PlayerOfTheWeek.objects.filter(player1 = player)),
         len(PlayerOfTheWeek.objects.filter(player2 = player)),
@@ -103,7 +103,7 @@ def get_badges(squad, player):
         badges.append(dict(slug = 'rising-star', count = rising_star_count))
     badges.sort(key = lambda badge: badge_order.index(badge['slug']))
     if len(badges) > 0:
-        badges = badges[:5]
+        badges = badges[:max_badge_count]
     return badges
 
 
@@ -111,6 +111,7 @@ def compute_card(
         squad_membership: SquadMembership,
         features: List[Feature],
         orders: List[numbers.Real] = [2, len(all_features_collapsed), np.inf],
+        max_badge_count: int = 5,
     ):
 
     # Compute the best/worst squad buddy
@@ -161,7 +162,7 @@ def compute_card(
         }
 
     stats   = [stat(feature) for feature in features]
-    badges  = get_badges(squad_membership.squad, squad_membership.player)
+    badges  = get_badges(squad_membership.squad, squad_membership.player, max_badge_count)
     card_data = {
         'profile': squad_membership.player,
         'stats': stats,
@@ -246,6 +247,7 @@ def squads(request, squad = None, expanded_stats = False):
             compute_card(
                 squad_membership,
                 all_features_expanded if expanded_stats else all_features_collapsed,
+                max_badge_count = 6 if expanded_stats else 5,
             )
             for squad_membership in squad.memberships.exclude(
                 position__isnull = True,
@@ -408,7 +410,7 @@ def player(request, squad, steamid):
     squad_membership = squad.memberships.filter(player = player).first()
 
     # Compute the player card
-    card = compute_card(squad_membership, all_features_expanded)
+    card = compute_card(squad_membership, all_features_expanded, max_badge_count = 6)
 
     # Fetch the player's match participations
     participations = MatchParticipation.objects.filter(player = player).order_by('pmatch__timestamp')
