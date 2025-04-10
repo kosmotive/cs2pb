@@ -157,8 +157,8 @@ class GamingSession(models.Model):
         player_by_executing_player = dict()
         for player_data in self.participated_unauthentic_squad_members:
             for executing_player in SteamProfile.objects.filter(
-                executed_matchparticipations__pmatch__sessions = self,
-                executed_matchparticipations__player__steamid = player_data['steamid'],
+                executed_matchparticipation__pmatch__sessions = self,
+                executed_matchparticipation__player__steamid = player_data['steamid'],
             ).distinct():
                 player_by_executing_player.setdefault(executing_player.steamid, list())
                 player_by_executing_player[executing_player.steamid].append(player_data['steamid'])
@@ -692,7 +692,7 @@ class MatchParticipation(models.Model):
         SteamProfile,
         on_delete = models.SET_NULL,
         verbose_name = 'Executing Player',
-        related_name = 'executed_matchparticipations',  # TODO: rename to `executed_matchparticipation`
+        related_name = 'executed_matchparticipation',
         null = True,
         blank = True,
     )

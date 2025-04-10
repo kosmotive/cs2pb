@@ -53,17 +53,17 @@ class SteamProfile(models.Model):
         else:
             return self.name
 
-    def match_badges(self, **kwargs):  # TODO: remove kwargs, filtering can be performed on returned QuerySet
+    def match_badges(self, **filters):
         from stats.models import MatchBadge
         return MatchBadge.objects.filter(
             participation__player = self,
             participation__executing_player = self,
-            **kwargs,
+            **filters,
         )
 
-    def matches(self, role: Literal['played', 'executed', 'authentic'] = 'played', **kwargs):  # TODO: remove kwargs, filtering can be performed on returned QuerySet
+    def matches(self, role: Literal['played', 'executed', 'authentic'] = 'played', **filters):  # TODO: remove filters, filtering can be performed on returned QuerySet
         from stats.models import Match
-        qs = Match.objects.filter(**kwargs)
+        qs = Match.objects.filter(**filters)
 
         if role in ('authentic', 'played'):
             qs = qs.filter(matchparticipation__player = self)
@@ -72,9 +72,9 @@ class SteamProfile(models.Model):
 
         return qs
 
-    def match_participations(self,  **filters):  # TODO: remove kwargs, filtering can be performed on returned QuerySet
+    def match_participations(self,  **filters):  # TODO: remove filters, filtering can be performed on returned QuerySet
         from stats.models import MatchParticipation
-        return MatchParticipation.objects.filter(player=self, **filters)
+        return MatchParticipation.objects.filter(player = self, **filters)
 
     def find_oldest_sharecode(self):
         matches_played = self.matches()
@@ -291,11 +291,11 @@ class Squad(models.Model):
             **kwargs,
         )
 
-    def match_participations(self, **kwargs):  # TODO: Remove kwargs, filtering can be performed on return QuerySet
+    def match_participations(self, **filters):
         from stats.models import MatchParticipation
         return MatchParticipation.objects.filter(
             player__in = self.memberships.values_list('player__pk', flat = True),
-            **kwargs,
+            **filters,
         )
 
     @property
