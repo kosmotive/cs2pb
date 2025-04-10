@@ -172,6 +172,10 @@ class Match__from_summary(TestCase):
         }
 
     def test(self):
+        p = SteamProfile.objects.create(steamid = '76561197961345487')
+        p.executed_by = SteamProfile.objects.create(steamid = '76561197961748270')
+        p.save()
+
         pmatch = models.Match.from_summary(self.summary)
 
         self.assertEqual(pmatch.sharecode, self.summary['sharecode'])
@@ -186,6 +190,14 @@ class Match__from_summary(TestCase):
         self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').old_rank, 15231)
         self.assertEqual(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').new_rank, 15107)
         self.assertEqual(round(pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').adr, 1), 104.7)
+        self.assertEqual(
+            pmatch.matchparticipation_set.get(player__steamid = '76561197967680028').executing_player.steamid,
+            '76561197967680028',
+        )
+        self.assertEqual(
+            pmatch.matchparticipation_set.get(player__steamid = '76561197961345487').executing_player.steamid,
+            '76561197961748270',
+        )
 
         return pmatch
 

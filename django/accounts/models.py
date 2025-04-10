@@ -34,6 +34,14 @@ class SteamProfile(models.Model):
     avatar_m = models.CharField(blank=False, max_length=100, verbose_name='Avatar medium')
     avatar_l = models.CharField(blank=False, max_length=100, verbose_name='Avatar large')
 
+    executed_by = models.ForeignKey(
+        'SteamProfile',
+        blank = True,
+        null = True,
+        on_delete = models.SET_NULL,
+        related_name = 'executing',
+    )
+
     def save(self, *args, **kwargs):
         import cs2_client
         profile = cs2_client.api.fetch_profile(self.steamid)
@@ -563,7 +571,8 @@ class Invitation(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields = ['steam_profile', 'squad'], name = 'unique_steam_profile_squad'
+                fields = ['steam_profile', 'squad'],
+                name = 'unique_steam_profile_squad',
             ),
         ]
 

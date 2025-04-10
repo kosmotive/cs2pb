@@ -22,16 +22,6 @@ from .models import (
 )
 
 
-class MatchParticipationInline(admin.TabularInline):
-    model = MatchParticipation
-    fields = ('executing_player', 'datetime', 'result', 'kills', 'assists', 'deaths', 'score', 'mvps', 'headshots')
-    readonly_fields = ('datetime',)
-    fk_name = 'player'
-
-    def datetime(self, mp):
-        return mp.pmatch.datetime
-
-
 @admin.action(description = 'Fetch matches')
 def fetch_matches(modeladmin, request, queryset):
     for account in queryset.all():
@@ -146,7 +136,7 @@ class SteamProfileAdmin(admin.ModelAdmin):
 
     list_display = ('steamid', 'name', 'squad_list', '_actions')
     fieldsets = (
-        (None, {'fields': ('steamid', 'name', '_avatar_s', '_avatar_m', '_avatar_l', 'squad_list')}),
+        (None, {'fields': ('steamid', 'name', '_avatar_s', '_avatar_m', '_avatar_l', 'squad_list', 'executed_by')}),
     )
     readonly_fields = ('steamid', 'squad_list', 'name', '_avatar_s', '_avatar_m', '_avatar_l')
     search_fields = ('steamid', 'name', 'account__clean_name')
@@ -183,10 +173,6 @@ class SteamProfileAdmin(admin.ModelAdmin):
             f'<a class="btn" href="{export_csv_url}">Export CSV</a>, '
             f'<a class="btn" href="{create_notebook_url}">Create Notebook</a>'
         )
-
-    inlines = [
-        MatchParticipationInline,
-    ]
 
 
 @admin.action(description = 'Announce on Discord')

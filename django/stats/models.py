@@ -539,14 +539,14 @@ class Match(models.Model):
 
                 steam_profiles = SteamProfile.objects.filter(steamid = steamid)
                 if len(steam_profiles) == 0:
-                    steam_profile = SteamProfile.objects.create(steamid = steamid)
+                    player = SteamProfile.objects.create(steamid = steamid)
                 else:
-                    steam_profile = steam_profiles[0]
-                    steam_profile.save()  # Updates data from Steam API
+                    player = steam_profiles[0]
+                    player.save()  # Updates data from Steam API
 
-                players.append(steam_profile)
+                players.append(player)
 
-                mp = MatchParticipation(player = steam_profile, executing_player = steam_profile, pmatch = m)
+                mp = MatchParticipation(player = player, executing_player = player.executed_by or player, pmatch = m)
                 mp.team      = 1 + pos // 5
                 mp.result    = get_match_result(mp.team - 1, (m.score_team1, m.score_team2))
                 mp.kills     = kills
@@ -555,9 +555,9 @@ class Match(models.Model):
                 mp.score     = score
                 mp.mvps      = mvps
                 mp.headshots = headshots
-                mp.adr       = float(data['adr'][str(steam_profile.steamid)] or 0)
-                mp.old_rank  = data['ranks'][str(steam_profile.steamid)]['old']
-                mp.new_rank  = data['ranks'][str(steam_profile.steamid)]['new']
+                mp.adr       = float(data['adr'][str(player.steamid)] or 0)
+                mp.old_rank  = data['ranks'][str(player.steamid)]['old']
+                mp.new_rank  = data['ranks'][str(player.steamid)]['new']
                 mp.save()
 
             for kill_data in data['kills'].to_dict(orient='records'):
