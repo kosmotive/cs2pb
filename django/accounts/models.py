@@ -494,7 +494,6 @@ class SquadMembership(models.Model):
             pmatch__sessions__in = sessions,
         ).filter(
             player = self.player,
-            executing_player = self.player,
         )
 
     def update_stats(self):

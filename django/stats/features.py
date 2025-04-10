@@ -25,12 +25,20 @@ class FeatureContext:
             role: Literal['played', 'executed', 'authentic'] = 'authentic',
         ):
         self.match_participations_universe = match_participations
-        self.match_participations_of_player = match_participations
+        self.player = player
+        self.role = role
 
+    def get_match_participations_of_player(
+            self,
+            override_role: Optional[Literal['played', 'executed', 'authentic']] = None,
+        ):
+        role = override_role or self.role
+        qs = self.match_participations_universe
         if role in ('authentic', 'played'):
-            self.match_participations_of_player = self.match_participations_of_player.filter(player = player)
+            qs = qs.filter(player = self.player)
         if role in ('authentic', 'executed'):
-            self.match_participations_of_player = self.match_participations_of_player.filter(executing_player = player)
+            qs = qs.filter(executing_player = self.player)
+        return qs
 
 
 class Feature:
@@ -83,7 +91,7 @@ class ExpressionFeature(Feature):
         return 0 if avg_value is not None and avg_value < 0 else avg_value
 
     def get_queryset(self, ctx: FeatureContext):
-        return ctx.match_participations_of_player.annotate(value = self.expression)
+        return ctx.get_match_participations_of_player().annotate(value = self.expression)
 
 
 class ParticipationEffect(Feature):
@@ -97,10 +105,11 @@ class ParticipationEffect(Feature):
         self.min_datapoints = min_datapoints
 
     def __call__(self, ctx: FeatureContext) -> Optional[float]:
-        victories_with_participation = ctx.match_participations_of_player.filter(result = 'w').count()
-        matches_with_participation   = ctx.match_participations_of_player.exclude(result = 't').count()
+        match_participations_of_player = ctx.get_match_participations_of_player()
+        victories_with_participation = match_participations_of_player.filter(result = 'w').count()
+        matches_with_participation   = match_participations_of_player.exclude(result = 't').count()
         matches_without_participation_qs = ctx.match_participations_universe.values('pmatch', 'result').exclude(
-            pmatch__in = ctx.match_participations_of_player.values_list('pmatch', flat = True)
+            pmatch__in = match_participations_of_player.values_list('pmatch', flat = True)
         ).exclude(result = 't').order_by('pmatch').distinct()
         matches_without_participation    = matches_without_participation_qs.count()
         if matches_with_participation < self.min_datapoints or matches_without_participation < self.min_datapoints:
@@ -129,7 +138,7 @@ class Rank(Feature):
     def __call__(self, ctx: FeatureContext) -> Optional[float]:
         from .models import MatchParticipation
         try:
-            rank = ctx.match_participations_of_player.filter(
+            rank = ctx.get_match_participations_of_player(override_role = 'played').filter(
                 pmatch__mtype = self.mtype,
             ).latest('pmatch__timestamp').new_rank
             return None if rank is None else rank / 1000
@@ -147,12 +156,13 @@ class PeachRate(Feature):
 
     def __call__(self, ctx: FeatureContext) -> Optional[float]:
         from .models import MatchBadge
-        if ctx.match_participations_of_player.count() > 0:
+        match_participations_of_player = ctx.get_match_participations_of_player()
+        if match_participations_of_player.count() > 0:
             match_participations_with_peach = MatchBadge.objects.filter(
                 badge_type = 'peach',
-                participation__in = ctx.match_participations_of_player.values_list('pk', flat = True),
+                participation__in = match_participations_of_player.values_list('pk', flat = True),
             )
-            return match_participations_with_peach.count() / ctx.match_participations_of_player.count()
+            return match_participations_with_peach.count() / match_participations_of_player.count()
         else:
             return None
 
