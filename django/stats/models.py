@@ -247,13 +247,19 @@ class GamingSession(models.Model):
         """
         Get the Steam IDs of the squad members who participated in the session.
         """
-        return self.squad.memberships.filter(
-            player__steamid__in = self.participated_steamids
-        ).values_list('player__steamid', flat = True)
+        return SteamProfile.objects.filter(
+            matchparticipation__executing_player__steamid__in = self.squad.memberships.values_list(
+                'player__steamid',
+                flat = True,
+            ),
+        ).values_list('steamid', flat = True)
     
     def _get_participated_squad_members(self, **filters) -> QuerySet:
         return SteamProfile.objects.filter(
-            steamid__in = self.participated_squad_members_steamids,
+            matchparticipation__executing_player__steamid__in = self.squad.memberships.values_list(
+                'player__steamid',
+                flat = True,
+            ),
             matchparticipation__pmatch__in = self.matches.values_list('pk', flat = True),
             **filters
         ).values(
