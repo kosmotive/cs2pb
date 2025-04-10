@@ -437,7 +437,7 @@ class MatchBadge__award(TestCase):
         self.mp5.save()
         models.MatchBadge.award(self.mp5)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 1)
-        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
 
     def test_peach_price__adr_too_high(self):
         """
@@ -454,7 +454,7 @@ class MatchBadge__award(TestCase):
         self.mp5.save()
         models.MatchBadge.award(self.mp5)
         self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'peach', participation = self.mp5)), 1)
-        self.assertEqual(len(ScheduledNotification.objects.all()), 0)
+        self.assertEqual(len(ScheduledNotification.objects.all()), 1)
 
     def test_peach_price__kd_and_adr_too_high(self):
         """
@@ -525,6 +525,7 @@ class MatchBadge__award(TestCase):
             ]
         )
         models.MatchBadge.award(mp1)
+        self.assertEqual(len(models.MatchBadge.objects.filter(badge_type = 'ace')), 1)
         self.assertEqual(len(ScheduledNotification.objects.all()), 0)
 
 
