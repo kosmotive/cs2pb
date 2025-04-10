@@ -889,6 +889,13 @@ div.squad .squad-members div.squad-member-details {
  */
 .executing-player {
     position: absolute;
-    transform: translate(0, -1.3em);
+    transform: translate(0, -1.1em);
     font-size: 50%;
+    padding-left: 1.5em;
+}
+
+.executing-player-icon {
+    position: absolute;
+    margin-left: -1.5em;
+    margin-top: -0.3em;
 }

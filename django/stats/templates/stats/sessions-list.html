@@ -78,7 +78,7 @@
                                 <div class="player-name">
                                     {% if mp.executing_player.pk != mp.player.pk %}
                                     <div class="executing-player">
-                                        &#128100; {{ mp.executing_player.name }}
+                                        <span class="executing-player-icon">&#128100;</span> {{ mp.executing_player.name }}
                                     </div>
                                     {% endif %}
                                     {{ mp.player.name }}
