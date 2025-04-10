@@ -1130,11 +1130,13 @@ class MatchBadge(models.Model):
     frequency     = models.PositiveSmallIntegerField(null = False, default = 1)
 
     @staticmethod
-    def award(participation, **kwargs):
-        # Mute Discord notifications if the player was not authentic
+    def _mute_discord_for_unauthentic(participation, kwargs):
         if participation.player != participation.executing_player:
             kwargs['mute_discord'] = True
 
+    @staticmethod
+    def award(participation, **kwargs):
+        MatchBadge._mute_discord_for_unauthentic(participation, kwargs)
         MatchBadge.award_kills_in_one_round_badges(participation, 5, 'ace', **kwargs)
         MatchBadge.award_kills_in_one_round_badges(participation, 4, 'quad-kill', **kwargs)
         MatchBadge.award_margin_badge(participation, 'carrier', order = '-adr', margin = 1.8, emoji = '🍆', **kwargs)
@@ -1144,12 +1146,13 @@ class MatchBadge(models.Model):
         MatchBadge.award_weapon_badge(participation, 'knife', emoji = '🔪', **kwargs)
 
     @staticmethod
-    def award_with_history(participation, old_participations):
+    def award_with_history(participation, old_participations, **kwargs):
+        MatchBadge._mute_discord_for_unauthentic(participation, kwargs)
         if len(old_participations) >= 10:
-            MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:])
+            MatchBadge.award_surpass_yourself_badge(participation, old_participations[-20:], **kwargs)
 
     @staticmethod
-    def award_surpass_yourself_badge(participation, old_participations):
+    def award_surpass_yourself_badge(participation, old_participations, mute_discord = False):
         badge_type = MatchBadgeType.objects.get(slug = 'surpass-yourself')
         if MatchBadge.objects.filter(badge_type = badge_type, participation=participation).exists():
             return
@@ -1162,13 +1165,15 @@ class MatchBadge(models.Model):
                 f'Surpass-yourself badge awarded to {participation.player.name} '
                 f'for K/D {participation.kd} where threshold was {threshold}'
             )
-            MatchBadge.objects.create(badge_type=badge_type, participation=participation)
-            text = (
-                f'🎖️ <{participation.player.steamid}> has been awarded the **Surpass-yourself Badge** in recognition '
-                f'of their far-above average performance on *{participation.pmatch.map_name}* recently!'
-            )
-            for m in participation.player.squad_memberships.all():
-                m.squad.notify_on_discord(text)
+            MatchBadge.objects.create(badge_type = badge_type, participation = participation)
+            if not mute_discord:
+                text = (
+                    f'🎖️ <{participation.player.steamid}> has been awarded the '
+                    f'**Surpass-yourself Badge** in recognition of their far-above average performance '
+                    f'on *{participation.pmatch.map_name}* recently!'
+                )
+                for m in participation.player.squad_memberships.all():
+                    m.squad.notify_on_discord(text)
 
     @staticmethod
     def award_kills_in_one_round_badges(participation, kill_number, badge_type_slug, mute_discord = False):
