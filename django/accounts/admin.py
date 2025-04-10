@@ -128,6 +128,15 @@ class AccountAdmin(UserAdmin):
         return 'asdf'
 
 
+@admin.action(description = 'Apply executions for all past matches')
+def apply_executions(modeladmin, request, queryset):
+    for player in queryset.all():
+        executing_player = player.executed_by or player
+        for mp in MatchParticipation.objects.filter(player = player):
+            mp.executing_player = executing_player
+            mp.save()
+
+
 @admin.register(SteamProfile)
 class SteamProfileAdmin(admin.ModelAdmin):
 
@@ -140,6 +149,8 @@ class SteamProfileAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('steamid', 'squad_list', 'name', '_avatar_s', '_avatar_m', '_avatar_l')
     search_fields = ('steamid', 'name', 'account__clean_name')
+
+    actions = [apply_executions]
 
     def has_add_permission(self, request, obj = None):
         return False
