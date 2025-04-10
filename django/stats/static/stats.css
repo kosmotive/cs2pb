@@ -889,6 +889,6 @@ div.squad .squad-members div.squad-member-details {
  */
 .executing-player {
     position: absolute;
-    transform: translate(0, -1.1em);
+    transform: translate(0, -1.3em);
     font-size: 50%;
 }
