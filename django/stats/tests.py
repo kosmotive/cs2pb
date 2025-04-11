@@ -1401,20 +1401,6 @@ class GamingSession__close(TestCase):
             adr = 120.5,
         )
 
-    def test_with_unauthentic(self):
-        self.squad.update_stats()
-
-        # Make one participant unauthentic
-        self.participation2.executing_player = None
-        self.participation2.save()
-
-        # Close the currently played session
-        self.session2.close()
-        self.assertTrue(self.session2.is_closed)
-
-        # Verify the rising star
-        self.assertIsNone(self.session2.rising_star)
-
     def test_first_session(self):
         # Remove the previously played session
         self.session1.delete()
@@ -1696,7 +1682,7 @@ class GamingSession__close(TestCase):
             expected = 'tests/data/radarplot_with_avatar.png',
         )
 
-    def test_with_one_unauthentic(self):
+    def test_with_unauthentic(self):
         self.squad.update_stats()
 
         # Make one participant unauthentic
