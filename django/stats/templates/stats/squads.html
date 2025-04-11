@@ -87,6 +87,48 @@
 
         </div>
 
+        {% if squad.mandates %}
+        <div class="squad-members-appendix"><div class="autoscale">
+
+            <div class="squad-members-appendix-header">Execution Mandates</div><br>
+
+            <ul class="execution-mandates">
+            {% for mandate in squad.mandates %}
+                <li class="execution-mandate">
+                    <div class="execution-mandate-background">&nbsp;</div>
+                    <div class="execution-mandate-subject">
+                        <img src="{{ mandate.player.avatar_m }}" class="avatar">
+                        <div class="player-name">{{ mandate.player.name }}</div>
+                    </div>
+                    <div class="execution-mandate-holder">
+                        <img src="{{ mandate.player.executed_by.avatar_m }}" class="avatar">
+                        <div class="player-name">{{ mandate.player.executed_by.name }}</div>
+                    </div>
+                    {% if mandate.subject_premier_rank %}
+                    <div class="execution-mandate-subject-premier-rank-container">
+                        {{ mandate.subject_premier_rank|rank }}
+                    </div>
+                    {% endif %}
+                    {% if mandate.holder_premier_rank %}
+                    <div class="execution-mandate-holder-premier-rank-container">
+                        {{ mandate.holder_premier_rank|rank }}
+                    </div>
+                    {% endif %}
+                    <div class="execution-mandate-labels">
+                        {% if mandate.permanent %}
+                        <span class="execution-mandate-label execution-mandate-label-permanent">Permanent</span>
+                        {% endif %}
+                        {% if mandate.smurfing %}
+                        <span class="execution-mandate-label execution-mandate-label-smurf">Smurf</span>
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+            </ul>
+
+        </div></div>
+        {% endif %}
+
         {% if squad.upcoming_player_of_the_week %}
         <div class="squad-members-appendix"><div class="autoscale">
 

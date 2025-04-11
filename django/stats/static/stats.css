@@ -548,7 +548,9 @@ div.session .session-content .unauthentic-session-members img.avatar {
     height: 1em;
 }
 
-div.session img.avatar {
+div.session img.avatar,
+.potw-aspirants img.avatar,
+.execution-mandates img.avatar {
     box-shadow: 0 0 1mm #999;
 }
 
@@ -898,4 +900,98 @@ div.squad .squad-members div.squad-member-details {
     position: absolute;
     margin-left: -1.5em;
     margin-top: -0.3em;
+}
+
+/* .execution-mandates
+ */
+ .execution-mandates {
+    position: relative;
+ }
+
+ .execution-mandates .execution-mandate {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 5mm;
+    position: relative;
+    width: 85mm;
+    height: 6em;
+    margin-top: 2mm;
+    margin-bottom: 2mm;
+    border: 1px solid #ccc;
+    border-radius: 1em;
+    box-sizing: border-box;
+}
+
+.execution-mandates .execution-mandate .execution-mandate-subject .avatar {
+    position: absolute;
+    left: 1em;
+    top: 1em;
+    width: 4em;
+    height: 4em;
+}
+
+.execution-mandates .execution-mandate .execution-mandate-subject .player-name {
+    position: absolute;
+    left: 5.5rem;
+    top: 2.2rem;
+    right: 4rem;
+    font-size: 120%;
+}
+
+.execution-mandates .execution-mandate .execution-mandate-holder .avatar {
+    position: absolute;
+    right: 1rem;
+    top: 2.2rem;
+    width: 2.8rem;
+    height: 2.8rem;
+}
+
+.execution-mandates .execution-mandate .execution-mandate-holder .player-name {
+    position: absolute;
+    right: 4.2rem;
+    bottom: 0.9rem;
+    left: 5.5rem;
+    font-size: 80%;
+    text-align: right;
+}
+
+.execution-mandates .execution-mandate .execution-mandate-subject-premier-rank-container {
+    position: absolute;
+    top: 3.5rem;
+    left: 5.5rem;
+}
+
+.execution-mandates .execution-mandate .execution-mandate-holder-premier-rank-container {
+    position: absolute;
+    bottom: 1.8rem;
+    right: 4.2rem;
+    font-size: 80%;
+}
+.execution-mandates .execution-mandate .execution-mandate-labels {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.8rem;
+    font-size: 80%;
+}
+
+.execution-mandates .execution-mandate .execution-mandate-labels .execution-mandate-label {
+    border: 1px solid #aaa;
+    border-radius: 1em;
+    color: rgb(120, 120, 120);
+    background-color: #fff;
+    display: inline-block;
+    padding-left: 0.5em;
+    padding-right: 0.5em;
+    padding-top: 0.1em;
+    padding-bottom: 0.1em;
+}
+
+.execution-mandates .execution-mandate .execution-mandate-background {
+    background: linear-gradient(#fff 40%, #eee);
+    z-index: -1;
+    position: absolute;
+    top: 2.12rem;
+    right: 1rem;
+    left: 1rem;
+    height: 2.8rem;
 }

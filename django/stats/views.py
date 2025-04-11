@@ -297,6 +297,59 @@ def squads(request, squad = None, expanded_stats = False):
 
         context['squads'].append(squad_data)
 
+        # Add current execution mandates to context
+        squad_data['mandates'] = list()
+        for player in SteamProfile.objects.filter(
+            executed_by__squad_memberships__squad = squad,
+        ).union(
+            SteamProfile.objects.filter(
+                squad_memberships__squad = squad,
+            )
+        ):
+            if player.executed_by is not None and player.executed_by.pk != player.pk:
+                permanent = (
+                    player.match_participations(
+                        executing_player = player.executed_by,
+                    ).count() == player.match_participations().count()
+                )
+                subject_ranked_premier_participations = player.match_participations(
+                    pmatch__mtype = Match.MTYPE_PREMIER,
+                    new_rank__isnull = False,
+                )
+                holder_ranked_premier_participations = player.executed_by.match_participations(
+                    pmatch__mtype = Match.MTYPE_PREMIER,
+                    new_rank__isnull = False,
+                )
+
+                # Determine the Premier rank of the mandate subject
+                if subject_ranked_premier_participations.count() == 0:
+                    subject_premier_rank = None
+                else:
+                    subject_premier_rank = subject_ranked_premier_participations.latest('pmatch__timestamp').new_rank
+
+                # Determine the Premier rank of the mandate holder
+                if holder_ranked_premier_participations.count() == 0:
+                    holder_premier_rank = None
+                else:
+                    holder_premier_rank = holder_ranked_premier_participations.latest('pmatch__timestamp').new_rank
+
+                # Determine whether the mandate holder is smurfing
+                smurfing = (
+                    subject_premier_rank or float('inf')
+                ) < (
+                    holder_premier_rank or 0
+                )
+
+                squad_data['mandates'].append(
+                    dict(
+                        player = player,
+                        permanent = permanent,
+                        smurfing = smurfing,
+                        subject_premier_rank = subject_premier_rank,
+                        holder_premier_rank = holder_premier_rank,
+                    )
+                )
+
     context['request'] = request
     add_globals_to_context(context)
     return render(request, 'stats/squads.html', context)
