@@ -1683,6 +1683,9 @@ class GamingSession__close(TestCase):
         )
 
     def test_with_unauthentic(self):
+        """
+        Test with one participant being unauthentic (i.e. not the executing player).
+        """
         self.squad.update_stats()
 
         # Make one participant unauthentic
@@ -1703,6 +1706,120 @@ class GamingSession__close(TestCase):
         self.assertEqual(
             f'<12345678900000002> played as <12345678900000001>.',
             notification.text,
+        )
+
+    def test_with_unauthentic_mixed(self):
+        """
+        Test with one participant being unathentic (i.e. not the executing player) in one match, but authentic in
+        another (i.e. the executing player).
+        """
+        self.squad.update_stats()
+
+        # ==============================================================================
+        # Setup the previous session
+        # ==============================================================================
+
+        # Player 1 participated with PV 1.0
+        self.participation1.kills = 10
+        self.participation1.deaths = 10
+        self.participation1.adr = 100
+        self.participation1.save()
+
+        # Player 2 participated with PV 1.0
+        models.MatchParticipation.objects.create(
+            player = self.player2,
+            executing_player = self.player2,
+            pmatch = self.match1,
+            team = self.participation1.team,
+            result = self.participation1.result,
+            kills = 10,
+            assists = 5,
+            deaths = 10,
+            score = 15,
+            mvps = 3,
+            headshots = 10,
+            adr = 100,
+        )
+
+        # ==============================================================================
+        # Setup the current session
+        # ==============================================================================
+
+        # In match 1 of the session, Player 1 participated with PV 10.0 (unauthentic)
+        self.participation2.executing_player = self.player3
+        self.participation2.kills = 10
+        self.participation2.deaths = 10
+        self.participation2.adr = 10_000
+        self.participation2.save()
+
+        # In match 1 of the session, Player 2 participated with PV 2.0 (authentic)
+        models.MatchParticipation.objects.create(
+            player = self.player2,
+            executing_player = self.player2,
+            pmatch = self.match2,
+            team = self.participation2.team,
+            result = self.participation2.result,
+            kills = 20,
+            assists = 5,
+            deaths = 10,
+            score = 15,
+            mvps = 3,
+            headshots = 10,
+            adr = 100,
+        )
+
+        # In match 2 of the session, Player 1 participated with PV 1.2 (authentic)
+        match3 = models.Match.objects.create(
+            timestamp = int(time.time()) - 2000,
+            score_team1 = 13, score_team2 = 12,
+            duration = 1653,
+            map_name = 'de_inferno',
+        )
+        match3.sessions.add(self.session2)
+        models.MatchParticipation.objects.create(
+            player = self.player1,
+            executing_player = self.player1,
+            pmatch = match3,
+            team = 1,
+            result = 'w',
+            kills = 12,
+            assists = 10,
+            deaths = 10,
+            score = 30,
+            mvps = 5,
+            headshots = 15,
+            adr = 100,
+        )
+
+        # ==============================================================================
+        # Run the checks
+        # ==============================================================================
+
+        # Close the currently played session
+        self.session2.close()
+        self.assertTrue(self.session2.is_closed)
+
+        # Verify the rising star (in match 1 player 1 was best, but unauthentic)
+        self.assertEqual(self.session2.rising_star.steamid, self.player3.steamid)
+
+        # Verify the scheduled Discord notifcation for player performance
+        self.assertGreaterEqual(len(ScheduledNotification.objects.all()), 3)
+        notifications = list(ScheduledNotification.objects.all())
+        for notification in notifications:
+            self.assertEqual(notification.squad.pk, self.squad.pk)
+        self.assertEqual(
+            notifications[0].text,
+            f'Looks like your session has ended! Here is your current performance compared to your 30-days average:  '
+            f'<12345678900000001> +100% (2.0), <12345678900000001> 📈 +20% (1.2), with respect to the *player value*.',
+        )
+        self.assertEqual(
+            notifications[1].text,
+            f'<12345678900000003> played as <12345678900000001>.',
+        )
+        self.assertEqual(
+            notifications[2].text,
+            f'And today\'s **rising star** was: 🌟 <12345678900000002>! '
+            f'</stats/{self.squad.uuid}/12345678900000002>',
         )
 
 
