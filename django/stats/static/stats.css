@@ -552,6 +552,7 @@ div.session img.avatar,
 .potw-aspirants img.avatar,
 .execution-mandates img.avatar {
     box-shadow: 0 0 1mm #999;
+    border-radius: 0.2rem;
 }
 
 div.session .session-member {
@@ -774,7 +775,7 @@ div.squad .squad-members div.squad-member-details {
 .rank {
     transform: skew(-10deg, 0);
     display: inline-block;
-    box-shadow: 0 0 1px #000000;
+    box-shadow: 0 0 2px #000000;
 }
 
 .rank, .rank div {
@@ -905,7 +906,9 @@ div.squad .squad-members div.squad-member-details {
 /* .execution-mandates
  */
  .execution-mandates {
-    position: relative;
+    padding-left: 0;
+    margin-left: -5mm;
+    margin-top: 0;
  }
 
  .execution-mandates .execution-mandate {
@@ -924,10 +927,11 @@ div.squad .squad-members div.squad-member-details {
 
 .execution-mandates .execution-mandate .execution-mandate-subject .avatar {
     position: absolute;
-    left: 1em;
-    top: 1em;
-    width: 4em;
-    height: 4em;
+    left: 1rem;
+    top: 1rem;
+    width: 4rem;
+    height: 4rem;
+    border-radius: 0.8rem;
 }
 
 .execution-mandates .execution-mandate .execution-mandate-subject .player-name {
@@ -936,40 +940,52 @@ div.squad .squad-members div.squad-member-details {
     top: 2.2rem;
     right: 4rem;
     font-size: 120%;
+    white-space: nowrap;
+    overflow: hidden;
+    background: linear-gradient(0.25turn, rgba(0, 0, 0, 1) 60%, rgba(0, 0, 0, 0.6) 70%, rgba(0, 0, 0, 0) 90%);
+    background-clip: text;
+    color: transparent;
 }
 
 .execution-mandates .execution-mandate .execution-mandate-holder .avatar {
     position: absolute;
-    right: 1rem;
-    top: 2.2rem;
-    width: 2.8rem;
-    height: 2.8rem;
+    right: 1.2rem;
+    top: 2.4rem;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 0.4rem;
 }
 
 .execution-mandates .execution-mandate .execution-mandate-holder .player-name {
     position: absolute;
-    right: 4.2rem;
-    bottom: 0.9rem;
+    right: 3.9rem;
+    bottom: 1.1rem;
     left: 5.5rem;
     font-size: 80%;
     text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    background: linear-gradient(0.75turn, rgba(0, 0, 0, 1) 60%, rgba(0, 0, 0, 0) 65%);
+    background-clip: text;
+    color: transparent;
 }
 
 .execution-mandates .execution-mandate .execution-mandate-subject-premier-rank-container {
     position: absolute;
-    top: 3.5rem;
+    top: 3.55rem;
     left: 5.5rem;
+    font-size: 105%;
 }
 
 .execution-mandates .execution-mandate .execution-mandate-holder-premier-rank-container {
     position: absolute;
-    bottom: 1.8rem;
-    right: 4.2rem;
+    bottom: 2.1rem;
+    right: 3.9rem;
     font-size: 80%;
 }
 .execution-mandates .execution-mandate .execution-mandate-labels {
     position: absolute;
-    top: 0.7rem;
+    top: 0.5rem;
     right: 0.8rem;
     font-size: 80%;
 }
@@ -987,11 +1003,12 @@ div.squad .squad-members div.squad-member-details {
 }
 
 .execution-mandates .execution-mandate .execution-mandate-background {
-    background: linear-gradient(#fff 40%, #eee);
+    background: linear-gradient(0.75turn, #fff 10%, #eee);
     z-index: -1;
     position: absolute;
-    top: 2.12rem;
-    right: 1rem;
+    top: 2rem;
+    height: 3rem;
+    right: 0.8rem;
     left: 1rem;
-    height: 2.8rem;
+    border-radius: 0.6rem;
 }
