@@ -6,6 +6,7 @@ from cs2pb_typing import (
 from django.db.models import (
     Avg,
     F,
+    Max,
     Value,
 )
 from django.db.models.functions import Sqrt
@@ -168,7 +169,7 @@ class Features:
     )
 
     kills_per_death = ExpressionFeature(
-        F_float('kills') / F_float('deaths'),
+        F_float('kills') / Max(F_float('deaths'), Value(1.0)),
         'Kills per death',
         'The kills/death ratio, averaged over all matches.',
     )
@@ -176,7 +177,7 @@ class Features:
     participation_effect = ParticipationEffect()
 
     player_value = ExpressionFeature(
-        Sqrt((F_float('kills') / F_float('deaths')) * (F_float('adr') / Value(100))),
+        Sqrt((F_float('kills') / Max(F_float('deaths'), Value(1.0))) * (F_float('adr') / Value(100))),
         'Player value',
         'Geometric mean of kills per death ration and the average damage per round (divided by 100).',
     )
