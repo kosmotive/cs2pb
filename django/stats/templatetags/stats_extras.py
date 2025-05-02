@@ -56,10 +56,8 @@ def absolute(value):
 
 @register.filter
 def player_value(match_participation):
-    if match_participation.deaths == 0:
-        return match_participation.adr / 100
-    else:
-        return math.sqrt((match_participation.kills / match_participation.deaths) * match_participation.adr / 100)
+    deaths = max((match_participation.deaths, 1))
+    return math.sqrt((match_participation.kills / deaths) * match_participation.adr / 100)
 
 
 @register.filter
