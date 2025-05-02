@@ -6,8 +6,8 @@ from cs2pb_typing import (
 from django.db.models import (
     Avg,
     F,
-    Value,
     Max,
+    Value,
 )
 from django.db.models.functions import Sqrt
 
