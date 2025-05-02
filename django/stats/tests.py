@@ -1775,3 +1775,62 @@ class templatetags(TestCase):
     def test__stats_extras__player_value__0deaths(self):
         self.participation1.deaths = 0
         self.assertEqual(stats_extras.player_value(self.participation1), math.sqrt(120 * 20 / 100))
+
+
+class Features(TestCase):
+
+    @testsuite.fake_api.patch
+    def setUp(self):
+        self.player1 = SteamProfile.objects.create(steamid = '12345678900000001')
+        self.player2 = SteamProfile.objects.create(steamid = '12345678900000002')
+        self.match1 = models.Match.objects.create(
+            timestamp = 0,
+            score_team1 = 12, score_team2 = 12,
+            duration = 1653,
+            map_name = 'de_dust2',
+        )
+        self.participation1 = models.MatchParticipation.objects.create(
+            player = self.player1,
+            pmatch = self.match1,
+            team = 1,
+            result = 'l',
+            kills = 20,
+            assists = 10,
+            deaths = 15,
+            score = 30,
+            mvps = 5,
+            headshots = 15,
+            adr = 120,
+        )
+
+    def test__kills_per_death(self):
+        ctx = features.FeatureContext(
+            match_participations = models.MatchParticipation.objects.filter(player = self.player1),
+            player = self.player1,
+        )
+        self.assertEqual(features.Features.kills_per_death(ctx), 20 / 15)
+
+    def test__kills_per_death__0deaths(self):
+        self.participation1.deaths = 0
+        self.participation1.save()
+        ctx = features.FeatureContext(
+            match_participations = models.MatchParticipation.objects.filter(player = self.player1),
+            player = self.player1,
+        )
+        self.assertEqual(features.Features.kills_per_death(ctx), 20)
+
+    def test__player_value(self):
+        ctx = features.FeatureContext(
+            match_participations = models.MatchParticipation.objects.filter(player = self.player1),
+            player = self.player1,
+        )
+        self.assertEqual(features.Features.player_value(ctx), math.sqrt(120 * 20 / (15 * 100)))
+
+    def test__player_value__0deaths(self):
+        self.participation1.deaths = 0
+        self.participation1.save()
+        ctx = features.FeatureContext(
+            match_participations = models.MatchParticipation.objects.filter(player = self.player1),
+            player = self.player1,
+        )
+        self.assertEqual(features.Features.player_value(ctx), math.sqrt(120 * 20 / 100))
