@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import accounts.forms
 import accounts.models
-import stats.features
 import stats.models
 from discordbot.models import ScheduledNotification
 from tests import testsuite
