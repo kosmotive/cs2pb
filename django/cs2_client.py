@@ -402,7 +402,7 @@ def parse_demo(demofile):
     log.info(f'Parsing demo: {demofile}')
     try:
         assert os.path.isfile(demofile)
-        return awpy.Demo(path=demofile, ticks = False)  # `ticks = False` is required to reduce memory consumption
+        return awpy.Demo(path=demofile)
     except:  # noqa: E722
         log.critical(f'Failed to parse demo: {demofile}')
         raise
