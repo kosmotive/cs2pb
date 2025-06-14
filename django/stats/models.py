@@ -579,16 +579,10 @@ class Match(models.Model):
                 kev = KillEvent()
                 kev.killer = MatchParticipation.objects.filter(pmatch = m, player = kill_data['attacker_steamid']).get()
                 kev.victim = MatchParticipation.objects.filter(pmatch = m, player = kill_data[  'victim_steamid']).get()
-                kev.killer_x = kill_data['attacker_X']
-                kev.killer_y = kill_data['attacker_Y']
-                kev.killer_z = kill_data['attacker_Z']
-                kev.victim_x = kill_data['victim_X']
-                kev.victim_y = kill_data['victim_Y']
-                kev.victim_z = kill_data['victim_Z']
-                kev.round    = kill_data['round']
+                kev.round  = kill_data['round']
+                kev.weapon = kill_data['weapon']
                 kev.kill_type = 1 if kill_data['attacker_team_name'] == 'TERRORIST' else 2
                 kev.bomb_planted = kill_data['is_bomb_planted']
-                kev.weapon = kill_data['weapon']
                 kev.save()
 
             squad_ids = set()
@@ -856,14 +850,6 @@ class KillEvent(models.Model):
     """
     The weapon used to score the kill.
     """
-
-    killer_x = models.FloatField()
-    killer_y = models.FloatField()
-    killer_z = models.FloatField()
-
-    victim_x = models.FloatField()
-    victim_y = models.FloatField()
-    victim_z = models.FloatField()
 
 
 class PlayerOfTheWeek(models.Model):
